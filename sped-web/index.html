@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor SPED para Excel Moderno</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Consider adding a link to a font library if allowed, e.g., Google Fonts -->
+    <!-- <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet"> -->
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1><span class="title-icon">✨</span> Conversor SPED para Excel <span class="title-version">Moderno</span></h1>
+        </header>
+
+        <!-- Navegação por Abas -->
+        <div class="tab-navigation">
+            <button id="tabConverter" class="tab-button active">Conversor SPED</button>
+            <button id="tabFomentar" class="tab-button">Apuração FOMENTAR</button>
+        </div>
+
+        <main class="main-content">
+            <div id="converterPanel" class="converter-panel tab-content active">
+                
+                <div id="dropZone" class="drop-zone">
+                    <span class="drop-zone-icon">📁</span>
+                    <p class="drop-zone-text">Arraste e solte o arquivo SPED aqui</p>
+                    <p class="drop-zone-or">- ou -</p>
+                    <label for="spedFile" class="btn-style btn-select-file">Selecionar Arquivo SPED</label>
+                    <input type="file" id="spedFile" accept=".txt" style="display: none;">
+                </div>
+                
+                <p id="selectedSpedFile" class="selected-file-text">Nenhum arquivo selecionado</p>
+
+                <!-- **** START NEW LOG WINDOW HTML **** -->
+                <div id="logContainer" class="log-container">
+                    <h3 class="log-title">Log de Eventos</h3>
+                    <div id="logWindow" class="log-window">
+                        <!-- Log messages will be appended here by JavaScript -->
+                    </div>
+                </div>
+                <!-- **** END NEW LOG WINDOW HTML **** -->
+
+                <div class="output-section">
+                    <label for="excelFileName" class="label-excel-output">Nome do arquivo Excel de saída:</label>
+                    <input type="text" id="excelFileName" class="input-style input-excel-name" placeholder="NomeDoArquivoModerno.xlsx">
+                </div>
+
+                <div class="progress-section">
+                    <div id="progressBarContainer" class="progress-bar-container-style">
+                        <div id="progressBar" class="progress-bar-style" style="width: 0%;">0%</div>
+                    </div>
+                    <p id="statusMessage" class="status-message-text">Aguardando arquivo SPED...</p>
+                </div>
+
+                <button id="convertButton" class="btn-style btn-convert">
+                    <span class="btn-icon">🚀</span> Converter Agora
+                </button>
+            </div>
+
+            <!-- Painel FOMENTAR -->
+            <div id="fomentarPanel" class="converter-panel tab-content">
+                <div class="fomentar-header">
+                    <h2>📊 Apuração FOMENTAR/PRODUZIR/MICROPRODUZIR</h2>
+                    <p class="fomentar-subtitle">Conforme Instrução Normativa nº 885/07-GSF</p>
+                </div>
+
+                <div class="instrucoes-uso">
+                    <h3>📋 Instruções de Uso</h3>
+                    <div class="instrucoes-content">
+                        <p><strong>1. Importação do SPED:</strong> Clique em "Importar SPED" para carregar os dados fiscais do período.</p>
+                        <p><strong>2. Configurações:</strong> Ajuste o programa (FOMENTAR/PRODUZIR/MICROPRODUZIR) e o percentual de financiamento.</p>
+                        <p><strong>3. Verificação:</strong> <em>Revise os valores calculados automaticamente</em> e preencha campos editáveis conforme necessário.</p>
+                        <p><strong>4. Exportação:</strong> Gere o demonstrativo em Excel ou imprima diretamente.</p>
+                    </div>
+                </div>
+
+                <div class="fomentar-import-section">
+                    <p id="fomentarSpedStatus">Nenhum arquivo SPED importado</p>
+                    <button id="importSpedFomentar" class="btn-style btn-import">
+                        <span class="btn-icon">📂</span> Importar SPED para FOMENTAR
+                    </button>
+                </div>
+
+                <div class="fomentar-config">
+                    <h3>⚙️ Configurações da Apuração</h3>
+                    <div class="config-grid">
+                        <div class="config-item">
+                            <label for="programType">Programa de Incentivo:</label>
+                            <select id="programType" class="input-style">
+                                <option value="FOMENTAR">FOMENTAR (até 70%)</option>
+                                <option value="PRODUZIR">PRODUZIR (até 73%)</option>
+                                <option value="MICROPRODUZIR">MICROPRODUZIR (até 90%)</option>
+                            </select>
+                        </div>
+                        <div class="config-item">
+                            <label for="percentualFinanciamento">Percentual de Financiamento (%):</label>
+                            <input type="number" id="percentualFinanciamento" class="input-style" 
+                                   min="0" max="73" step="0.01" value="70.00">
+                        </div>
+                        <div class="config-item">
+                            <label for="icmsPorMedia">ICMS por Média (R$):</label>
+                            <input type="number" id="icmsPorMedia" class="input-style" 
+                                   step="0.01" value="0.00">
+                        </div>
+                        <div class="config-item">
+                            <label for="saldoCredorAnterior">Saldo Credor Anterior (R$):</label>
+                            <input type="number" id="saldoCredorAnterior" class="input-style" 
+                                   step="0.01" value="0.00">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="fomentarResults" style="display: none;">
+                    <!-- Quadro A: Proporção dos Créditos -->
+                    <div class="quadro-section">
+                        <h3>📈 QUADRO A - PROPORÇÃO DOS CRÉDITOS APROPRIADOS</h3>
+                        <div class="quadro-table">
+                            <table class="fomentar-table">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Descrição</th>
+                                        <th>Valor (R$)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>1</td><td>Saídas de Operações Incentivadas</td><td id="itemA1">0,00</td></tr>
+                                    <tr><td>2</td><td>Total das Saídas</td><td id="itemA2">0,00</td></tr>
+                                    <tr><td>3</td><td>Percentual das Saídas de Operações Incentivadas (%)</td><td id="itemA3">0,00</td></tr>
+                                    <tr><td>4</td><td>Créditos por Entradas</td><td id="itemA4">0,00</td></tr>
+                                    <tr><td>5</td><td>Outros Créditos</td><td id="itemA5">0,00</td></tr>
+                                    <tr><td>6</td><td>Estorno de Débitos</td><td id="itemA6">0,00</td></tr>
+                                    <tr><td>7</td><td>Saldo Credor do Período Anterior</td><td id="itemA7">0,00</td></tr>
+                                    <tr><td>8</td><td>Total dos Créditos do Período</td><td id="itemA8">0,00</td></tr>
+                                    <tr><td>9</td><td>Crédito para Operações Incentivadas</td><td id="itemA9">0,00</td></tr>
+                                    <tr><td>10</td><td>Crédito para Operações Não Incentivadas</td><td id="itemA10">0,00</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Quadro B: Operações Incentivadas -->
+                    <div class="quadro-section">
+                        <h3>🎯 QUADRO B - APURAÇÃO DOS SALDOS DAS OPERAÇÕES INCENTIVADAS</h3>
+                        <div class="quadro-table">
+                            <table class="fomentar-table">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Descrição</th>
+                                        <th>Valor (R$)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>11</td><td>Débito do ICMS das Operações Incentivadas</td><td id="itemB11">0,00</td></tr>
+                                    <tr><td>12</td><td>Outros Débitos das Operações Incentivadas</td><td id="itemB12">0,00</td></tr>
+                                    <tr><td>13</td><td>Estorno de Créditos das Operações Incentivadas</td><td id="itemB13">0,00</td></tr>
+                                    <tr><td>14</td><td>Crédito para Operações Incentivadas</td><td id="itemB14">0,00</td></tr>
+                                    <tr><td>15</td><td>Deduções das Operações Incentivadas</td><td id="itemB15">0,00</td></tr>
+                                    <tr><td>17</td><td>Saldo Devedor do ICMS das Operações Incentivadas</td><td id="itemB17">0,00</td></tr>
+                                    <tr><td>18</td><td>ICMS por Média</td><td id="itemB18">0,00</td></tr>
+                                    <tr><td>21</td><td>ICMS Base para FOMENTAR/PRODUZIR</td><td id="itemB21">0,00</td></tr>
+                                    <tr><td>22</td><td>Percentagem do Financiamento (%)</td><td id="itemB22">0,00</td></tr>
+                                    <tr><td>23</td><td>ICMS Sujeito a Financiamento</td><td id="itemB23">0,00</td></tr>
+                                    <tr><td>25</td><td>ICMS Financiado</td><td id="itemB25">0,00</td></tr>
+                                    <tr><td>26</td><td>Saldo do ICMS da Parcela Não Financiada</td><td id="itemB26">0,00</td></tr>
+                                    <tr><td>28</td><td>Saldo do ICMS a Pagar da Parcela Não Financiada</td><td id="itemB28">0,00</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Quadro C: Operações Não Incentivadas -->
+                    <div class="quadro-section">
+                        <h3>📋 QUADRO C - APURAÇÃO DOS SALDOS DAS OPERAÇÕES NÃO INCENTIVADAS</h3>
+                        <div class="quadro-table">
+                            <table class="fomentar-table">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Descrição</th>
+                                        <th>Valor (R$)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>32</td><td>Débito do ICMS das Operações Não Incentivadas</td><td id="itemC32">0,00</td></tr>
+                                    <tr><td>33</td><td>Outros Débitos das Operações Não Incentivadas</td><td id="itemC33">0,00</td></tr>
+                                    <tr><td>34</td><td>Estorno de Créditos das Operações Não Incentivadas</td><td id="itemC34">0,00</td></tr>
+                                    <tr><td>36</td><td>Crédito para Operações Não Incentivadas</td><td id="itemC36">0,00</td></tr>
+                                    <tr><td>37</td><td>Deduções das Operações Não Incentivadas</td><td id="itemC37">0,00</td></tr>
+                                    <tr><td>39</td><td>Saldo Devedor do ICMS das Operações Não Incentivadas</td><td id="itemC39">0,00</td></tr>
+                                    <tr><td>41</td><td>Saldo do ICMS a Pagar das Operações Não Incentivadas</td><td id="itemC41">0,00</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Resumo Final -->
+                    <div class="resumo-section">
+                        <h3>💰 RESUMO DA APURAÇÃO</h3>
+                        <div class="resumo-grid">
+                            <div class="resumo-item">
+                                <label>Total a Pagar - Operações Incentivadas:</label>
+                                <span id="totalPagarIncentivadas" class="valor-destaque">R$ 0,00</span>
+                            </div>
+                            <div class="resumo-item">
+                                <label>Total a Pagar - Operações Não Incentivadas:</label>
+                                <span id="totalPagarNaoIncentivadas" class="valor-destaque">R$ 0,00</span>
+                            </div>
+                            <div class="resumo-item">
+                                <label>Valor do Financiamento FOMENTAR:</label>
+                                <span id="valorFinanciamento" class="valor-destaque valor-economia">R$ 0,00</span>
+                            </div>
+                            <div class="resumo-item">
+                                <label>Total Geral a Pagar:</label>
+                                <span id="totalGeralPagar" class="valor-destaque valor-total">R$ 0,00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ações -->
+                    <div class="fomentar-actions">
+                        <button id="exportFomentar" class="btn-style btn-export">
+                            <span class="btn-icon">📊</span> Exportar Excel
+                        </button>
+                        <button id="printFomentar" class="btn-style btn-secondary">
+                            <span class="btn-icon">🖨️</span> Imprimir
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <footer class="app-footer">
+            <p>Conversor SPED Moderno &copy; 2024</p>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-populate/browser/xlsx-populate.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

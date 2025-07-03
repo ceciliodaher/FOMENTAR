@@ -1,0 +1,8 @@
+        <main class="main-content">
+            <!-- Navegação por Abas -->
+            <div class="tab-navigation">
+                <button id="tabConverter" class="tab-button active">Conversor SPED</button>
+                <button id="tabFomentar" class="tab-button">Apuração FOMENTAR</button>
+            </div>
+
+            <div id="converterPanel" class="converter-panel tab-content active">
