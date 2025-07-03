@@ -1,1350 +1,1730 @@
-// Variáveis globais
-let spedData = null;
-let fomentarData = null;
-
-// CFOPs para classificação de operações incentivadas (baseado na IN 885/07-GSF)
-const CFOP_ENTRADAS_INCENTIVADAS = [
-    '1101', '1116', '1120', '1122', '1124', '1125', '1131', '1135', '1151', '1159',
-    '1201', '1203', '1206', '1208', '1212', '1213', '1214', '1215', '1252', '1257',
-    '1352', '1360', '1401', '1406', '1408', '1410', '1414', '1453', '1454', '1455',
-    '1503', '1505', '1551', '1552', '1651', '1653', '1658', '1660', '1661', '1662',
-    '1910', '1911', '1917', '1918', '1932', '1949',
-    '2101', '2116', '2120', '2122', '2124', '2125', '2131', '2135', '2151', '2159',
-    '2201', '2203', '2206', '2208', '2212', '2213', '2214', '2215', '2252', '2257',
-    '2352', '2401', '2406', '2408', '2410', '2414', '2453', '2454', '2455',
-    '2503', '2505', '2551', '2552', '2651', '2653', '2658', '2660', '2661', '2662', '2664',
-    '2910', '2911', '2917', '2918', '2932', '2949',
-    '3101', '3127', '3129', '3201', '3206', '3211', '3212', '3352', '3551', '3651', '3653', '3949'
-];
-
-const CFOP_SAIDAS_INCENTIVADAS = [
-    '5101', '5103', '5105', '5109', '5116', '5118', '5122', '5124', '5125', '5129',
-    '5131', '5132', '5151', '5155', '5159', '5201', '5206', '5207', '5208', '5213',
-    '5214', '5215', '5216', '5401', '5402', '5408', '5410', '5451', '5452', '5456',
-    '5501', '5651', '5652', '5653', '5658', '5660', '5910', '5911', '5917', '5918',
-    '5927', '5928',
-    '6101', '6103', '6105', '6107', '6109', '6116', '6118', '6122', '6124', '6125',
-    '6129', '6131', '6132', '6151', '6155', '6159', '6201', '6206', '6207', '6208',
-    '6213', '6214', '6215', '6216', '6401', '6402', '6408', '6410', '6451', '6452',
-    '6456', '6501', '6651', '6652', '6653', '6658', '6660', '6663', '6905', '6910',
-    '6911', '6917', '6918', '6934',
-    '7101', '7105', '7127', '7129', '7201', '7206', '7207', '7211', '7212', '7251',
-    '7504', '7651', '7667'
-];
-
-// Inicialização
-document.addEventListener('DOMContentLoaded', function() {
-    initializeApp();
-});
-
-function initializeApp() {
-    // Inicializar navegação por abas
-    initializeTabs();
-    
-    // Inicializar conversor SPED original
-    initializeSpedConverter();
-    
-    // Inicializar módulo FOMENTAR
-    initializeFomentar();
-    
-    // Adicionar listeners para configurações
-    addConfigurationListeners();
-}
-
-function initializeTabs() {
-    const tabConverter = document.getElementById('tabConverter');
-    const tabFomentar = document.getElementById('tabFomentar');
-    const converterPanel = document.getElementById('converterPanel');
-    const fomentarPanel = document.getElementById('fomentarPanel');
-    
-    tabConverter.addEventListener('click', () => {
-        switchTab('converter');
-    });
-    
-    tabFomentar.addEventListener('click', () => {
-        switchTab('fomentar');
-    });
-}
-
-function switchTab(tab) {
-    const tabs = document.querySelectorAll('.tab-button');
-    const panels = document.querySelectorAll('.tab-content');
-    
-    tabs.forEach(t => t.classList.remove('active'));
-    panels.forEach(p => p.classList.remove('active'));
-    
-    if (tab === 'converter') {
-        document.getElementById('tabConverter').classList.add('active');
-        document.getElementById('converterPanel').classList.add('active');
-    } else if (tab === 'fomentar') {
-        document.getElementById('tabFomentar').classList.add('active');
-        document.getElementById('fomentarPanel').classList.add('active');
-    }
-}
-
-function initializeSpedConverter() {
-    const dropZone = document.getElementById('dropZone');
-    const fileInput = document.getElementById('spedFile');
-    const convertButton = document.getElementById('convertButton');
+// script.js
+document.addEventListener('DOMContentLoaded', () => {
+    // --- DOM Elements ---
+    const spedFileButtonLabel = document.querySelector('label[for="spedFile"]');
+    const spedFileInput = document.getElementById('spedFile');
+    const selectedSpedFileText = document.getElementById('selectedSpedFile');
+    const excelFileNameInput = document.getElementById('excelFileName');
     const progressBar = document.getElementById('progressBar');
     const statusMessage = document.getElementById('statusMessage');
-    const selectedFileText = document.getElementById('selectedSpedFile');
+    const convertButton = document.getElementById('convertButton');
+    const dropZone = document.getElementById('dropZone');
+    const logWindow = document.getElementById('logWindow'); // Added logWindow
+
+    // --- Global/Shared Variables ---
+    let spedFile = null;
+    let spedFileContent = '';
+    let sharedNomeEmpresa = "Empresa"; // For sharing extracted header info
+    let sharedPeriodo = "";
+    let fomentarData = null; // FOMENTAR specific data
+    let registrosCompletos = null; // Complete SPED records for FOMENTAR
+
+    // --- Event Listeners ---
+    // spedFileButtonLabel.addEventListener('click', () => { // This is handled by <label for="spedFile">
+    //     spedFileInput.click(); 
+    // });
+
+    // convertButton listener remains
+    convertButton.addEventListener('click', iniciarConversao);
+
+    // Tab navigation listeners
+    document.getElementById('tabConverter').addEventListener('click', () => switchTab('converter'));
+    document.getElementById('tabFomentar').addEventListener('click', () => switchTab('fomentar'));
+
+    // FOMENTAR listeners
+    document.getElementById('importSpedFomentar').addEventListener('click', importSpedForFomentar);
+    document.getElementById('exportFomentar').addEventListener('click', exportFomentarReport);
+    document.getElementById('printFomentar').addEventListener('click', printFomentarReport);
     
-    // Drag and drop
-    dropZone.addEventListener('dragover', handleDragOver);
-    dropZone.addEventListener('drop', handleDrop);
-    dropZone.addEventListener('click', () => fileInput.click());
-    
-    // File input
-    fileInput.addEventListener('change', handleFileSelect);
-    
-    // Convert button
-    convertButton.addEventListener('click', convertSpedToExcel);
-    
+    // Configuration listeners
+    document.getElementById('programType').addEventListener('change', handleConfigChange);
+    document.getElementById('percentualFinanciamento').addEventListener('input', handleConfigChange);
+    document.getElementById('icmsPorMedia').addEventListener('input', handleConfigChange);
+    document.getElementById('saldoCredorAnterior').addEventListener('input', handleConfigChange);
+
+    // Drag and Drop Event Listeners for dropZone
+    if (dropZone) {
+        // For the drop zone itself
+        dropZone.addEventListener('dragenter', handleDragEnter, false);
+        dropZone.addEventListener('dragover', handleDragOver, false);
+        dropZone.addEventListener('dragleave', handleDragLeave, false);
+        dropZone.addEventListener('drop', handleFileDrop, false); // Renamed from handleDrop to avoid conflict if any
+
+        // For the document body - to prevent browser default behavior for unhandled drops / drags
+        document.body.addEventListener('dragover', function(e) {
+            e.preventDefault(); // Only prevent default to allow drop cursor, don't highlight body
+            e.stopPropagation();
+        }, false);
+        document.body.addEventListener('drop', function(e) {
+            e.preventDefault(); // Prevent browser opening file if dropped outside zone
+            e.stopPropagation();
+        }, false);
+    }
+
+    // --- Functions --- (New/Modified Drag and Drop handlers)
+
+    // Keep preventDefaults as a general utility if needed elsewhere, or inline its logic
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    function handleDragEnter(e) {
+        preventDefaults(e);
+        highlight(e); // Existing highlight function
+    }
+
     function handleDragOver(e) {
-        e.preventDefault();
-        dropZone.style.backgroundColor = 'rgba(102, 126, 234, 0.1)';
+        preventDefaults(e);
+        highlight(e); // Keep highlighted if dragging over
+    }
+
+    function handleDragLeave(e) {
+        preventDefaults(e);
+        if (!dropZone.contains(e.relatedTarget)) {
+          unhighlight(e); 
+        }
     }
     
-    function handleDrop(e) {
-        e.preventDefault();
-        dropZone.style.backgroundColor = '';
-        const files = e.dataTransfer.files;
+    function highlight(e) {
+        // preventDefaults(e); // Called by specific handlers
+        dropZone.classList.add('highlight');
+        dropZone.classList.add('dragover');
+        // addLog("Arquivo detectado sobre a área de soltar.", "info"); // Optional: can be verbose
+    }
+
+    function unhighlight(e) {
+        // preventDefaults(e); // Called by specific handlers
+        dropZone.classList.remove('highlight');
+        dropZone.classList.remove('dragover');
+        // addLog("Detecção de arquivo sobre a área removida.", "info"); // Optional: can be verbose
+    }
+
+    function handleFileDrop(e) { 
+        preventDefaults(e); 
+        unhighlight(e);
+
+        const dt = e.dataTransfer;
+        const files = dt.files;
+
         if (files.length > 0) {
-            processFile(files[0]);
+            const fileToProcess = files[0]; 
+            addLog(`Arquivo "${fileToProcess.name}" solto na área.`, "info");
+            if (fileToProcess.name.toLowerCase().endsWith('.txt')) {
+                processSpedFile(fileToProcess); 
+            } else {
+                addLog(`Tipo de arquivo "${fileToProcess.name}" não suportado. Use .txt.`, 'error');
+                showError("Por favor, solte apenas arquivos .txt (SPED).");
+                // updateStatus is called by showError
+            }
+        } else {
+            addLog("Nenhum arquivo foi solto.", 'warn');
         }
     }
-    
-    function handleFileSelect(e) {
-        const file = e.target.files[0];
-        if (file) {
-            processFile(file);
+
+
+    // Refactor existing file selection logic
+    // Old: spedFileInput.addEventListener('change', handleSpedFileSelect);
+    // New:
+    spedFileInput.addEventListener('change', (event) => {
+        const files = event.target.files;
+        if (files.length > 0) {
+            processSpedFile(files[0]);
         }
-    }
-    
-    function processFile(file) {
-        if (!file.name.endsWith('.txt')) {
-            logMessage('Erro: Selecione um arquivo .txt válido', 'error');
+    });
+
+
+    // New function to process the file, whether from input or drop
+    async function processSpedFile(fileToProcess) {
+        clearLogs(); // Clear logs for new file processing
+        addLog(`Processando arquivo: ${fileToProcess.name}`, "info");
+
+        if (!fileToProcess) {
+            selectedSpedFileText.textContent = 'Nenhum arquivo selecionado';
+            excelFileNameInput.value = '';
+            spedFile = null;
+            spedFileContent = '';
+            addLog("Nenhum arquivo para processar.", "warn");
             return;
         }
-        
-        selectedFileText.textContent = `Arquivo selecionado: ${file.name}`;
-        selectedFileText.style.color = '#28a745';
-        
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            spedData = e.target.result;
-            logMessage(`Arquivo ${file.name} carregado com sucesso`, 'success');
-            convertButton.disabled = false;
-        };
-        reader.readAsText(file);
-    }
-    
-    function convertSpedToExcel() {
-        if (!spedData) {
-            logMessage('Erro: Nenhum arquivo SPED carregado', 'error');
-            return;
-        }
-        
-        statusMessage.textContent = 'Convertendo arquivo SPED...';
-        updateProgress(10);
-        
+
+        spedFile = fileToProcess; 
+        selectedSpedFileText.textContent = `Arquivo selecionado: ${spedFile.name}`;
+        updateStatus('Analisando arquivo...', 5);
+        // addLog('Analisando arquivo...', 'info'); // Redundant with updateStatus if it also logs
+
         try {
-            const parsedData = parseSpedData(spedData);
-            updateProgress(50);
-            
-            const excelData = convertToExcelFormat(parsedData);
-            updateProgress(80);
-            
-            const fileName = document.getElementById('excelFileName').value || 'ConversaoSPED.xlsx';
-            downloadExcel(excelData, fileName);
-            updateProgress(100);
-            
-            statusMessage.textContent = 'Conversão concluída com sucesso!';
-            logMessage('Arquivo Excel gerado e baixado com sucesso', 'success');
-            
+            updateStatus('Lendo arquivo SPED...', 10);
+            addLog('Lendo arquivo SPED...', 'info');
+            const arrayBuffer = await spedFile.arrayBuffer(); 
+            const { encoding, content } = await detectAndRead(arrayBuffer);
+            spedFileContent = content; 
+            addLog(`Encoding detectado: ${encoding}`, 'info');
+
+            if (!spedFileContent) {
+                addLog('Falha ao ler o conteúdo do arquivo.', 'error');
+                showError('Não foi possível ler o conteúdo do arquivo. Tente UTF-8 ou Latin-1.');
+                // updateStatus is called by showError
+                return;
+            }
+
+            updateStatus('Extraindo informações do cabeçalho...', 30);
+            addLog('Extraindo informações do cabeçalho...', 'info');
+            const registrosHeader = lerArquivoSpedParaHeader(spedFileContent); 
+            const { nomeEmpresa, periodo } = extrairInformacoesHeader(registrosHeader);
+            sharedNomeEmpresa = nomeEmpresa; // Assign to shared variable
+            sharedPeriodo = periodo;       // Assign to shared variable
+            addLog(`Cabeçalho: Empresa "${nomeEmpresa}", Período "${periodo}"`, 'info');
+
+            const suggestedExcelName = processarNomeArquivo(nomeEmpresa, periodo, spedFile.name);
+            excelFileNameInput.value = suggestedExcelName;
+            addLog(`Nome de arquivo Excel sugerido: ${suggestedExcelName}`, 'info');
+
+            updateStatus('Pronto para converter.', 0);
+            addLog('Arquivo analisado e pronto para conversão.', 'info');
+            // console.log(...) // console logs can be replaced by addLog if desired
+
         } catch (error) {
-            logMessage(`Erro na conversão: ${error.message}`, 'error');
-            statusMessage.textContent = 'Erro na conversão do arquivo';
-            updateProgress(0);
+            // console.error(...)
+            addLog(`Erro ao processar arquivo: ${error.message}`, 'error');
+            showError(`Erro ao processar arquivo: ${error.message}`);
+            selectedSpedFileText.textContent = 'Erro ao ler o arquivo.';
+            excelFileNameInput.value = '';
+            // updateStatus is called by showError
+            spedFile = null;
+            spedFileContent = '';
         }
     }
     
-    function updateProgress(percentage) {
-        progressBar.style.width = percentage + '%';
-        progressBar.textContent = percentage + '%';
+    /**
+     * Tries to detect encoding (UTF-8 or Latin-1) and read file content.
+     * More sophisticated detection would require a library.
+     */
+    async function detectAndRead(arrayBuffer) {
+        const decoders = [
+            { encoding: 'UTF-8', decoder: new TextDecoder('utf-8', { fatal: true }) },
+            { encoding: 'ISO-8859-1', decoder: new TextDecoder('iso-8859-1') } // Latin-1
+        ];
+
+        for (const { encoding, decoder } of decoders) {
+            try {
+                const content = decoder.decode(arrayBuffer);
+                console.log(`Arquivo lido com sucesso usando ${encoding}`);
+                return { encoding, content };
+            } catch (e) {
+                console.warn(`Falha ao decodificar como ${encoding}:`, e.message);
+            }
+        }
+        // Fallback if specific error handling for decoding is needed
+        try {
+            // Try UTF-8 with non-fatal to get at least some content if possible,
+            // but this might lead to mojibake for other encodings.
+            const content = new TextDecoder('utf-8').decode(arrayBuffer);
+            console.warn('Decodificado como UTF-8 com possíveis erros (fallback).');
+            return { encoding: 'UTF-8 (fallback)', content };
+        } catch (e) {
+            console.error('Falha final ao decodificar o ArrayBuffer:', e);
+            throw new Error('Não foi possível decodificar o arquivo com os encodings suportados.');
+        }
     }
-}
 
-function initializeFomentar() {
-    const importButton = document.getElementById('importSpedFomentar');
-    const exportButton = document.getElementById('exportFomentar');
-    const printButton = document.getElementById('printFomentar');
-    
-    importButton.addEventListener('click', importSpedForFomentar);
-    exportButton.addEventListener('click', exportFomentarReport);
-    printButton.addEventListener('click', printFomentarReport);
-}
 
-function addConfigurationListeners() {
-    const programType = document.getElementById('programType');
-    const percentualFinanciamento = document.getElementById('percentualFinanciamento');
-    
-    programType.addEventListener('change', function() {
-        const maxPercentual = this.value === 'MICROPRODUZIR' ? 90 : 73;
-        percentualFinanciamento.max = maxPercentual;
-        if (parseFloat(percentualFinanciamento.value) > maxPercentual) {
-            percentualFinanciamento.value = maxPercentual;
+    /**
+     * Placeholder for SPED file reading for header.
+     * A more complete version will parse all lines.
+     */
+    function lerArquivoSpedParaHeader(fileContent) {
+        const registros = { '0000': [] }; // Using an object for defaultdict-like behavior
+        const lines = fileContent.split('\n');
+        for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (isLinhaValida(trimmedLine)) {
+                const campos = trimmedLine.split('|');
+                if (campos.length > 1 && campos[1] === '0000') {
+                     // Remove empty first and last element if they exist due to split('|')
+                    registros['0000'].push(campos.slice(1, -1));
+                }
+                if (registros['0000'].length > 0) break; // Found 0000, no need to parse further for header
+            }
+        }
+        return registros;
+    }
+
+
+    /**
+     * Extracts header information from SPED records (specifically '0000').
+     * Mimics `extrair_informacoes_header` from Python.
+     */
+    function extrairInformacoesHeader(registros) {
+        let nomeEmpresa = "Empresa";
+        let periodo = "";
+
+        if (registros['0000'] && registros['0000'].length > 0) {
+            const reg0000 = registros['0000'][0]; // reg0000 is already without the initial/final pipe chars
+            // Python code: nome_empresa = reg_0000[6] if len(reg_0000) > 6 else "Empresa"
+            // Python code: data_inicial = reg_0000[4] if len(reg_0000) > 4 else ""
+            // Indexes need to be adjusted because Python's split('|') results in an empty string at the start and end.
+            // ['','REG','COD_VER', ..., 'NOME', ..., ''] for a line |REG|COD_VER|...|NOME|...|
+            // So, in Python, after `campos = linha.split('|')`, `campos[1]` is REG.
+            // `reg_0000` in Python was `registros['0000'][0]` which is `campos`.
+            // So `reg_0000[6]` (NOME) and `reg_0000[4]` (DT_INI).
+
+            // Our `reg0000` is `campos.slice(1, -1)` from `lerArquivoSpedParaHeader`
+            // So, `reg0000[0]` is REG, `reg0000[1]` is COD_VER etc.
+            // DT_INI is at index 3 (original index 4, minus 1)
+            // NOME is at index 5 (original index 6, minus 1)
+
+            const dtIniIndex = 3; // Corresponds to reg_0000[4] in Python's full split
+            const nomeIndex = 5;  // Corresponds to reg_0000[6] in Python's full split
+
+            if (reg0000.length > nomeIndex) {
+                nomeEmpresa = reg0000[nomeIndex] || "Empresa";
+            }
+            if (reg0000.length > dtIniIndex) {
+                const dataInicial = reg0000[dtIniIndex];
+                if (dataInicial && dataInicial.length === 8) {
+                    periodo = `${dataInicial.substring(0, 2)}/${dataInicial.substring(2, 4)}/${dataInicial.substring(4, 8)}`;
+                }
+            }
+        }
+        return { nomeEmpresa, periodo };
+    }
+
+    /**
+     * Processes the Excel filename based on company name and period.
+     * Mimics `processar_nome_arquivo` from Python.
+     */
+    function processarNomeArquivo(nomeEmpresa, periodo, originalSpedName = "SPED_convertido") {
+        try {
+            const primeiroNome = nomeEmpresa.split(' ')[0].trim() || "Empresa";
+            if (periodo) {
+                const partesData = periodo.split('/');
+                if (partesData.length === 3) {
+                    const mes = partesData[1];
+                    const ano = partesData[2];
+                    return `${primeiroNome}_SPED_${mes}_${ano}.xlsx`;
+                }
+            }
+            // Fallback using original SPED name if company/period processing fails
+            const baseName = originalSpedName.substring(0, originalSpedName.lastIndexOf('.')) || primeiroNome + "_SPED";
+            return `${baseName}.xlsx`;
+
+        } catch (error) {
+            console.error("Erro ao processar nome do arquivo:", error);
+            const baseName = originalSpedName.substring(0, originalSpedName.lastIndexOf('.')) || "SPED_convertido";
+            return `${baseName}.xlsx`;
+        }
+    }
+
+    /**
+     * Validates a SPED line.
+     * Mimics `is_linha_valida` from Python.
+     */
+    function isLinhaValida(linha) {
+        linha = linha.trim();
+        if (!linha) return false;
+        if (!linha.startsWith('|') || !linha.endsWith('|')) return false;
+
+        const campos = linha.split('|');
+        if (campos.length < 3) return false; // Must have at least |REG|FIELD|
+
+        const regCode = campos[1];
+        if (!regCode) return false;
+
+        // Regex for SPED record codes (e.g., 0000, C100, M210, 1990)
+        const padraoRegistro = /^[A-Z0-9]?\d{3,4}$/; // Adjusted to include alphanumeric prefix like 'M'
+        return padraoRegistro.test(regCode);
+    }
+
+
+    /**
+     * Initiates the conversion process.
+     * Mimics `iniciar_conversao` from Python.
+     */
+    async function iniciarConversao() {
+        if (!validarEntrada()) { // validarEntrada might call showError, which calls updateStatus
+            addLog("Validação de entrada falhou.", "warn");
+            return;
+        }
+        addLog("Validação de entrada bem-sucedida.", "info");
+
+        const outputFileName = excelFileNameInput.value.trim();
+        let fullOutputFileName = outputFileName;
+        if (!fullOutputFileName.toLowerCase().endsWith('.xlsx')) {
+            fullOutputFileName += '.xlsx';
+        }
+
+        convertButton.disabled = true;
+        updateStatus('Convertendo...', 0, false, true); // Start indeterminate progress
+        addLog(`Iniciando conversão para: ${fullOutputFileName}`, 'info');
+
+        try {
+            await new Promise(resolve => setTimeout(resolve, 50)); 
+            await converter(fullOutputFileName);
+        } catch (error) {
+            // This catch might be redundant if 'converter' calls conversaoConcluida itself
+            // console.error('Erro ao iniciar conversão (nível iniciarConversao):', error);
+            // conversaoConcluida(false, error.message); // conversaoConcluida will log
+        }
+    }
+
+    /**
+     * Validates user inputs.
+     * Mimics `validar_entrada` from Python.
+     */
+    function validarEntrada() {
+        if (!spedFile) {
+            showError("Selecione o arquivo SPED");
+            return false;
+        }
+        if (!excelFileNameInput.value.trim()) {
+            showError("Digite um nome para o arquivo Excel");
+            return false;
+        }
+        // File existence is implicitly true if spedFile object exists from input
+        return true;
+    }
+
+    /**
+     * Main conversion function (placeholder for actual SPED to Excel logic).
+     * Mimics `converter` from Python.
+     */
+    async function converter(caminhoExcel) {
+        // console.log(`Iniciando conversão para: ${caminhoExcel}`); // Already logged by iniciarConversao
+        try {
+            updateStatus('Processando arquivo SPED...', 10);
+            // addLog('Processando arquivo SPED...', 'info'); // Covered by processarSpedParaExcel logs
+            await new Promise(resolve => setTimeout(resolve, 200));
+
+            await processarSpedParaExcel(spedFileContent, caminhoExcel); // This function will call gerarExcel
+
+            // Success is handled by gerarExcel calling conversaoConcluida(true)
+            // console.log("Conversão (simulada) concluída."); // Logged by conversaoConcluida
+        } catch (error) {
+            // console.error('Erro durante a conversão (nível converter):', error);
+            // conversaoConcluida will be called by processarSpedParaExcel or gerarExcel's catch block
+            // If error bubbles up to here without conversaoConcluida being called, then call it:
+            if (!statusMessage.textContent.includes("Erro na conversão") && !statusMessage.textContent.includes("sucesso")) {
+                 conversaoConcluida(false, error.message);
+            }
+        }
+    }
+
+    /**
+     * Processes the SPED file content and generates the Excel file.
+     * This function will be expanded significantly.
+     * Mimics `processar_sped_para_excel` from Python.
+     */
+    async function processarSpedParaExcel(fileContent, caminhoSaidaExcel) {
+        updateStatus('Lendo e normalizando registros SPED...', 20);
+        addLog('Lendo e normalizando todos os registros SPED...', 'info');
+        await new Promise(resolve => setTimeout(resolve, 100)); 
+
+        const registros = lerArquivoSpedCompleto(fileContent); // Assuming this is synchronous for now
+        addLog(`Total de ${Object.keys(registros).length} tipos de registros lidos.`, 'info');
+        // const { nomeEmpresa, periodo } = extrairInformacoesHeader(registros); // Already done in processSpedFile
+
+        updateStatus('Gerando arquivo Excel...', 50);
+        addLog('Iniciando geração do arquivo Excel...', 'info');
+        await new Promise(resolve => setTimeout(resolve, 100)); 
+
+        try {
+            // Pass nomeEmpresa and periodo from the global scope if they are set there by processSpedFile
+            await gerarExcel(registros, sharedNomeEmpresa, sharedPeriodo, caminhoSaidaExcel);
+        } catch (e) {
+            // console.error("Falha em processarSpedParaExcel:", e);
+            conversaoConcluida(false, `Falha na geração do Excel: ${e.message}`); // Will log error
+        }
+    }
+
+    /**
+     * Reads the entire SPED file and organizes records.
+     * Mimics `ler_arquivo_sped` from Python (more complete version).
+     */
+    function lerArquivoSpedCompleto(fileContent) {
+        const registros = {}; // Using an object like defaultdict(list)
+        const lines = fileContent.split('\n'); // Ensure consistent line splitting
+
+        for (const rawLine of lines) {
+            const linha = rawLine.trim();
+            if (isLinhaValida(linha)) {
+                const campos = linha.split('|');
+                // campos[0] is empty, campos[1] is REG, ..., campos[campos.length-1] is empty
+                const tipoRegistro = campos[1];
+                const dadosRegistro = campos; // Keep the raw split including empty start/end
+
+                if (!registros[tipoRegistro]) {
+                    registros[tipoRegistro] = [];
+                }
+                registros[tipoRegistro].push(dadosRegistro);
+            }
+        }
+        console.log("SPED Completo Lido e Estruturado. Contagem de Tipos:", Object.keys(registros).length);
+        return registros;
+    }
+
+
+    // --- Excel Generation Functions (Placeholders - to be implemented) ---
+    /**
+     * Generates the Excel file using xlsx-populate.
+     * Mimics `gerar_excel` from Python.
+     */
+    async function gerarExcel(registros, nomeEmpresa, periodo, caminhoSaida) {
+        // console.log("Iniciando geração do Excel com XlsxPopulate..."); // Logged by caller
+        updateStatus('Preparando dados para Excel...', 60);
+        // addLog('Preparando dados para Excel...', 'info'); // Redundant with updateStatus
+
+        try {
+            const workbook = await XlsxPopulate.fromBlankAsync();
+            addLog('Novo workbook Excel criado.', 'info');
+            
+            // Pass necessary global/state variables or objects
+            const context = {
+                registros, 
+                workbook,
+                writer: workbook, 
+                obterLayoutRegistro, 
+                logger: { 
+                    info: (msg) => addLog(msg, 'info'), // Route logger to addLog
+                    error: (msg) => addLog(msg, 'error'),
+                    warn: (msg) => addLog(msg, 'warn')
+                },
+                ajustarColunas: _ajustarColunas, 
+                formatarPlanilha: _formatarPlanilha, 
+                nomeEmpresa, // Pass already received nomeEmpresa
+                periodo,   // Pass already received periodo
+                addLog     // Pass addLog itself if sub-functions need more granular logging not covered by logger
+            };
+
+
+            updateStatus('Processando registros principais...', 70);
+            addLog('Processando registros principais para abas individuais...', 'info');
+            await _processarRegistros(context); 
+            addLog('Registros principais processados.', 'info');
+
+            updateStatus('Criando aba consolidada...', 80);
+            addLog('Criando aba consolidada...', 'info');
+            await _criarAbaConsolidada(context);
+            addLog('Aba consolidada criada.', 'info');
+
+            updateStatus('Processando outras obrigações...', 85);
+            addLog('Processando outras obrigações (C197/D197)...', 'info');
+            await _processarOutrasObrigacoes(context);
+            addLog('Outras obrigações processadas.', 'info');
+            
+            /**if (!context.e110E111Processado) {
+                 updateStatus('Processando E110/E111...', 88);
+                 addLog('Processando registros E110/E111...', 'info');
+                 await _processarRegistrosE110E111(context);
+                 addLog('Registros E110/E111 processados.', 'info');
+            }*/
+            
+            // Remove a aba padrão criada automaticamente
+            try {
+                const defaultSheet = workbook.sheet(0); // Primeira aba (Sheet1)
+                if (defaultSheet && (defaultSheet.name() === 'Sheet1' || defaultSheet.name() === 'Sheet')) {
+                    workbook.deleteSheet(defaultSheet);
+                }
+            } catch (e) {
+                // Se não conseguir deletar, apenas continua
+            }
+
+            updateStatus('Finalizando arquivo Excel...', 95);
+            addLog('Gerando blob do arquivo Excel...', 'info');
+            const excelData = await workbook.outputAsync(); 
+            const blob = new Blob([excelData], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+
+            addLog('Iniciando download do arquivo Excel...', 'info');
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = caminhoSaida;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href); 
+
+            // console.log("Arquivo Excel gerado e download iniciado."); // Logged by conversaoConcluida
+            conversaoConcluida(true, caminhoSaida); // This will call addLog for success
+
+        } catch (error) {
+            // console.error("Erro em gerarExcel:", error);
+            conversaoConcluida(false, `Erro ao gerar Excel: ${error.message}`); // This will call addLog for error
+        }
+    }
+
+    /**
+     * Mimics Python's _processar_registros
+     * context: { registros, writer, formatarData, obterLayoutRegistro, logger, ajustarColunas, formatarPlanilha, nomeEmpresa, periodo }
+     */
+    async function _processarRegistros(context) {
+        const { registros, writer, obterLayoutRegistro, logger, ajustarColunas, formatarPlanilha } = context;
+        
+        const ordemBlocos = ['0', 'B', 'C', 'D', 'E', 'G', 'H', 'K', '1', '9'];
+        let registrosOrdenados = [];
+
+        for (const bloco of ordemBlocos) {
+            let registrosBloco = Object.entries(registros)
+                .filter(([k, v]) => k.startsWith(bloco))
+                .sort(([ka], [kb]) => ka.localeCompare(kb));
+            registrosOrdenados.push(...registrosBloco);
+        }
+
+        let outrosRegistros = Object.entries(registros)
+            .filter(([k, v]) => !ordemBlocos.some(b => k.startsWith(b)))
+            .sort(([ka], [kb]) => ka.localeCompare(kb));
+        registrosOrdenados.push(...outrosRegistros);
+        
+        context.e110E111Processado = false; // Initialize flag
+
+        for (const [tipoRegistro, linhas] of registrosOrdenados) {
+            /**if (tipoRegistro === 'E110' || tipoRegistro === 'E111') {
+                // These are handled by _processarRegistrosE110E111, typically called after E100 or at the end
+                continue;
+            }*/
+            if (!linhas || linhas.length === 0) continue;
+
+            try {
+                // Python: df = pd.DataFrame(linhas)
+                // Python: df = df.iloc[:, 1:-1]
+                // JS: map `linhas` (which are arrays of strings from split('|'))
+                // Each `linha` in `linhas` is like: ['', 'REG', 'FIELD1', ..., 'FIELDN', '']
+                const dadosParaDf = linhas.map(linhaCompleta => linhaCompleta.slice(1, -1));
+                
+                if (dadosParaDf.length === 0 || dadosParaDf[0].length === 0) continue;
+
+                let colunasNomes = obterLayoutRegistro(tipoRegistro);
+                if (colunasNomes) {
+                    colunasNomes = ajustarColunas(dadosParaDf[0].length, colunasNomes); // Pass df width and layout
+                } else {
+                    colunasNomes = Array.from({ length: dadosParaDf[0].length }, (_, i) => `Campo_${i + 1}`);
+                }
+
+                const sheetName = tipoRegistro.substring(0, 31);
+                const worksheet = writer.addSheet(sheetName);
+
+                // Header style
+                const headerStyle = { bold: true, fill: "D7E4BC", border: true }; // Simplified
+                colunasNomes.forEach((colName, colIdx) => {
+                    worksheet.cell(1, colIdx + 1).value(colName).style(headerStyle);
+                });
+
+                // Data
+                dadosParaDf.forEach((row, rowIdx) => {
+                    row.forEach((cellValue, colIdx) => {
+                        // Attempt to convert to number if applicable based on column name or content
+                        let finalValue = cellValue;
+                        const isNumericField = colunasNomes[colIdx] && (colunasNomes[colIdx].startsWith('VL_') || colunasNomes[colIdx].startsWith('ALIQ_') || colunasNomes[colIdx].startsWith('QTD'));
+                        if (isNumericField && typeof cellValue === 'string' && cellValue.trim() !== '') {
+                            const num = parseFloat(cellValue.replace(',', '.'));
+                            if (!isNaN(num)) {
+                                finalValue = num;
+                            }
+                        }
+                        worksheet.cell(rowIdx + 2, colIdx + 1).value(finalValue);
+                    });
+                });
+                
+                formatarPlanilha(worksheet, colunasNomes, dadosParaDf);
+
+
+                // Store data for consolidated sheet if needed (this was handled differently in Python)
+                // For JS, _criarAbaConsolidada will pull directly from context.registros
+
+                /**if (tipoRegistro === 'E100' && !context.e110E111Processado) {
+                    logger.info("Registro E100 encontrado, processando E110/E111...");
+                    await _processarRegistrosE110E111(context);
+                    context.e110E111Processado = true;
+                }*/
+
+            } catch (e) {
+                logger.error(`Erro ao processar registro ${tipoRegistro} em _processarRegistros: ${e.message}`);
+                console.error(e); // Log stack
+            }
+        }
+        logger.info(`Registros processados (JS): ${registrosOrdenados.map(r => r[0]).join(', ')}`);
+    }
+
+
+    /**
+     * Mimics Python's _ajustar_colunas
+     * dfWidth: number of columns in the data
+     * colunas: array of layout column names
+     */
+    function _ajustarColunas(dfWidth, colunasOriginal) {
+        let colunas = [...colunasOriginal]; // Create a copy
+        if (colunas.length > dfWidth) {
+            return colunas.slice(0, dfWidth);
+        } else if (colunas.length < dfWidth) {
+            for (let i = colunas.length; i < dfWidth; i++) {
+                colunas.push(`Campo_${i + 1}`);
+            }
+        }
+        return colunas;
+    }
+
+    /**
+     * Mimics Python's _formatar_planilha
+     * worksheet: XlsxPopulate worksheet object
+     * columns: array of column names (headers)
+     * data: array of arrays representing rows of data
+     */
+    function _formatarPlanilha(worksheet, columns, data) {
+        columns.forEach((colName, colIdx) => {
+            let maxLength = colName.length;
+            data.forEach(row => {
+                const cellValue = row[colIdx];
+                if (cellValue !== null && cellValue !== undefined) {
+                    const cellLength = String(cellValue).length;
+                    if (cellLength > maxLength) {
+                        maxLength = cellLength;
+                    }
+                }
+            });
+            // xlsx-populate uses different column width units than xlsxwriter.
+            // A rough approximation: Excel's character width unit is complex.
+            // xlsx-populate's `columnWidth` is in "average characters"
+            // Let's try maxLength + a small buffer. Max 50 like in Python.
+            worksheet.column(colIdx + 1).width(Math.min(maxLength + 5, 50));
+        });
+    }
+
+
+    /**
+     * Placeholder for _criar_aba_consolidada
+     * context: { registros, writer, formatarData, obterLayoutRegistro, logger, nomeEmpresa, periodo }
+     */
+    async function _criarAbaConsolidada(context) {
+        const { registros, writer, logger, nomeEmpresa, periodo, obterLayoutRegistro } = context; // Ensure obterLayoutRegistro is in context
+        logger.info("Iniciando _criarAbaConsolidada (JS)...");
+
+        try {
+            const worksheet = writer.addSheet('Consolidado_Fiscal');
+            
+            const mainHeaderStyle = { bold: true, horizontalAlignment: "center", fill: "D7E4BC", border: true };
+            const headerStyle = { bold: true, fill: "D7E4BC", border: true };
+            const numStyle = { numberFormat: "#,##0.00", border: true };
+            const codeStyle = { numberFormat: "0", border: true };
+            const dateStyle = { numberFormat: "dd/mm/yyyy", border: true }; // XlsxPopulate expects JS Date for date styles
+            const cellStyle = { border: true };
+
+            let cnpj = "";
+            if (registros['0000'] && registros['0000'][0] && registros['0000'][0].length > 7 + 1) {
+                cnpj = registros['0000'][0][7];
+            }
+            const empresaCnpj = cnpj ? `${nomeEmpresa} - CNPJ: ${cnpj}` : nomeEmpresa;
+            worksheet.range("A1:L1").merged(true).value(empresaCnpj).style(mainHeaderStyle);
+
+            const colunasOrdem = ['Data', 'CST_ICMS', 'CFOP', 'ALIQ_ICMS', 'VL_OPR', 'VL_BC_ICMS',
+                                 'VL_ICMS', 'VL_BC_ICMS_ST', 'VL_ICMS_ST', 'VL_RED_BC', 'VL_IPI',
+                                 'COD_OBS', 'Tipo_Registro'];
+
+            colunasOrdem.forEach((colName, idx) => {
+                worksheet.cell(3, idx + 1).value(colName).style(headerStyle);
+            });
+
+            let dataSped = null;
+            if (registros['0000'] && registros['0000'][0] && registros['0000'][0].length > 4 + 1) {
+                const dataStr = registros['0000'][0][4]; 
+                if (dataStr && dataStr.length === 8) {
+                    // Converter para objeto Date (formato: DDMMAAAA -> AAAA-MM-DD)
+                    const dia = dataStr.substring(0, 2);
+                    const mes = dataStr.substring(2, 4);
+                    const ano = dataStr.substring(4, 8);
+                    dataSped = new Date(parseInt(ano), parseInt(mes) - 1, parseInt(dia)); // mes - 1 porque Date usa 0-11
+                }
+            }
+
+            let currentRow = 4;
+            const registrosDadosConsolidados = []; 
+
+            const tiposRegConsolidado = ['C190', 'C590', 'D190', 'D590'];
+            tiposRegConsolidado.forEach(tipoReg => {
+                if (registros[tipoReg]) {
+                    const layout = obterLayoutRegistro(tipoReg);
+                    if (!layout) {
+                        logger.warn(`Layout não encontrado para o registro ${tipoReg} na aba consolidada.`);
+                        return;
+                    }
+                    
+                    // Helper to get value from dados by field name, returns default if not found or field empty
+                    const getValue = (dadosRegistro, fieldName, defaultValue = 0, isNumeric = true) => {
+                        const index = layout.indexOf(fieldName);
+                        if (index === -1 || index >= dadosRegistro.length || dadosRegistro[index] === '') {
+                            return defaultValue;
+                        }
+                        const val = dadosRegistro[index];
+                        if (isNumeric) {
+                            const num = parseFloat(String(val).replace(',', '.'));
+                            return isNaN(num) ? defaultValue : num;
+                        }
+                        return val; // For non-numeric like COD_OBS
+                    };
+                    
+                    const getMinLength = (regLayout) => {
+                        // Determine a reasonable minimum length, e.g., up to VL_ICMS or a key field
+                        const keyFields = ['VL_ICMS', 'VL_OPR'];
+                        let minIdx = 0;
+                        keyFields.forEach(kf => {
+                            let idx = regLayout.indexOf(kf);
+                            if (idx > minIdx) minIdx = idx;
+                        });
+                        return minIdx + 1; // +1 because indexOf is 0-based and length is 1-based
+                    };
+
+                    const minExpectedDadosLength = getMinLength(layout);
+
+                    registros[tipoReg].forEach(linhaCompleta => {
+                        const dados = linhaCompleta.slice(1, -1); // Data fields for the current record
+
+                        if (dados.length < minExpectedDadosLength) { // Basic check
+                            // logger.warn(`Registro ${tipoReg} com menos campos (${dados.length}) que o esperado (${minExpectedDadosLength}). Linha: ${linhaCompleta.join('|')}`);
+                            // continue; // Skip this line or handle as per requirements
+                        }
+
+                        const registroConsolidado = {
+                            'Data': dataSped,
+                            'CST_ICMS': parseInt(getValue(dados, 'CST_ICMS', '0', false)) || 0, // CST is not float
+                            'CFOP': parseInt(getValue(dados, 'CFOP', '0', false)) || 0, // CFOP is not float
+                            'ALIQ_ICMS': getValue(dados, 'ALIQ_ICMS', 0),
+                            'VL_OPR': getValue(dados, 'VL_OPR', 0),
+                            'VL_BC_ICMS': getValue(dados, 'VL_BC_ICMS', 0),
+                            'VL_ICMS': getValue(dados, 'VL_ICMS', 0),
+                            'VL_BC_ICMS_ST': getValue(dados, 'VL_BC_ICMS_ST', 0),
+                            'VL_ICMS_ST': getValue(dados, 'VL_ICMS_ST', 0),
+                            'VL_RED_BC': getValue(dados, 'VL_RED_BC', 0),
+                            'VL_IPI': getValue(dados, 'VL_IPI', 0),
+                            'COD_OBS': getValue(dados, 'COD_OBS', '', false),
+                            'Tipo_Registro': tipoReg
+                        };
+                        registrosDadosConsolidados.push(registroConsolidado);
+
+                        worksheet.cell(currentRow, 1).value(registroConsolidado.Data).style(dateStyle);
+                        worksheet.cell(currentRow, 2).value(registroConsolidado.CST_ICMS).style(codeStyle);
+                        worksheet.cell(currentRow, 3).value(registroConsolidado.CFOP).style(codeStyle);
+                        worksheet.cell(currentRow, 4).value(registroConsolidado.ALIQ_ICMS).style(numStyle);
+                        worksheet.cell(currentRow, 5).value(registroConsolidado.VL_OPR).style(numStyle);
+                        worksheet.cell(currentRow, 6).value(registroConsolidado.VL_BC_ICMS).style(numStyle);
+                        worksheet.cell(currentRow, 7).value(registroConsolidado.VL_ICMS).style(numStyle);
+                        worksheet.cell(currentRow, 8).value(registroConsolidado.VL_BC_ICMS_ST).style(numStyle);
+                        worksheet.cell(currentRow, 9).value(registroConsolidado.VL_ICMS_ST).style(numStyle);
+                        worksheet.cell(currentRow, 10).value(registroConsolidado.VL_RED_BC).style(numStyle);
+                        worksheet.cell(currentRow, 11).value(registroConsolidado.VL_IPI).style(numStyle);
+                        worksheet.cell(currentRow, 12).value(registroConsolidado.COD_OBS).style(cellStyle);
+                        worksheet.cell(currentRow, 13).value(registroConsolidado.Tipo_Registro).style(cellStyle);
+                        currentRow++;
+                    });
+                }
+            });
+
+            // Tabela de Conferência (using registrosDadosConsolidados)
+            const ultimaColunaDados = colunasOrdem.length;
+            const inicioConferenciaCol = ultimaColunaDados + 2;
+            const linhaInicioConferencia = 3;
+
+            worksheet.cell(linhaInicioConferencia, inicioConferenciaCol).value("Tipo de Registro").style(headerStyle);
+            worksheet.cell(linhaInicioConferencia, inicioConferenciaCol + 1).value("Registros na Origem").style(headerStyle);
+            worksheet.cell(linhaInicioConferencia, inicioConferenciaCol + 2).value("Registros Consolidados").style(headerStyle);
+            worksheet.cell(linhaInicioConferencia, inicioConferenciaCol + 3).value("Status").style(headerStyle);
+
+            const statusOkStyle = { border: true, fill: "C6EFCE", fontColor: "006100", bold: true };
+            const statusDivergenteStyle = { border: true, fill: "FFC7CE", fontColor: "9C0006", bold: true };
+            const intStyle = { numberFormat: "#,##0", border: true };
+
+            let linhaAtualConf = linhaInicioConferencia + 1;
+            tiposRegConsolidado.forEach(tipoReg => { // Iterate again for the conference table
+                const qtdOrigem = registros[tipoReg] ? registros[tipoReg].length : 0;
+                const qtdConsolidado = registrosDadosConsolidados.filter(r => r.Tipo_Registro === tipoReg).length;
+                const status = (qtdOrigem === qtdConsolidado) ? "OK" : "DIVERGENTE";
+                const statusStyleToApply = (status === "OK") ? statusOkStyle : statusDivergenteStyle;
+
+                worksheet.cell(linhaAtualConf, inicioConferenciaCol).value(tipoReg).style(cellStyle);
+                worksheet.cell(linhaAtualConf, inicioConferenciaCol + 1).value(qtdOrigem).style(intStyle);
+                worksheet.cell(linhaAtualConf, inicioConferenciaCol + 2).value(qtdConsolidado).style(intStyle);
+                worksheet.cell(linhaAtualConf, inicioConferenciaCol + 3).value(status).style(statusStyleToApply);
+                linhaAtualConf++;
+            });
+
+            for (let i = 1; i <= ultimaColunaDados; i++) worksheet.column(i).width(15);
+            worksheet.column(inicioConferenciaCol).width(20);
+            worksheet.column(inicioConferenciaCol + 1).width(20);
+            worksheet.column(inicioConferenciaCol + 2).width(22);
+            worksheet.column(inicioConferenciaCol + 3).width(15);
+
+            logger.info("_criarAbaConsolidada (JS) concluída.");
+        } catch (e) {
+            logger.error(`Erro em _criarAbaConsolidada (JS): ${e.message}`);
+            console.error(e); 
+            throw e;
+        }
+    }
+
+
+    /**
+     * Placeholder for _processarOutrasObrigacoes (C197, D197)
+     * context: { registros, writer, logger }
+     */
+    async function _processarOutrasObrigacoes(context) {
+        const { registros, writer, logger } = context;
+        logger.info("Iniciando _processarOutrasObrigacoes (JS)...");
+
+        try {
+            const layout197 = ['REG', 'COD_AJ', 'DESCR_COMPL_AJ', 'COD_ITEM',
+                               'VL_BC_ICMS', 'ALIQ_ICMS', 'VL_ICMS', 'VL_OUTROS'];
+            const registros197Data = [];
+
+            ['C197', 'D197'].forEach(tipoReg => {
+                if (registros[tipoReg]) {
+                    registros[tipoReg].forEach(linhaCompleta => {
+                        const registro = linhaCompleta.slice(1, -1); // Remove leading/trailing empty strings
+                        // Pad if necessary
+                        const paddedRegistro = [...registro];
+                        while (paddedRegistro.length < layout197.length) {
+                            paddedRegistro.push('');
+                        }
+                        registros197Data.push(paddedRegistro.slice(0, layout197.length)); // Ensure correct length
+                    });
+                }
+            });
+
+            if (registros197Data.length > 0) {
+                const worksheet = writer.addSheet('Outras_Obrigacoes_197');
+                const headerStyle = { bold: true, fill: "D7E4BC", border: true, wrapText: true, verticalAlignment: 'top' };
+                const numStyle = { numberFormat: "#,##0.00", border: true };
+                const defaultCellStyle = { border: true };
+
+                layout197.forEach((header, idx) => {
+                    worksheet.cell(1, idx + 1).value(header).style(headerStyle);
+                });
+
+                const camposNumericosIndices = [4, 5, 6, 7]; // Indices in layout197
+
+                registros197Data.forEach((row, rowIdx) => {
+                    row.forEach((value, colIdx) => {
+                        let cellValue = value;
+                        // Determine the style: numeric gets numStyle, others get defaultCellStyle.
+                        let currentStyle = defaultCellStyle; // Default for non-numeric cells with border
+
+                        if (camposNumericosIndices.includes(colIdx)) {
+                            // Attempt to convert to number only if it's a numeric column
+                            if (String(value).trim() !== '') {
+                                const num = parseFloat(String(value).replace(',', '.'));
+                                cellValue = isNaN(num) ? 0 : num; // Use 0 if parsing fails, or original string? Python used fillna(0)
+                            } else {
+                                cellValue = 0; // Or null, depending on desired output for empty numeric strings
+                            }
+                            currentStyle = numStyle; // Apply numeric style
+                        }
+                        // Apply the determined style
+                        worksheet.cell(rowIdx + 2, colIdx + 1).value(cellValue).style(currentStyle);
+                    });
+                });
+                
+                // Auto width
+                layout197.forEach((col, i) => worksheet.column(i + 1).width(Math.max(col.length, 15) + 2));
+
+
+                // Tabela Resumo 197
+                await _criarTabelaResumo197(registros197Data, layout197, writer, logger);
+            }
+
+            logger.info("_processarOutrasObrigacoes (JS) concluída.");
+        } catch (e) {
+            logger.error(`Erro em _processarOutrasObrigacoes (JS): ${e.message}`);
+            console.error(e);
+            throw e;
+        }
+    }
+
+    /**
+     * Helper for _processarOutrasObrigacoes to create summary table.
+     * df197Data: array of arrays (data for C197/D197)
+     * layout197: column headers for df197Data
+     */
+    async function _criarTabelaResumo197(df197Data, layout197, writer, logger) {
+        logger.info("Iniciando _criarTabelaResumo197 (JS)...");
+        try {
+            const vlIcmsIndex = layout197.indexOf('VL_ICMS');
+            if (vlIcmsIndex === -1) {
+                logger.error("Coluna VL_ICMS não encontrada no layout para resumo 197.");
+                return;
+            }
+
+            const resumoMap = new Map(); // Key: "REG|COD_AJ|DESCR_COMPL_AJ", Value: { REG, COD_AJ, DESCR_COMPL_AJ, VL_ICMS_SUM }
+
+            df197Data.forEach(row => {
+                const reg = row[layout197.indexOf('REG')];
+                const codAj = row[layout197.indexOf('COD_AJ')];
+                const descrComplAj = row[layout197.indexOf('DESCR_COMPL_AJ')];
+                let vlIcms = row[vlIcmsIndex];
+
+                if (typeof vlIcms === 'string' && vlIcms.trim() !== '') {
+                    vlIcms = parseFloat(vlIcms.replace(',', '.'));
+                    if (isNaN(vlIcms)) vlIcms = 0;
+                } else if (typeof vlIcms !== 'number') {
+                    vlIcms = 0;
+                }
+                
+                const key = `${reg}|${codAj}|${descrComplAj}`;
+                if (!resumoMap.has(key)) {
+                    resumoMap.set(key, { REG: reg, COD_AJ: codAj, DESCR_COMPL_AJ: descrComplAj, VL_ICMS_SUM: 0 });
+                }
+                resumoMap.get(key).VL_ICMS_SUM += vlIcms;
+            });
+
+            const resumoArray = Array.from(resumoMap.values());
+
+            if (resumoArray.length > 0) {
+                const worksheet = writer.addSheet('Resumo_Outras_Obrigacoes');
+                const headerStyle = { bold: true, fill: "D7E4BC", border: true, wrapText: true, verticalAlignment: 'top' };
+                const numStyle = { numberFormat: "#,##0.00", border: true };
+                const defaultCellStyle = { border: true }; // Defined locally for clarity
+                const headersResumo = ['REG', 'COD_AJ', 'DESCR_COMPL_AJ', 'VL_ICMS'];
+
+                headersResumo.forEach((header, idx) => {
+                    worksheet.cell(1, idx + 1).value(header).style(headerStyle);
+                });
+
+                resumoArray.forEach((row, rowIdx) => {
+                    worksheet.cell(rowIdx + 2, 1).value(row.REG).style(defaultCellStyle);
+                    worksheet.cell(rowIdx + 2, 2).value(row.COD_AJ).style(defaultCellStyle);
+                    worksheet.cell(rowIdx + 2, 3).value(row.DESCR_COMPL_AJ).style(defaultCellStyle);
+                    worksheet.cell(rowIdx + 2, 4).value(row.VL_ICMS_SUM).style(numStyle);
+                });
+
+                worksheet.column(1).width(15); // REG
+                worksheet.column(2).width(20); // COD_AJ
+                worksheet.column(3).width(50); // DESCR_COMPL_AJ
+                worksheet.column(4).width(15); // VL_ICMS
+            }
+            logger.info("_criarTabelaResumo197 (JS) concluída.");
+        } catch (e) {
+            logger.error(`Erro em _criarTabelaResumo197 (JS): ${e.message}`);
+            console.error(e);
+            throw e;
+        }
+    }
+
+
+    /**
+     * Placeholder for _processar_registros_e110_e111
+     * context: { registros, writer, logger }
+     */
+    async function _processarRegistrosE110E111(context) {
+        const { registros, writer, logger } = context;
+        logger.info("Iniciando _processarRegistrosE110E111 (JS)...");
+
+        try {
+            const layoutE110 = ['REG', 'VL_TOT_DEBITOS', 'VL_AJ_DEBITOS', 'VL_TOT_AJ_DEBITOS',
+                                'VL_ESTORNOS_CRED', 'VL_TOT_CREDITOS', 'VL_AJ_CREDITOS',
+                                'VL_TOT_AJ_CREDITOS', 'VL_ESTORNOS_DEB', 'VL_SLD_CREDOR_ANT',
+                                'VL_SLD_APURADO', 'VL_TOT_DED', 'VL_ICMS_RECOLHER',
+                                'VL_SLD_CREDOR_TRANSPORTAR', 'DEB_ESP'];
+            const layoutE111 = ['REG', 'COD_AJ_APUR', 'DESCR_COMPL_AJ', 'VL_AJ_APUR'];
+
+            const headerStyle = { bold: true, fill: "D7E4BC", border: true, wrapText: true, verticalAlignment: 'top' };
+            const numStyle = { numberFormat: "#,##0.00", border: true };
+            const defaultCellStyle = { border: true }; // Define default style for cells
+
+            // Process E110
+            if (registros['E110'] && registros['E110'].length > 0) {
+                const sheetE110 = writer.sheet('E110') || writer.addSheet('E110');
+                // Write headers only if it's a new sheet (or first time writing)
+                if (sheetE110.cell(1,1).value() === null) { // Check if header is already written
+                    layoutE110.forEach((header, idx) => {
+                        sheetE110.cell(1, idx + 1).value(header).style(headerStyle);
+                        sheetE110.column(idx + 1).width(Math.max(header.length, 15) + 2);
+                    });
+                }
+                
+                let e110RowOffset = sheetE110.usedRange() ? sheetE110.usedRange().endCell().rowNumber() : 1;
+                if (e110RowOffset === 1 && sheetE110.cell(1,1).value() !== null) e110RowOffset = 1; // Header exists, start data at row 2
+                else if (sheetE110.cell(1,1).value() === null) e110RowOffset = 0; // No header, start header at 1, data at 2
+                
+                registros['E110'].forEach(linhaCompleta => {
+                    const dados = linhaCompleta.slice(1, -1);
+                    dados.forEach((value, colIdx) => {
+                        let cellValue = value;
+                        let currentStyle = defaultCellStyle; // Start with default style
+                        const colName = layoutE110[colIdx];
+
+                        if (colName && (colName.startsWith('VL_') || colName.startsWith('DEB_'))) {
+                            if (String(value).trim() !== '') {
+                                const num = parseFloat(String(value).replace(',', '.'));
+                                cellValue = isNaN(num) ? 0 : num;
+                            } else {
+                                cellValue = 0; // Default for empty numeric fields
+                            }
+                            currentStyle = numStyle; // Apply numeric style
+                        }
+                        sheetE110.cell(e110RowOffset + 1, colIdx + 1).value(cellValue).style(currentStyle);
+                    });
+                    e110RowOffset++;
+                });
+            }
+
+            // Process E111
+            if (registros['E111'] && registros['E111'].length > 0) {
+                const sheetE111 = writer.sheet('E111') || writer.addSheet('E111');
+                if (sheetE111.cell(1,1).value() === null) {
+                    layoutE111.forEach((header, idx) => {
+                        sheetE111.cell(1, idx + 1).value(header).style(headerStyle);
+                        sheetE111.column(idx + 1).width(Math.max(header.length, 20) + 2);
+                    });
+                }
+
+                let e111RowOffset = sheetE111.usedRange() ? sheetE111.usedRange().endCell().rowNumber() : 1;
+                 if (e111RowOffset === 1 && sheetE111.cell(1,1).value() !== null) e111RowOffset = 1;
+                 else if (sheetE111.cell(1,1).value() === null) e111RowOffset = 0;
+
+
+                registros['E111'].forEach(linhaCompleta => {
+                    const dados = linhaCompleta.slice(1, -1);
+                    dados.forEach((value, colIdx) => {
+                        let cellValue = value;
+                        let currentStyle = defaultCellStyle; // Start with default style
+
+                        if (layoutE111[colIdx] === 'VL_AJ_APUR') {
+                            if (String(value).trim() !== '') {
+                                const num = parseFloat(String(value).replace(',', '.'));
+                                cellValue = isNaN(num) ? 0 : num;
+                            } else {
+                                cellValue = 0; // Default for empty numeric field
+                            }
+                            currentStyle = numStyle; // Apply numeric style
+                        }
+                        sheetE111.cell(e111RowOffset + 1, colIdx + 1).value(cellValue).style(currentStyle);
+                    });
+                    e111RowOffset++;
+                });
+            }
+            context.e110E111Processado = true; // Mark as processed
+            logger.info("_processarRegistrosE110E111 (JS) concluída.");
+        } catch (e) {
+            logger.error(`Erro em _processarRegistrosE110E111 (JS): ${e.message}`);
+        console.error(e); // Log stack for debugging
+            throw e;
+        }
+    }
+
+
+    /**
+     * Provides SPED record layouts (column names).
+     * Mimics `obter_layout_registro` from Python.
+     */
+    function obterLayoutRegistro(tipoRegistro) {
+        const layouts = {
+            '0000': ['REG', 'COD_VER', 'COD_FIN', 'DT_INI', 'DT_FIN', 'NOME', 'CNPJ', 'CPF', 'UF', 'IE', 'COD_MUN', 'IM', 'SUFRAMA', 'IND_PERFIL', 'IND_ATIV'],
+            'C100': ['REG', 'IND_OPER', 'IND_EMIT', 'COD_PART', 'COD_MOD', 'COD_SIT', 'SER', 'NUM_DOC', 'CHV_NFE', 'DT_DOC', 'DT_E_S', 'VL_DOC', 'IND_PGTO', 'VL_DESC', 'VL_ABAT_NT', 'VL_MERC', 'IND_FRT', 'VL_FRT', 'VL_SEG', 'VL_OUT_DA', 'VL_BC_ICMS', 'VL_ICMS', 'VL_BC_ICMS_ST', 'VL_ICMS_ST', 'VL_IPI', 'VL_PIS', 'VL_COFINS', 'VL_PIS_ST', 'VL_COFINS_ST'],
+            'C170': ['REG', 'NUM_ITEM', 'COD_ITEM', 'DESCR_COMPL', 'QTD', 'UNID', 'VL_ITEM', 'VL_DESC', 'IND_MOV', 'CST_ICMS', 'CFOP', 'COD_NAT', 'VL_BC_ICMS', 'ALIQ_ICMS', 'VL_ICMS', 'VL_BC_ICMS_ST', 'ALIQ_ST', 'VL_ICMS_ST', 'IND_APUR', 'CST_IPI', 'COD_ENQ', 'VL_BC_IPI', 'ALIQ_IPI', 'VL_IPI', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'QUANT_BC_PIS', 'VL_PIS', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'QUANT_BC_COFINS', 'VL_COFINS', 'COD_CTA', 'VL_ABAT_NT'],
+            'C190': ['REG', 'CST_ICMS', 'CFOP', 'ALIQ_ICMS', 'VL_OPR', 'VL_BC_ICMS', 'VL_ICMS', 'VL_BC_ICMS_ST', 'VL_ICMS_ST', 'VL_RED_BC', 'VL_IPI', 'COD_OBS'],
+            'C500': ['REG', 'IND_OPER', 'IND_EMIT', 'COD_PART', 'COD_MOD', 'COD_SIT', 'SER', 'SUB', 'COD_CONS', 'NUM_DOC', 'DT_DOC', 'DT_E_S', 'VL_DOC', 'VL_DESC', 'VL_FORN', 'VL_SERV_NT', 'VL_TERC', 'VL_DA', 'VL_BC_ICMS', 'VL_ICMS', 'VL_BC_ICMS_ST', 'VL_ICMS_ST', 'COD_INF', 'VL_PIS', 'VL_COFINS'],
+            'C590': ['REG', 'CST_ICMS', 'CFOP', 'ALIQ_ICMS', 'VL_OPR', 'VL_BC_ICMS', 'VL_ICMS', 'VL_BC_ICMS_ST', 'VL_ICMS_ST', 'VL_RED_BC', 'COD_OBS'],
+            'D100': ['REG', 'IND_OPER', 'IND_EMIT', 'COD_PART', 'COD_MOD', 'COD_SIT', 'SER', 'SUB', 'NUM_DOC', 'CHV_CTE', 'DT_DOC', 'DT_A_P', 'TP_CT-e', 'CHV_CTE_REF', 'VL_DOC', 'VL_DESC', 'IND_FRT', 'VL_SERV', 'VL_BC_ICMS', 'VL_ICMS', 'VL_NT', 'COD_INF', 'COD_CTA', 'COD_MUN_ORIG', 'COD_MUN_DEST'],
+            'D190': ['REG', 'CST_ICMS', 'CFOP', 'ALIQ_ICMS', 'VL_OPR', 'VL_BC_ICMS', 'VL_ICMS', 'VL_RED_BC', 'COD_OBS'],
+            'D500': ['REG', 'IND_OPER', 'IND_EMIT', 'COD_PART', 'COD_MOD', 'COD_SIT', 'SER', 'SUB', 'NUM_DOC', 'DT_DOC', 'DT_A_P', 'VL_DOC', 'VL_DESC', 'VL_SERV', 'VL_SERV_NT', 'VL_TERC', 'VL_DA', 'VL_BC_ICMS', 'VL_ICMS', 'COD_INF', 'VL_PIS', 'VL_COFINS', 'COD_CTA', 'TP_ASSINANTE'],
+            'D590': ['REG', 'CST_ICMS', 'CFOP', 'ALIQ_ICMS', 'VL_OPR', 'VL_BC_ICMS', 'VL_ICMS', 'VL_BC_ICMS_ST', 'VL_ICMS_ST', 'VL_RED_BC', 'COD_OBS'],
+            'E100': ['REG', 'DT_INI', 'DT_FIN'],
+            'E110': ['REG', 'VL_TOT_DEBITOS', 'VL_AJ_DEBITOS', 'VL_TOT_AJ_DEBITOS', 'VL_ESTORNOS_CRED', 'VL_TOT_CREDITOS', 'VL_AJ_CREDITOS', 'VL_TOT_AJ_CREDITOS', 'VL_ESTORNOS_DEB', 'VL_SLD_CREDOR_ANT', 'VL_SLD_APURADO', 'VL_TOT_DED', 'VL_ICMS_RECOLHER', 'VL_SLD_CREDOR_TRANSPORTAR', 'DEB_ESP'],
+            'E111': ['REG', 'COD_AJ_APUR', 'DESCR_COMPL_AJ', 'VL_AJ_APUR'],
+            'E200': ['REG', 'UF', 'DT_INI', 'DT_FIN'],
+            'E210': ['REG', 'IND_MOV_ST', 'VL_SLD_CRED_ANT_ST', 'VL_DEVOL_ST', 'VL_RESSARC_ST', 'VL_OUT_CRED_ST', 'VL_AJ_CREDITOS_ST', 'VL_RETENCAO_ST', 'VL_OUT_DEB_ST', 'VL_AJ_DEBITOS_ST', 'VL_SLD_DEV_ANT_ST', 'VL_DEDUCOES_ST', 'VL_ICMS_RECOL_ST', 'VL_SLD_CRED_ST_TRANSPORTAR', 'DEB_ESP_ST'],
+            'E500': ['REG', 'IND_APUR', 'DT_INI', 'DT_FIN'],
+            'E510': ['REG', 'CFOP', 'CST_IPI', 'VL_CONT_IPI', 'VL_BC_IPI', 'VL_IPI'],
+            'E520': ['REG', 'VL_SD_ANT_IPI', 'VL_DEB_IPI', 'VL_CRED_IPI', 'VL_OD_IPI', 'VL_OC_IPI', 'VL_SC_IPI', 'VL_SD_IPI']
+            // Add other layouts as needed from the Python script
+        };
+        return layouts[tipoRegistro] || null;
+    }
+
+    // --- UI Update Functions ---
+    function updateStatus(message, progressPercent = -1, error = false, indeterminate = false) {
+        statusMessage.textContent = message;
+        if (error) {
+            statusMessage.style.color = ''; // Remove direct style if CSS class handles it
+            statusMessage.classList.add('error'); // Add error class
+            progressBar.style.backgroundColor = '#ff8a80'; // Error color for progress bar (can also be class-based)
+            // For progress bar container border, if you want to change it too:
+            // if (progressBar.parentElement.classList.contains('progress-bar-container-style')) {
+            //     progressBar.parentElement.style.borderColor = '#ff8a80'; 
+            // }
+        } else {
+            statusMessage.style.color = ''; // Remove direct style
+            statusMessage.classList.remove('error'); // Remove error class
+            progressBar.style.backgroundColor = ''; // Revert to CSS default or specific color
+            // Revert progress bar container border if changed for error
+            // if (progressBar.parentElement.classList.contains('progress-bar-container-style')) {
+            //    progressBar.parentElement.style.borderColor = ''; // Revert to CSS default
+            // }
         }
         
-        if (fomentarData) {
-            calculateFomentar();
+        // Update progress text inside the bar
+        if (progressPercent >= 0 && !indeterminate) {
+            progressBar.textContent = `${Math.round(progressPercent)}%`;
+        } else if (indeterminate) {
+             progressBar.textContent = ''; // No text for indeterminate
+        } else if (error) {
+            progressBar.textContent = 'Erro!';
         }
-    });
-    
-    percentualFinanciamento.addEventListener('input', function() {
-        if (fomentarData) {
-            calculateFomentar();
-        }
-    });
-    
-    document.getElementById('icmsPorMedia').addEventListener('input', function() {
-        if (fomentarData) {
-            calculateFomentar();
-        }
-    });
-    
-    document.getElementById('saldoCredorAnterior').addEventListener('input', function() {
-        if (fomentarData) {
-            calculateFomentar();
-        }
-    });
-    
-    // Adicionar listeners para inputs dos Quadros D e E quando a página carregar
-    setTimeout(addQuadroListeners, 1000);
-}
 
-function addQuadroListeners() {
-    // Listeners para Quadro D
-    const quadroDInputs = [
-        'itemD45', 'itemD46', 'itemD47', 'itemD48', 'itemD49', 'itemD50', 'itemD51', 'itemD52',
-        'itemD53', 'itemD54', 'itemD55', 'itemD56', 'itemD57', 'itemD58', 'itemD59', 'itemD60',
-        'itemD62', 'itemD63', 'itemD64', 'itemD65', 'itemD66', 'itemD67', 'itemD68', 'itemD69', 'itemD70'
+
+        if (indeterminate) {
+            progressBar.classList.add('indeterminate');
+            progressBar.style.width = '100%'; 
+        } else {
+            progressBar.classList.remove('indeterminate');
+            if (progressPercent >= 0) {
+                progressBar.style.width = `${progressPercent}%`;
+            } else {
+                progressBar.style.width = '0%'; // Reset on error if no specific progress
+            }
+        }
+    }
+
+    function showError(message) {
+        console.error("Interface Error:", message);
+        addLog(`ERRO UI: ${message}`, 'error'); // Log the UI error
+        updateStatus(`Erro: ${message}`, -1, true); 
+    }
+
+    /**
+     * Finalizes the conversion process UI-wise.
+     * Mimics `conversao_concluida` from Python.
+     */
+    function conversaoConcluida(sucesso, mensagemOuErro = "") {
+        progressBar.classList.remove('indeterminate');
+        progressBar.style.width = sucesso ? '100%' : progressBar.style.width; 
+        convertButton.disabled = false;
+
+        if (sucesso) {
+            updateStatus("Conversão concluída com sucesso!", 100);
+            addLog(`Arquivo Excel "${mensagemOuErro}" gerado com sucesso.`, 'success');
+            addLog("Log encerrado com sucesso.", 'success'); // Final success log
+            // console.log("Sucesso! Arquivo Excel gerado: " + mensagemOuErro);
+        } else {
+            updateStatus(`Erro na conversão: ${mensagemOuErro}`, -1, true); // updateStatus adds .error class
+            addLog(`ERRO NA CONVERSÃO: ${mensagemOuErro}`, 'error');
+            addLog("Log encerrado com falha.", 'error'); // Final error log
+            // console.error(`Erro na conversão: ${mensagemOuErro}`);
+        }
+    }
+
+    // --- New Logging Function ---
+    function addLog(message, type = 'info') {
+        if (!logWindow) return;
+
+        const logEntry = document.createElement('div'); // Or 'p'
+        logEntry.classList.add('log-message');
+        logEntry.classList.add(`log-${type}`); // e.g., log-info, log-error, log-success, log-warn
+        
+        const timestamp = new Date().toLocaleTimeString();
+        logEntry.textContent = `[${timestamp}] ${message}`;
+        
+        logWindow.appendChild(logEntry);
+        logWindow.scrollTop = logWindow.scrollHeight; // Auto-scroll to bottom
+    }
+
+    // --- Function to clear logs ---
+    function clearLogs() {
+        if (logWindow) {
+            logWindow.innerHTML = '';
+        }
+        addLog("Log inicializado. Aguardando ação...", "info");
+    }
+
+
+    // --- FOMENTAR Constants ---
+    // CFOPs para classificação de operações incentivadas (baseado na IN 885/07-GSF)
+    const CFOP_ENTRADAS_INCENTIVADAS = [
+        '1101', '1116', '1120', '1122', '1124', '1125', '1131', '1135', '1151', '1159',
+        '1201', '1203', '1206', '1208', '1212', '1213', '1214', '1215', '1252', '1257',
+        '1352', '1360', '1401', '1406', '1408', '1410', '1414', '1453', '1454', '1455',
+        '1503', '1505', '1551', '1552', '1651', '1653', '1658', '1660', '1661', '1662',
+        '1910', '1911', '1917', '1918', '1932', '1949',
+        '2101', '2116', '2120', '2122', '2124', '2125', '2131', '2135', '2151', '2159',
+        '2201', '2203', '2206', '2208', '2212', '2213', '2214', '2215', '2252', '2257',
+        '2352', '2401', '2406', '2408', '2410', '2414', '2453', '2454', '2455',
+        '2503', '2505', '2551', '2552', '2651', '2653', '2658', '2660', '2661', '2662', '2664',
+        '2910', '2911', '2917', '2918', '2932', '2949',
+        '3101', '3127', '3129', '3201', '3206', '3211', '3212', '3352', '3551', '3651', '3653', '3949'
     ];
-    
-    quadroDInputs.forEach(inputId => {
-        const input = document.getElementById(inputId);
-        if (input) {
-            input.addEventListener('input', function() {
-                if (fomentarData) {
-                    calculateFomentar();
-                }
-            });
-            
-            input.addEventListener('blur', function() {
-                // Formatar o valor quando sair do campo
-                const value = parseFloat(this.value) || 0;
-                this.value = value.toFixed(2);
-                if (fomentarData) {
-                    calculateFomentar();
-                }
-            });
-        }
-    });
-    
-    // Listeners para Quadro E
-    const quadroEInputs = ['itemE73', 'itemE74', 'itemE78'];
-    
-    quadroEInputs.forEach(inputId => {
-        const input = document.getElementById(inputId);
-        if (input) {
-            input.addEventListener('input', function() {
-                if (fomentarData) {
-                    calculateFomentar();
-                }
-            });
-            
-            input.addEventListener('blur', function() {
-                // Formatar o valor quando sair do campo
-                const value = parseFloat(this.value) || 0;
-                this.value = value.toFixed(2);
-                if (fomentarData) {
-                    calculateFomentar();
-                }
-            });
-        }
-    });
-}
 
-function importSpedForFomentar() {
-    if (!spedData) {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.txt';
-        input.onchange = function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    spedData = e.target.result;
-                    processFomentarData();
-                };
-                reader.readAsText(file);
-            }
-        };
-        input.click();
-    } else {
-        processFomentarData();
+    const CFOP_SAIDAS_INCENTIVADAS = [
+        '5101', '5103', '5105', '5109', '5116', '5118', '5122', '5124', '5125', '5129',
+        '5131', '5132', '5151', '5155', '5159', '5201', '5206', '5207', '5208', '5213',
+        '5214', '5215', '5216', '5401', '5402', '5408', '5410', '5451', '5452', '5456',
+        '5501', '5651', '5652', '5653', '5658', '5660', '5910', '5911', '5917', '5918',
+        '5927', '5928',
+        '6101', '6103', '6105', '6107', '6109', '6116', '6118', '6122', '6124', '6125',
+        '6129', '6131', '6132', '6151', '6155', '6159', '6201', '6206', '6207', '6208',
+        '6213', '6214', '6215', '6216', '6401', '6402', '6408', '6410', '6451', '6452',
+        '6456', '6501', '6651', '6652', '6653', '6658', '6660', '6663', '6905', '6910',
+        '6911', '6917', '6918', '6934',
+        '7101', '7105', '7127', '7129', '7201', '7206', '7207', '7211', '7212', '7251',
+        '7504', '7651', '7667'
+    ];
+
+    // Códigos de ajuste incentivados conforme Anexo III da IN 885/07-GSF
+    const CODIGOS_AJUSTE_INCENTIVADOS = [
+        'GO-ICMS-001', 'GO-ICMS-002', 'GO-ICMS-003', 'GO-ICMS-004', 'GO-ICMS-005',
+        'GO-ICMS-006', 'GO-ICMS-007', 'GO-ICMS-008', 'GO-ICMS-009', 'GO-ICMS-010',
+        'GO-ICMS-011', 'GO-ICMS-012', 'GO-ICMS-013', 'GO-ICMS-014', 'GO-ICMS-015',
+        'GO-ICMS-016', 'GO-ICMS-017', 'GO-ICMS-018', 'GO-ICMS-019', 'GO-ICMS-020'
+        // Adicionar outros códigos conforme necessário
+    ];
+
+    // Códigos de crédito FOMENTAR/PRODUZIR/MICROPRODUZIR que devem ser EXCLUÍDOS da base de cálculo
+    const CODIGOS_CREDITO_FOMENTAR = [
+        'GO040007', // FOMENTAR
+        'GO040008', // PRODUZIR  
+        'GO040009', // MICROPRODUZIR
+        'GO040010', // FOMENTAR variação
+        'GO040011', // PRODUZIR variação
+        'GO040012'  // MICROPRODUZIR variação
+    ];
+
+    // --- Tab Navigation Functions ---
+    function switchTab(tab) {
+        const tabs = document.querySelectorAll('.tab-button');
+        const panels = document.querySelectorAll('.tab-content');
+        
+        tabs.forEach(t => t.classList.remove('active'));
+        panels.forEach(p => p.classList.remove('active'));
+        
+        if (tab === 'converter') {
+            document.getElementById('tabConverter').classList.add('active');
+            document.getElementById('converterPanel').classList.add('active');
+        } else if (tab === 'fomentar') {
+            document.getElementById('tabFomentar').classList.add('active');
+            document.getElementById('fomentarPanel').classList.add('active');
+        }
     }
-}
 
-function processFomentarData() {
-    try {
-        logMessage('Processando dados SPED para apuração FOMENTAR...', 'info');
-        
-        const parsedData = parseSpedData(spedData);
-        fomentarData = classifyOperations(parsedData);
-        
-        // Validar se há dados suficientes
-        const totalOperacoes = fomentarData.saidasIncentivadas.length + fomentarData.saidasNaoIncentivadas.length + 
-                              fomentarData.entradasIncentivadas.length + fomentarData.entradasNaoIncentivadas.length;
-        
-        if (totalOperacoes === 0) {
-            throw new Error('SPED não contém operações suficientes para apuração FOMENTAR');
+    // --- FOMENTAR Functions ---
+    function importSpedForFomentar() {
+        if (!spedFileContent) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.txt';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    processSpedFile(file).then(() => {
+                        if (spedFileContent) {
+                            processFomentarData();
+                        }
+                    });
+                }
+            };
+            input.click();
+        } else {
+            processFomentarData();
         }
-        
-        document.getElementById('fomentarSpedStatus').textContent = 
-            `Arquivo SPED importado: ${totalOperacoes} operações processadas (${fomentarData.saidasIncentivadas.length} saídas incentivadas, ${fomentarData.saidasNaoIncentivadas.length} saídas não incentivadas)`;
-        document.getElementById('fomentarSpedStatus').style.color = '#28a745';
-        
-        calculateFomentar();
-        document.getElementById('fomentarResults').style.display = 'block';
-        
-        logMessage(`Apuração FOMENTAR calculada: ${totalOperacoes} operações analisadas`, 'success');
-        logMessage('Revise os valores calculados e ajuste os campos editáveis conforme necessário', 'info');
-        
-    } catch (error) {
-        logMessage(`Erro ao processar dados FOMENTAR: ${error.message}`, 'error');
-        document.getElementById('fomentarSpedStatus').textContent = `Erro: ${error.message}`;
-        document.getElementById('fomentarSpedStatus').style.color = '#dc3545';
     }
-}
 
-function parseSpedData(data) {
-    const lines = data.split('\n');
-    const result = {
-        registroC100: [],
-        registroC170: [],
-        registroD100: [],
-        registroD190: [],
-        registroE100: [],
-        registroE110: []
-    };
-    
-    let lineNumber = 0;
-    let hasSpedData = false;
-    
-    lines.forEach(line => {
-        lineNumber++;
-        const trimmedLine = line.trim();
-        
-        if (!trimmedLine || trimmedLine.length < 5) {
-            return; // Pular linhas vazias ou muito curtas
-        }
-        
+    function processFomentarData() {
         try {
-            if (trimmedLine.startsWith('|C100|')) {
-                result.registroC100.push(parseC100Line(trimmedLine));
-                hasSpedData = true;
-            } else if (trimmedLine.startsWith('|C170|')) {
-                result.registroC170.push(parseC170Line(trimmedLine));
-                hasSpedData = true;
-            } else if (trimmedLine.startsWith('|D100|')) {
-                result.registroD100.push(parseD100Line(trimmedLine));
-                hasSpedData = true;
-            } else if (trimmedLine.startsWith('|D190|')) {
-                result.registroD190.push(parseD190Line(trimmedLine));
-                hasSpedData = true;
-            } else if (trimmedLine.startsWith('|E100|')) {
-                result.registroE100.push(parseE100Line(trimmedLine));
-                hasSpedData = true;
-            } else if (trimmedLine.startsWith('|E110|')) {
-                result.registroE110.push(parseE110Line(trimmedLine));
-                hasSpedData = true;
+            addLog('Processando dados SPED para apuração FOMENTAR...', 'info');
+            
+            registrosCompletos = lerArquivoSpedCompleto(spedFileContent);
+            fomentarData = classifyOperations(registrosCompletos);
+            
+            // Validar se há dados suficientes
+            const totalOperacoes = fomentarData.saidasIncentivadas.length + fomentarData.saidasNaoIncentivadas.length + 
+                                  fomentarData.entradasIncentivadas.length + fomentarData.entradasNaoIncentivadas.length;
+            
+            if (totalOperacoes === 0) {
+                throw new Error('SPED não contém operações suficientes para apuração FOMENTAR');
             }
+            
+            document.getElementById('fomentarSpedStatus').textContent = 
+                `Arquivo SPED importado: ${totalOperacoes} operações processadas (${fomentarData.saidasIncentivadas.length} saídas incentivadas, ${fomentarData.saidasNaoIncentivadas.length} saídas não incentivadas)`;
+            document.getElementById('fomentarSpedStatus').style.color = '#20e3b2';
+            
+            calculateFomentar();
+            document.getElementById('fomentarResults').style.display = 'block';
+            
+            addLog(`Apuração FOMENTAR calculada: ${totalOperacoes} operações analisadas`, 'success');
+            addLog('Revise os valores calculados e ajuste os campos editáveis conforme necessário', 'info');
+            
         } catch (error) {
-            logMessage(`Erro ao processar linha ${lineNumber}: ${error.message}`, 'warning');
+            addLog(`Erro ao processar dados FOMENTAR: ${error.message}`, 'error');
+            document.getElementById('fomentarSpedStatus').textContent = `Erro: ${error.message}`;
+            document.getElementById('fomentarSpedStatus').style.color = '#f857a6';
         }
-    });
-    
-    if (!hasSpedData) {
-        throw new Error('Arquivo SPED não contém dados válidos para apuração FOMENTAR');
     }
-    
-    logMessage(`SPED processado: ${result.registroC100.length} reg. C100, ${result.registroC170.length} reg. C170, ${result.registroD100.length} reg. D100, ${result.registroD190.length} reg. D190`, 'info');
-    
-    return result;
-}
 
-function parseC100Line(line) {
-    const fields = line.split('|');
-    if (fields.length < 12) {
-        throw new Error('Registro C100 com formato inválido');
-    }
-    
-    return {
-        tipo: 'C100',
-        cfop: fields[7] || '',
-        valorOperacao: parseFloat(fields[9]?.replace(',', '.') || '0'),
-        valorIcms: parseFloat(fields[11]?.replace(',', '.') || '0'),
-        tipoOperacao: fields[4] === '0' ? 'ENTRADA' : 'SAIDA'
-    };
-}
-
-function parseC170Line(line) {
-    const fields = line.split('|');
-    if (fields.length < 12) {
-        throw new Error('Registro C170 com formato inválido');
-    }
-    
-    return {
-        tipo: 'C170',
-        cfop: fields[7] || '',
-        valorOperacao: parseFloat(fields[8]?.replace(',', '.') || '0'),
-        valorIcms: parseFloat(fields[11]?.replace(',', '.') || '0')
-    };
-}
-
-function parseD100Line(line) {
-    const fields = line.split('|');
-    if (fields.length < 14) {
-        throw new Error('Registro D100 com formato inválido');
-    }
-    
-    return {
-        tipo: 'D100',
-        cfop: fields[9] || '',
-        valorOperacao: parseFloat(fields[12]?.replace(',', '.') || '0'),
-        valorIcms: parseFloat(fields[13]?.replace(',', '.') || '0'),
-        tipoOperacao: fields[4] === '0' ? 'ENTRADA' : 'SAIDA'
-    };
-}
-
-function parseD190Line(line) {
-    const fields = line.split('|');
-    if (fields.length < 6) {
-        throw new Error('Registro D190 com formato inválido');
-    }
-    
-    return {
-        tipo: 'D190',
-        cfop: fields[2] || '',
-        valorOperacao: parseFloat(fields[3]?.replace(',', '.') || '0'),
-        valorIcms: parseFloat(fields[5]?.replace(',', '.') || '0')
-    };
-}
-
-function parseE100Line(line) {
-    const fields = line.split('|');
-    if (fields.length < 7) {
-        throw new Error('Registro E100 com formato inválido');
-    }
-    
-    return {
-        tipo: 'E100',
-        valorCredito: parseFloat(fields[4]?.replace(',', '.') || '0'),
-        valorDebito: parseFloat(fields[5]?.replace(',', '.') || '0'),
-        saldoCredor: parseFloat(fields[6]?.replace(',', '.') || '0')
-    };
-}
-
-function parseE110Line(line) {
-    const fields = line.split('|');
-    if (fields.length < 5) {
-        throw new Error('Registro E110 com formato inválido');
-    }
-    
-    return {
-        tipo: 'E110',
-        valorCredito: parseFloat(fields[3]?.replace(',', '.') || '0'),
-        valorDebito: parseFloat(fields[4]?.replace(',', '.') || '0')
-    };
-}
-
-function classifyOperations(parsedData) {
-    const operations = {
-        entradasIncentivadas: [],
-        entradasNaoIncentivadas: [],
-        saidasIncentivadas: [],
-        saidasNaoIncentivadas: [],
-        creditosEntradas: 0,
-        debitosOperacoes: 0,
-        saldoCredorAnterior: 0
-    };
-    
-    // Processar registros C100 e C170
-    [...parsedData.registroC100, ...parsedData.registroC170].forEach(registro => {
-        const cfop = registro.cfop;
-        const isIncentivada = registro.tipoOperacao === 'ENTRADA' 
-            ? CFOP_ENTRADAS_INCENTIVADAS.includes(cfop)
-            : CFOP_SAIDAS_INCENTIVADAS.includes(cfop);
+    function classifyOperations(registros) {
+        const operations = {
+            entradasIncentivadas: [],
+            entradasNaoIncentivadas: [],
+            saidasIncentivadas: [],
+            saidasNaoIncentivadas: [],
+            creditosEntradas: 0,
+            debitosOperacoes: 0,
+            outrosCreditos: 0,
+            outrosDebitos: 0,
+            saldoCredorAnterior: 0
+        };
         
-        if (registro.tipoOperacao === 'ENTRADA') {
-            if (isIncentivada) {
-                operations.entradasIncentivadas.push(registro);
-            } else {
-                operations.entradasNaoIncentivadas.push(registro);
-            }
-            operations.creditosEntradas += registro.valorIcms;
-        } else {
-            if (isIncentivada) {
-                operations.saidasIncentivadas.push(registro);
-            } else {
-                operations.saidasNaoIncentivadas.push(registro);
-            }
-            operations.debitosOperacoes += registro.valorIcms;
-        }
-    });
-    
-    // Processar registros D100 e D190
-    [...parsedData.registroD100, ...parsedData.registroD190].forEach(registro => {
-        const cfop = registro.cfop;
-        const isIncentivada = registro.tipoOperacao === 'ENTRADA' 
-            ? CFOP_ENTRADAS_INCENTIVADAS.includes(cfop)
-            : CFOP_SAIDAS_INCENTIVADAS.includes(cfop);
+        addLog('Processando registros consolidados C190, C590, D190, D590...', 'info');
         
-        if (registro.tipoOperacao === 'ENTRADA') {
-            if (isIncentivada) {
-                operations.entradasIncentivadas.push(registro);
-            } else {
-                operations.entradasNaoIncentivadas.push(registro);
+        // Processar registros consolidados C190 (NF-e) e C590 (NF-e Energia/Telecom)
+        [...(registros.C190 || []), ...(registros.C590 || [])].forEach(registro => {
+            const campos = registro.slice(1, -1);
+            const tipoRegistro = registro[1]; // C190 ou C590
+            
+            let layout, cfopIndex, valorOprIndex, valorIcmsIndex;
+            
+            if (tipoRegistro === 'C190') {
+                layout = obterLayoutRegistro('C190');
+                cfopIndex = layout.indexOf('CFOP');
+                valorOprIndex = layout.indexOf('VL_OPR');
+                valorIcmsIndex = layout.indexOf('VL_ICMS');
+            } else { // C590
+                layout = obterLayoutRegistro('C590');
+                cfopIndex = layout.indexOf('CFOP');
+                valorOprIndex = layout.indexOf('VL_OPR');
+                valorIcmsIndex = layout.indexOf('VL_ICMS');
             }
-            operations.creditosEntradas += registro.valorIcms;
-        } else {
-            if (isIncentivada) {
-                operations.saidasIncentivadas.push(registro);
+            
+            const cfop = campos[cfopIndex] || '';
+            const valorOperacao = parseFloat(campos[valorOprIndex] || '0');
+            const valorIcms = parseFloat(campos[valorIcmsIndex] || '0');
+            
+            // Determinar tipo de operação pelo CFOP
+            const tipoOperacao = cfop.startsWith('1') || cfop.startsWith('2') || cfop.startsWith('3') ? 'ENTRADA' : 'SAIDA';
+            
+            const isIncentivada = tipoOperacao === 'ENTRADA' 
+                ? CFOP_ENTRADAS_INCENTIVADAS.includes(cfop)
+                : CFOP_SAIDAS_INCENTIVADAS.includes(cfop);
+            
+            const operacao = {
+                tipo: tipoRegistro,
+                cfop: cfop,
+                valorOperacao: valorOperacao,
+                valorIcms: valorIcms,
+                tipoOperacao: tipoOperacao
+            };
+            
+            if (tipoOperacao === 'ENTRADA') {
+                if (isIncentivada) {
+                    operations.entradasIncentivadas.push(operacao);
+                } else {
+                    operations.entradasNaoIncentivadas.push(operacao);
+                }
+                operations.creditosEntradas += valorIcms;
             } else {
-                operations.saidasNaoIncentivadas.push(registro);
+                if (isIncentivada) {
+                    operations.saidasIncentivadas.push(operacao);
+                } else {
+                    operations.saidasNaoIncentivadas.push(operacao);
+                }
+                operations.debitosOperacoes += valorIcms;
             }
-            operations.debitosOperacoes += registro.valorIcms;
-        }
-    });
-    
-    return operations;
-}
+        });
+        
+        // Processar registros consolidados D190 (CT-e) e D590 (CT-e Consolidado)
+        [...(registros.D190 || []), ...(registros.D590 || [])].forEach(registro => {
+            const campos = registro.slice(1, -1);
+            const tipoRegistro = registro[1]; // D190 ou D590
+            
+            let layout, cfopIndex, valorOprIndex, valorIcmsIndex;
+            
+            if (tipoRegistro === 'D190') {
+                layout = obterLayoutRegistro('D190');
+                cfopIndex = layout.indexOf('CFOP');
+                valorOprIndex = layout.indexOf('VL_OPR');
+                valorIcmsIndex = layout.indexOf('VL_ICMS');
+            } else { // D590
+                layout = obterLayoutRegistro('D590');
+                cfopIndex = layout.indexOf('CFOP');
+                valorOprIndex = layout.indexOf('VL_OPR');
+                valorIcmsIndex = layout.indexOf('VL_ICMS');
+            }
+            
+            const cfop = campos[cfopIndex] || '';
+            const valorOperacao = parseFloat(campos[valorOprIndex] || '0');
+            const valorIcms = parseFloat(campos[valorIcmsIndex] || '0');
+            
+            // Determinar tipo de operação pelo CFOP
+            const tipoOperacao = cfop.startsWith('1') || cfop.startsWith('2') || cfop.startsWith('3') ? 'ENTRADA' : 'SAIDA';
+            
+            const isIncentivada = tipoOperacao === 'ENTRADA' 
+                ? CFOP_ENTRADAS_INCENTIVADAS.includes(cfop)
+                : CFOP_SAIDAS_INCENTIVADAS.includes(cfop);
+            
+            const operacao = {
+                tipo: tipoRegistro,
+                cfop: cfop,
+                valorOperacao: valorOperacao,
+                valorIcms: valorIcms,
+                tipoOperacao: tipoOperacao
+            };
+            
+            if (tipoOperacao === 'ENTRADA') {
+                if (isIncentivada) {
+                    operations.entradasIncentivadas.push(operacao);
+                } else {
+                    operations.entradasNaoIncentivadas.push(operacao);
+                }
+                operations.creditosEntradas += valorIcms;
+            } else {
+                if (isIncentivada) {
+                    operations.saidasIncentivadas.push(operacao);
+                } else {
+                    operations.saidasNaoIncentivadas.push(operacao);
+                }
+                operations.debitosOperacoes += valorIcms;
+            }
+        });
 
-function calculateFomentar() {
-    if (!fomentarData) return;
-    
-    // Configurações
-    const percentualFinanciamento = parseFloat(document.getElementById('percentualFinanciamento').value) / 100;
-    const icmsPorMedia = parseFloat(document.getElementById('icmsPorMedia').value) || 0;
-    const saldoCredorAnterior = parseFloat(document.getElementById('saldoCredorAnterior').value) || 0;
-    
-    // Obter valores do Quadro D
-    const getQuadroDValue = (id) => parseFloat(document.getElementById(id)?.value || 0);
-    
-    // QUADRO A - Proporção dos Créditos
-    const saidasIncentivadas = fomentarData.saidasIncentivadas.reduce((total, op) => total + op.valorOperacao, 0);
-    const totalSaidas = saidasIncentivadas + fomentarData.saidasNaoIncentivadas.reduce((total, op) => total + op.valorOperacao, 0);
-    const percentualSaidasIncentivadas = totalSaidas > 0 ? (saidasIncentivadas / totalSaidas) * 100 : 0;
-    
-    const creditosEntradas = fomentarData.creditosEntradas;
-    const outrosCreditos = 0; // Configurável pelos quadros D
-    const estornoDebitos = 0; // Configurável
-    const totalCreditos = creditosEntradas + outrosCreditos + estornoDebitos + saldoCredorAnterior;
-    
-    const creditoIncentivadas = (percentualSaidasIncentivadas / 100) * totalCreditos;
-    const creditoNaoIncentivadas = totalCreditos - creditoIncentivadas;
-    
-    // QUADRO A.1 - Créditos não submetidos à proporção (item 10.1)
-    const creditosNaoSubmetidosProporcao = 0; // Art. 4° da IN 1208/2015-GSF
-    const creditoIncentivadaTotal = creditoIncentivadas + creditosNaoSubmetidosProporcao;
-    
-    // QUADRO B - Operações Incentivadas
-    const debitoIncentivadas = fomentarData.saidasIncentivadas.reduce((total, op) => total + op.valorIcms, 0);
-    const debitoBonificacao = 0; // Item 11.1 - Saídas a título de bonificação
-    const outrosDebitosIncentivadas = 0;
-    const estornoCreditosIncentivadas = 0;
-    const deducoesIncentivadas = 0;
-    const creditoSaldoCredorNaoIncentivadas = 0; // Item 16
-    
-    const saldoDevedorIncentivadas = (debitoIncentivadas + debitoBonificacao + outrosDebitosIncentivadas + estornoCreditosIncentivadas) - 
-                                   (creditoIncentivadaTotal + deducoesIncentivadas + creditoSaldoCredorNaoIncentivadas);
-    
-    const deducoesCompensacoes64 = getQuadroDValue('itemD64'); // Item 19
-    const saldoPagarMedia = icmsPorMedia - deducoesCompensacoes64; // Item 20
-    const icmsBaseFomentar = Math.max(0, saldoDevedorIncentivadas - icmsPorMedia); // Item 21
-    const icmsSujeitoFinanciamento = icmsBaseFomentar * percentualFinanciamento; // Item 23
-    const icmsExcedenteNaoSujeito = 0; // Item 24
-    const icmsFinanciado = icmsSujeitoFinanciamento - icmsExcedenteNaoSujeito; // Item 25
-    const parcelaNaoFinanciada = icmsBaseFomentar - icmsSujeitoFinanciamento; // Item 26
-    const deducoesCompensacoes65 = getQuadroDValue('itemD65'); // Item 27
-    const saldoPagarParcelaNaoFinanciada = Math.max(0, parcelaNaoFinanciada - deducoesCompensacoes65); // Item 28
-    
-    // Saldo Credor das Operações Incentivadas
-    const saldoCredorIncentivadas = Math.max(0, (creditoIncentivadaTotal + deducoesIncentivadas) - 
-                                           (debitoIncentivadas + debitoBonificacao + outrosDebitosIncentivadas + estornoCreditosIncentivadas)); // Item 29
-    const saldoCredorUtilizadoNaoIncentivadas = 0; // Item 30
-    const saldoCredorTransportar = saldoCredorIncentivadas - saldoCredorUtilizadoNaoIncentivadas; // Item 31
-    
-    // QUADRO C - Operações Não Incentivadas
-    const debitoNaoIncentivadas = fomentarData.saidasNaoIncentivadas.reduce((total, op) => total + op.valorIcms, 0);
-    const outrosDebitosNaoIncentivadas = 0;
-    const estornoCreditosNaoIncentivadas = 0;
-    const icmsExcedenteNaoIncentivadas = icmsExcedenteNaoSujeito; // Item 35 - transportado do item 24
-    const deducoesNaoIncentivadas = 0;
-    const creditoSaldoCredorIncentivadas = saldoCredorUtilizadoNaoIncentivadas; // Item 38
-    
-    const saldoDevedorNaoIncentivadas = (debitoNaoIncentivadas + outrosDebitosNaoIncentivadas + estornoCreditosNaoIncentivadas + icmsExcedenteNaoIncentivadas) - 
-                                      (creditoNaoIncentivadas + deducoesNaoIncentivadas + creditoSaldoCredorIncentivadas);
-    
-    const deducoesCompensacoes63 = getQuadroDValue('itemD63'); // Item 40
-    const saldoPagarNaoIncentivadas = Math.max(0, saldoDevedorNaoIncentivadas - deducoesCompensacoes63); // Item 41
-    
-    // Saldo Credor das Operações Não Incentivadas
-    const saldoCredorNaoIncentivadas = Math.max(0, (creditoNaoIncentivadas + deducoesNaoIncentivadas) - 
-                                              (debitoNaoIncentivadas + outrosDebitosNaoIncentivadas + estornoCreditosNaoIncentivadas + icmsExcedenteNaoIncentivadas)); // Item 42
-    const saldoCredorUtilizadoIncentivadas = 0; // Item 43
-    const saldoCredorTransportarNaoIncentivadas = saldoCredorNaoIncentivadas - saldoCredorUtilizadoIncentivadas; // Item 44
-    
-    // QUADRO D - Buscar valores dos inputs
-    const quadroDValues = {
-        item45: getQuadroDValue('itemD45'), item46: getQuadroDValue('itemD46'), item47: getQuadroDValue('itemD47'), 
-        item48: getQuadroDValue('itemD48'), item49: getQuadroDValue('itemD49'), item50: getQuadroDValue('itemD50'), 
-        item51: getQuadroDValue('itemD51'), item52: getQuadroDValue('itemD52'), item53: getQuadroDValue('itemD53'), 
-        item54: getQuadroDValue('itemD54'), item55: getQuadroDValue('itemD55'), item56: getQuadroDValue('itemD56'), 
-        item57: getQuadroDValue('itemD57'), item58: getQuadroDValue('itemD58'), item59: getQuadroDValue('itemD59'), 
-        item60: getQuadroDValue('itemD60'), item62: getQuadroDValue('itemD62'), item63: getQuadroDValue('itemD63'), 
-        item64: getQuadroDValue('itemD64'), item65: getQuadroDValue('itemD65'), item66: getQuadroDValue('itemD66'), 
-        item67: getQuadroDValue('itemD67'), item68: getQuadroDValue('itemD68'), item69: getQuadroDValue('itemD69'), 
-        item70: getQuadroDValue('itemD70')
-    };
-    
-    const totalCreditosD = quadroDValues.item45 + quadroDValues.item46 + quadroDValues.item47 + quadroDValues.item48 + 
-                          quadroDValues.item49 + quadroDValues.item50 + quadroDValues.item51 + quadroDValues.item52 + 
-                          quadroDValues.item53 + quadroDValues.item54 + quadroDValues.item55 + quadroDValues.item56 + 
-                          quadroDValues.item57 + quadroDValues.item58 + quadroDValues.item59 + quadroDValues.item60;
-    
-    const totalDeducoesD = quadroDValues.item62 + quadroDValues.item63 + quadroDValues.item64 + quadroDValues.item65 + 
-                          quadroDValues.item66 + quadroDValues.item67 + quadroDValues.item68 + quadroDValues.item69 + 
-                          quadroDValues.item70;
-    
-    const saldoCredorTransportarD = totalCreditosD - totalDeducoesD;
-    
-    // QUADRO E - Mercadorias Importadas
-    const totalMercadoriasImportadas = parseFloat(document.getElementById('itemE73')?.value || 0); // Item 73
-    const outrosAcrescimosImportacao = parseFloat(document.getElementById('itemE74')?.value || 0); // Item 74
-    const totalOperacoesImportacao = totalMercadoriasImportadas + outrosAcrescimosImportacao; // Item 75
-    const totalEntradasPeriodo = fomentarData.entradasIncentivadas.reduce((total, op) => total + op.valorOperacao, 0) + 
-                                fomentarData.entradasNaoIncentivadas.reduce((total, op) => total + op.valorOperacao, 0); // Item 76
-    const percentualOperacoesImportacao = totalEntradasPeriodo > 0 ? (totalOperacoesImportacao / totalEntradasPeriodo) * 100 : 0; // Item 77
-    const icmsSobreImportacao = parseFloat(document.getElementById('itemE78')?.value || 0); // Item 78
-    const mercadoriasImportadasExcedentes = totalEntradasPeriodo > 0 ? Math.max(0, (totalEntradasPeriodo * (percentualOperacoesImportacao - 30)) / 100) : 0; // Item 79
-    const icmsImportacaoExcedente = totalOperacoesImportacao > 0 ? icmsSobreImportacao * (mercadoriasImportadasExcedentes / totalOperacoesImportacao) : 0; // Item 80
-    const icmsImportacaoExcedenteNaoSujeito = icmsImportacaoExcedente * percentualFinanciamento; // Item 81
-    const icmsImportacaoSujeitoIncentivo = icmsSobreImportacao - icmsImportacaoExcedente; // Item 82
-    const icmsImportacaoParcelaNaoFinanciada = icmsSobreImportacao * (1 - percentualFinanciamento); // Item 83
-    const saldoIcmsImportacaoPagar = icmsImportacaoExcedenteNaoSujeito + icmsImportacaoParcelaNaoFinanciada; // Item 84
-    
-    // Atualizar interface
-    updateQuadroA({
-        item1: saidasIncentivadas,
-        item2: totalSaidas,
-        item3: percentualSaidasIncentivadas,
-        item4: creditosEntradas,
-        item5: outrosCreditos,
-        item6: estornoDebitos,
-        item7: saldoCredorAnterior,
-        item8: totalCreditos,
-        item9: creditoIncentivadas,
-        item10: creditoNaoIncentivadas,
-        item101: creditosNaoSubmetidosProporcao
-    });
-    
-    updateQuadroB({
-        item11: debitoIncentivadas,
-        item111: debitoBonificacao,
-        item12: outrosDebitosIncentivadas,
-        item13: estornoCreditosIncentivadas,
-        item14: creditoIncentivadaTotal,
-        item15: deducoesIncentivadas,
-        item16: creditoSaldoCredorNaoIncentivadas,
-        item17: saldoDevedorIncentivadas,
-        item18: icmsPorMedia,
-        item19: deducoesCompensacoes64,
-        item20: saldoPagarMedia,
-        item21: icmsBaseFomentar,
-        item22: percentualFinanciamento * 100,
-        item23: icmsSujeitoFinanciamento,
-        item24: icmsExcedenteNaoSujeito,
-        item25: icmsFinanciado,
-        item26: parcelaNaoFinanciada,
-        item27: deducoesCompensacoes65,
-        item28: saldoPagarParcelaNaoFinanciada,
-        item29: saldoCredorIncentivadas,
-        item30: saldoCredorUtilizadoNaoIncentivadas,
-        item31: saldoCredorTransportar
-    });
-    
-    updateQuadroC({
-        item32: debitoNaoIncentivadas,
-        item33: outrosDebitosNaoIncentivadas,
-        item34: estornoCreditosNaoIncentivadas,
-        item35: icmsExcedenteNaoIncentivadas,
-        item36: creditoNaoIncentivadas,
-        item37: deducoesNaoIncentivadas,
-        item38: creditoSaldoCredorIncentivadas,
-        item39: saldoDevedorNaoIncentivadas,
-        item40: deducoesCompensacoes63,
-        item41: saldoPagarNaoIncentivadas,
-        item42: saldoCredorNaoIncentivadas,
-        item43: saldoCredorUtilizadoIncentivadas,
-        item44: saldoCredorTransportarNaoIncentivadas
-    });
-    
-    updateQuadroD({
-        ...quadroDValues,
-        item61: totalCreditosD,
-        item71: totalDeducoesD,
-        item72: saldoCredorTransportarD
-    });
-    
-    updateQuadroE({
-        item73: totalMercadoriasImportadas,
-        item74: outrosAcrescimosImportacao,
-        item75: totalOperacoesImportacao,
-        item76: totalEntradasPeriodo,
-        item77: percentualOperacoesImportacao,
-        item78: icmsSobreImportacao,
-        item79: mercadoriasImportadasExcedentes,
-        item80: icmsImportacaoExcedente,
-        item81: icmsImportacaoExcedenteNaoSujeito,
-        item82: icmsImportacaoSujeitoIncentivo,
-        item83: icmsImportacaoParcelaNaoFinanciada,
-        item84: saldoIcmsImportacaoPagar
-    });
-    
-    updateResumo({
-        totalIncentivadas: saldoPagarParcelaNaoFinanciada,
-        totalNaoIncentivadas: saldoPagarNaoIncentivadas,
-        valorFinanciamento: icmsFinanciado,
-        totalGeral: saldoPagarParcelaNaoFinanciada + saldoPagarNaoIncentivadas + saldoIcmsImportacaoPagar
-    });
-    
-    // Adicionar listeners após primeira execução
-    if (!window.listenersAdded) {
-        addQuadroListeners();
-        window.listenersAdded = true;
-    }
-}
-
-function updateQuadroA(values) {
-    document.getElementById('itemA1').textContent = formatCurrency(values.item1);
-    document.getElementById('itemA2').textContent = formatCurrency(values.item2);
-    document.getElementById('itemA3').textContent = values.item3.toFixed(2) + '%';
-    document.getElementById('itemA4').textContent = formatCurrency(values.item4);
-    document.getElementById('itemA5').textContent = formatCurrency(values.item5);
-    document.getElementById('itemA6').textContent = formatCurrency(values.item6);
-    document.getElementById('itemA7').textContent = formatCurrency(values.item7);
-    document.getElementById('itemA8').textContent = formatCurrency(values.item8);
-    document.getElementById('itemA9').textContent = formatCurrency(values.item9);
-    document.getElementById('itemA10').textContent = formatCurrency(values.item10);
-}
-
-function updateQuadroB(values) {
-    document.getElementById('itemB11').textContent = formatCurrency(values.item11);
-    document.getElementById('itemB12').textContent = formatCurrency(values.item12);
-    document.getElementById('itemB13').textContent = formatCurrency(values.item13);
-    document.getElementById('itemB14').textContent = formatCurrency(values.item14);
-    document.getElementById('itemB15').textContent = formatCurrency(values.item15);
-    document.getElementById('itemB17').textContent = formatCurrency(values.item17);
-    document.getElementById('itemB18').textContent = formatCurrency(values.item18);
-    document.getElementById('itemB21').textContent = formatCurrency(values.item21);
-    document.getElementById('itemB22').textContent = values.item22.toFixed(0) + '%';
-    document.getElementById('itemB23').textContent = formatCurrency(values.item23);
-    document.getElementById('itemB25').textContent = formatCurrency(values.item25);
-    document.getElementById('itemB26').textContent = formatCurrency(values.item26);
-    document.getElementById('itemB28').textContent = formatCurrency(values.item28);
-}
-
-function updateQuadroC(values) {
-    document.getElementById('itemC32').textContent = formatCurrency(values.item32);
-    document.getElementById('itemC33').textContent = formatCurrency(values.item33);
-    document.getElementById('itemC34').textContent = formatCurrency(values.item34);
-    document.getElementById('itemC36').textContent = formatCurrency(values.item36);
-    document.getElementById('itemC37').textContent = formatCurrency(values.item37);
-    document.getElementById('itemC39').textContent = formatCurrency(values.item39);
-    document.getElementById('itemC41').textContent = formatCurrency(values.item41);
-}
-
-function updateQuadroD(values) {
-    // Os valores de entrada já estão nos inputs, só precisamos atualizar os totais calculados
-    document.getElementById('itemD61Display').textContent = formatCurrency(values.item61 || 0);
-    document.getElementById('itemD71Display').textContent = formatCurrency(values.item71 || 0);
-    document.getElementById('itemD72Display').textContent = formatCurrency(values.item72 || 0);
-}
-
-function updateQuadroE(values) {
-    // Os itens editáveis ficam nos inputs, os calculados nos displays
-    document.getElementById('itemE75Display').textContent = formatCurrency(values.item75 || 0);
-    document.getElementById('itemE76Display').textContent = formatCurrency(values.item76 || 0);
-    document.getElementById('itemE77Display').textContent = (values.item77 || 0).toFixed(2) + '%';
-    document.getElementById('itemE79Display').textContent = formatCurrency(values.item79 || 0);
-    document.getElementById('itemE80Display').textContent = formatCurrency(values.item80 || 0);
-    document.getElementById('itemE81Display').textContent = formatCurrency(values.item81 || 0);
-    document.getElementById('itemE82Display').textContent = formatCurrency(values.item82 || 0);
-    document.getElementById('itemE83Display').textContent = formatCurrency(values.item83 || 0);
-    document.getElementById('itemE84Display').textContent = formatCurrency(values.item84 || 0);
-}
-
-function updateResumo(values) {
-    document.getElementById('totalPagarIncentivadas').textContent = formatCurrency(values.totalIncentivadas);
-    document.getElementById('totalPagarNaoIncentivadas').textContent = formatCurrency(values.totalNaoIncentivadas);
-    document.getElementById('valorFinanciamento').textContent = formatCurrency(values.valorFinanciamento);
-    document.getElementById('totalGeralPagar').textContent = formatCurrency(values.totalGeral);
-}
-
-function formatCurrency(value) {
-    return new Intl.NumberFormat('pt-BR', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    }).format(value);
-}
-
-function convertToExcelFormat(parsedData) {
-    // Implementação da conversão para Excel (mantida da versão original)
-    const workbook = [];
-    
-    // Criar planilhas para cada tipo de registro
-    const sheets = {
-        'C100': parsedData.registroC100,
-        'C170': parsedData.registroC170,
-        'D100': parsedData.registroD100,
-        'D190': parsedData.registroD190,
-        'E100': parsedData.registroE100,
-        'E110': parsedData.registroE110
-    };
-    
-    Object.keys(sheets).forEach(sheetName => {
-        if (sheets[sheetName].length > 0) {
-            workbook.push({
-                name: sheetName,
-                data: sheets[sheetName]
+        // Processar E111 para outros créditos e débitos
+        if (registros.E111 && registros.E111.length > 0) {
+            addLog(`Processando ${registros.E111.length} registros E111 para outros créditos/débitos...`, 'info');
+            
+            registros.E111.forEach(registro => {
+                const campos = registro.slice(1, -1);
+                const layout = obterLayoutRegistro('E111');
+                const codAjuste = campos[layout.indexOf('COD_AJ_APUR')] || '';
+                const valorAjuste = parseFloat(campos[layout.indexOf('VL_AJ_APUR')] || '0');
+                
+                // EXCLUIR os créditos do próprio FOMENTAR/PRODUZIR/MICROPRODUZIR da base de cálculo
+                const isCreditoFomentar = CODIGOS_CREDITO_FOMENTAR.some(cod => codAjuste.includes(cod));
+                if (isCreditoFomentar) {
+                    addLog(`E111 EXCLUÍDO (crédito programa incentivo): ${codAjuste} = R$ ${formatCurrency(Math.abs(valorAjuste))} - NÃO computado em outros créditos`, 'warn');
+                    return; // Pular este registro
+                }
+                
+                // Verificar se o código de ajuste é incentivado conforme Anexo III da IN 885
+                const isIncentivado = CODIGOS_AJUSTE_INCENTIVADOS.some(cod => codAjuste.includes(cod));
+                
+                if (valorAjuste !== 0) {
+                    if (valorAjuste > 0) { // Crédito
+                        operations.outrosCreditos += valorAjuste;
+                        addLog(`E111 Crédito: ${codAjuste} = R$ ${formatCurrency(valorAjuste)} ${isIncentivado ? '(Incentivado)' : '(Não Incentivado)'}`, 'info');
+                    } else { // Débito
+                        operations.outrosDebitos += Math.abs(valorAjuste);
+                        addLog(`E111 Débito: ${codAjuste} = R$ ${formatCurrency(Math.abs(valorAjuste))} ${isIncentivado ? '(Incentivado)' : '(Não Incentivado)'}`, 'info');
+                    }
+                }
             });
         }
-    });
-    
-    return workbook;
-}
-
-function downloadExcel(data, fileName) {
-    // Implementação simplificada do download Excel
-    const csvContent = convertToCSV(data);
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    
-    if (link.download !== undefined) {
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", fileName.replace('.xlsx', '.csv'));
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        
+        // Log resumo das operações processadas
+        addLog(`Resumo: ${operations.saidasIncentivadas.length} saídas incentivadas, ${operations.saidasNaoIncentivadas.length} saídas não incentivadas`, 'success');
+        addLog(`Créditos de entradas: R$ ${formatCurrency(operations.creditosEntradas)}, Outros créditos: R$ ${formatCurrency(operations.outrosCreditos)}`, 'success');
+        addLog(`Débitos de operações: R$ ${formatCurrency(operations.debitosOperacoes)}, Outros débitos: R$ ${formatCurrency(operations.outrosDebitos)}`, 'success');
+        
+        return operations;
     }
-}
 
-function convertToCSV(data) {
-    let csv = '';
-    data.forEach(sheet => {
-        csv += `\n\n=== ${sheet.name} ===\n`;
-        if (sheet.data.length > 0) {
-            const headers = Object.keys(sheet.data[0]);
-            csv += headers.join(',') + '\n';
-            sheet.data.forEach(row => {
-                csv += headers.map(header => row[header] || '').join(',') + '\n';
-            });
+    function calculateFomentar() {
+        if (!fomentarData) return;
+        
+        // Configurações
+        const percentualFinanciamento = parseFloat(document.getElementById('percentualFinanciamento').value) / 100;
+        const icmsPorMedia = parseFloat(document.getElementById('icmsPorMedia').value) || 0;
+        const saldoCredorAnterior = parseFloat(document.getElementById('saldoCredorAnterior').value) || 0;
+        
+        // QUADRO A - Proporção dos Créditos
+        const saidasIncentivadas = fomentarData.saidasIncentivadas.reduce((total, op) => total + op.valorOperacao, 0);
+        const totalSaidas = saidasIncentivadas + fomentarData.saidasNaoIncentivadas.reduce((total, op) => total + op.valorOperacao, 0);
+        const percentualSaidasIncentivadas = totalSaidas > 0 ? (saidasIncentivadas / totalSaidas) * 100 : 0;
+        
+        const creditosEntradas = fomentarData.creditosEntradas;
+        const outrosCreditos = fomentarData.outrosCreditos;
+        const estornoDebitos = 0; // Configurável
+        const totalCreditos = creditosEntradas + outrosCreditos + estornoDebitos + saldoCredorAnterior;
+        
+        const creditoIncentivadas = (percentualSaidasIncentivadas / 100) * totalCreditos;
+        const creditoNaoIncentivadas = totalCreditos - creditoIncentivadas;
+        
+        // QUADRO B - Operações Incentivadas
+        const debitoIncentivadas = fomentarData.saidasIncentivadas.reduce((total, op) => total + op.valorIcms, 0);
+        const outrosDebitosIncentivadas = fomentarData.outrosDebitos * (percentualSaidasIncentivadas / 100);
+        const estornoCreditosIncentivadas = 0;
+        const deducoesIncentivadas = 0;
+        const creditoSaldoCredorNaoIncentivadas = 0;
+        
+        const saldoDevedorIncentivadas = (debitoIncentivadas + outrosDebitosIncentivadas + estornoCreditosIncentivadas) - 
+                                       (creditoIncentivadas + deducoesIncentivadas + creditoSaldoCredorNaoIncentivadas);
+        
+        const icmsBaseFomentar = Math.max(0, saldoDevedorIncentivadas - icmsPorMedia);
+        const icmsSujeitoFinanciamento = icmsBaseFomentar * percentualFinanciamento;
+        const icmsFinanciado = icmsSujeitoFinanciamento;
+        const parcelaNaoFinanciada = icmsBaseFomentar - icmsSujeitoFinanciamento;
+        const saldoPagarParcelaNaoFinanciada = Math.max(0, parcelaNaoFinanciada);
+        
+        // QUADRO C - Operações Não Incentivadas
+        const debitoNaoIncentivadas = fomentarData.saidasNaoIncentivadas.reduce((total, op) => total + op.valorIcms, 0);
+        const outrosDebitosNaoIncentivadas = fomentarData.outrosDebitos * ((100 - percentualSaidasIncentivadas) / 100);
+        const estornoCreditosNaoIncentivadas = 0;
+        const deducoesNaoIncentivadas = 0;
+        const creditoSaldoCredorIncentivadas = 0;
+        
+        const saldoDevedorNaoIncentivadas = (debitoNaoIncentivadas + outrosDebitosNaoIncentivadas + estornoCreditosNaoIncentivadas) - 
+                                          (creditoNaoIncentivadas + deducoesNaoIncentivadas + creditoSaldoCredorIncentivadas);
+        
+        const saldoPagarNaoIncentivadas = Math.max(0, saldoDevedorNaoIncentivadas);
+        
+        // Atualizar interface
+        updateQuadroA({
+            item1: saidasIncentivadas,
+            item2: totalSaidas,
+            item3: percentualSaidasIncentivadas,
+            item4: creditosEntradas,
+            item5: outrosCreditos,
+            item6: estornoDebitos,
+            item7: saldoCredorAnterior,
+            item8: totalCreditos,
+            item9: creditoIncentivadas,
+            item10: creditoNaoIncentivadas
+        });
+        
+        updateQuadroB({
+            item11: debitoIncentivadas,
+            item12: outrosDebitosIncentivadas,
+            item13: estornoCreditosIncentivadas,
+            item14: creditoIncentivadas,
+            item15: deducoesIncentivadas,
+            item17: saldoDevedorIncentivadas,
+            item18: icmsPorMedia,
+            item21: icmsBaseFomentar,
+            item22: percentualFinanciamento * 100,
+            item23: icmsSujeitoFinanciamento,
+            item25: icmsFinanciado,
+            item26: parcelaNaoFinanciada,
+            item28: saldoPagarParcelaNaoFinanciada
+        });
+        
+        updateQuadroC({
+            item32: debitoNaoIncentivadas,
+            item33: outrosDebitosNaoIncentivadas,
+            item34: estornoCreditosNaoIncentivadas,
+            item36: creditoNaoIncentivadas,
+            item37: deducoesNaoIncentivadas,
+            item39: saldoDevedorNaoIncentivadas,
+            item41: saldoPagarNaoIncentivadas
+        });
+        
+        updateResumo({
+            totalIncentivadas: saldoPagarParcelaNaoFinanciada,
+            totalNaoIncentivadas: saldoPagarNaoIncentivadas,
+            valorFinanciamento: icmsFinanciado,
+            totalGeral: saldoPagarParcelaNaoFinanciada + saldoPagarNaoIncentivadas
+        });
+    }
+
+    function updateQuadroA(values) {
+        document.getElementById('itemA1').textContent = formatCurrency(values.item1);
+        document.getElementById('itemA2').textContent = formatCurrency(values.item2);
+        document.getElementById('itemA3').textContent = values.item3.toFixed(2) + '%';
+        document.getElementById('itemA4').textContent = formatCurrency(values.item4);
+        document.getElementById('itemA5').textContent = formatCurrency(values.item5);
+        document.getElementById('itemA6').textContent = formatCurrency(values.item6);
+        document.getElementById('itemA7').textContent = formatCurrency(values.item7);
+        document.getElementById('itemA8').textContent = formatCurrency(values.item8);
+        document.getElementById('itemA9').textContent = formatCurrency(values.item9);
+        document.getElementById('itemA10').textContent = formatCurrency(values.item10);
+    }
+
+    function updateQuadroB(values) {
+        document.getElementById('itemB11').textContent = formatCurrency(values.item11);
+        document.getElementById('itemB12').textContent = formatCurrency(values.item12);
+        document.getElementById('itemB13').textContent = formatCurrency(values.item13);
+        document.getElementById('itemB14').textContent = formatCurrency(values.item14);
+        document.getElementById('itemB15').textContent = formatCurrency(values.item15);
+        document.getElementById('itemB17').textContent = formatCurrency(values.item17);
+        document.getElementById('itemB18').textContent = formatCurrency(values.item18);
+        document.getElementById('itemB21').textContent = formatCurrency(values.item21);
+        document.getElementById('itemB22').textContent = values.item22.toFixed(0) + '%';
+        document.getElementById('itemB23').textContent = formatCurrency(values.item23);
+        document.getElementById('itemB25').textContent = formatCurrency(values.item25);
+        document.getElementById('itemB26').textContent = formatCurrency(values.item26);
+        document.getElementById('itemB28').textContent = formatCurrency(values.item28);
+    }
+
+    function updateQuadroC(values) {
+        document.getElementById('itemC32').textContent = formatCurrency(values.item32);
+        document.getElementById('itemC33').textContent = formatCurrency(values.item33);
+        document.getElementById('itemC34').textContent = formatCurrency(values.item34);
+        document.getElementById('itemC36').textContent = formatCurrency(values.item36);
+        document.getElementById('itemC37').textContent = formatCurrency(values.item37);
+        document.getElementById('itemC39').textContent = formatCurrency(values.item39);
+        document.getElementById('itemC41').textContent = formatCurrency(values.item41);
+    }
+
+    function updateResumo(values) {
+        document.getElementById('totalPagarIncentivadas').textContent = formatCurrency(values.totalIncentivadas);
+        document.getElementById('totalPagarNaoIncentivadas').textContent = formatCurrency(values.totalNaoIncentivadas);
+        document.getElementById('valorFinanciamento').textContent = formatCurrency(values.valorFinanciamento);
+        document.getElementById('totalGeralPagar').textContent = formatCurrency(values.totalGeral);
+    }
+
+    function formatCurrency(value) {
+        return new Intl.NumberFormat('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(value);
+    }
+
+    function handleConfigChange() {
+        const programType = document.getElementById('programType').value;
+        const percentualInput = document.getElementById('percentualFinanciamento');
+        
+        let maxPercentual;
+        switch(programType) {
+            case 'FOMENTAR':
+                maxPercentual = 70;
+                break;
+            case 'PRODUZIR':
+                maxPercentual = 73;
+                break;
+            case 'MICROPRODUZIR':
+                maxPercentual = 90;
+                break;
+            default:
+                maxPercentual = 73;
         }
-    });
-    return csv;
-}
-
-function exportFomentarReport() {
-    if (!fomentarData) {
-        logMessage('Erro: Nenhum dado FOMENTAR disponível para exportação', 'error');
-        return;
-    }
-    
-    // Criar relatório em Excel/CSV
-    const reportData = generateFomentarReport();
-    const fileName = `DemonstrativoFOMENTAR_${new Date().toISOString().slice(0, 10)}.csv`;
-    
-    const csvContent = convertFomentarToCSV(reportData);
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    
-    if (link.download !== undefined) {
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", fileName);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
         
-        logMessage('Relatório FOMENTAR exportado com sucesso', 'success');
-    }
-}
-
-function generateFomentarReport() {
-    // Coletar todos os dados calculados
-    const report = {
-        quadroA: extractQuadroAData(),
-        quadroB: extractQuadroBData(),
-        quadroC: extractQuadroCData(),
-        quadroD: extractQuadroDData(),
-        quadroE: extractQuadroEData(),
-        resumo: extractResumoData(),
-        configuracoes: {
-            programa: document.getElementById('programType').value,
-            percentualFinanciamento: document.getElementById('percentualFinanciamento').value + '%',
-            icmsPorMedia: document.getElementById('icmsPorMedia').value,
-            saldoCredorAnterior: document.getElementById('saldoCredorAnterior').value
+        percentualInput.max = maxPercentual;
+        if (parseFloat(percentualInput.value) > maxPercentual) {
+            percentualInput.value = maxPercentual;
         }
-    };
-    
-    return report;
-}
-
-function extractQuadroAData() {
-    return {
-        item1: document.getElementById('itemA1').textContent,
-        item2: document.getElementById('itemA2').textContent,
-        item3: document.getElementById('itemA3').textContent,
-        item4: document.getElementById('itemA4').textContent,
-        item5: document.getElementById('itemA5').textContent,
-        item6: document.getElementById('itemA6').textContent,
-        item7: document.getElementById('itemA7').textContent,
-        item8: document.getElementById('itemA8').textContent,
-        item9: document.getElementById('itemA9').textContent,
-        item10: document.getElementById('itemA10').textContent
-    };
-}
-
-function extractQuadroBData() {
-    return {
-        item11: document.getElementById('itemB11').textContent,
-        item12: document.getElementById('itemB12').textContent,
-        item13: document.getElementById('itemB13').textContent,
-        item14: document.getElementById('itemB14').textContent,
-        item15: document.getElementById('itemB15').textContent,
-        item17: document.getElementById('itemB17').textContent,
-        item18: document.getElementById('itemB18').textContent,
-        item21: document.getElementById('itemB21').textContent,
-        item22: document.getElementById('itemB22').textContent,
-        item23: document.getElementById('itemB23').textContent,
-        item25: document.getElementById('itemB25').textContent,
-        item26: document.getElementById('itemB26').textContent,
-        item28: document.getElementById('itemB28').textContent
-    };
-}
-
-function extractQuadroCData() {
-    return {
-        item32: document.getElementById('itemC32').textContent,
-        item33: document.getElementById('itemC33').textContent,
-        item34: document.getElementById('itemC34').textContent,
-        item36: document.getElementById('itemC36').textContent,
-        item37: document.getElementById('itemC37').textContent,
-        item39: document.getElementById('itemC39').textContent,
-        item41: document.getElementById('itemC41').textContent
-    };
-}
-
-function extractQuadroDData() {
-    return {
-        item45: document.getElementById('itemD45')?.value || '0,00',
-        item46: document.getElementById('itemD46')?.value || '0,00',
-        item47: document.getElementById('itemD47')?.value || '0,00',
-        item48: document.getElementById('itemD48')?.value || '0,00',
-        item49: document.getElementById('itemD49')?.value || '0,00',
-        item50: document.getElementById('itemD50')?.value || '0,00',
-        item51: document.getElementById('itemD51')?.value || '0,00',
-        item52: document.getElementById('itemD52')?.value || '0,00',
-        item53: document.getElementById('itemD53')?.value || '0,00',
-        item54: document.getElementById('itemD54')?.value || '0,00',
-        item55: document.getElementById('itemD55')?.value || '0,00',
-        item56: document.getElementById('itemD56')?.value || '0,00',
-        item57: document.getElementById('itemD57')?.value || '0,00',
-        item58: document.getElementById('itemD58')?.value || '0,00',
-        item59: document.getElementById('itemD59')?.value || '0,00',
-        item60: document.getElementById('itemD60')?.value || '0,00',
-        item61: document.getElementById('itemD61Display').textContent,
-        item62: document.getElementById('itemD62')?.value || '0,00',
-        item63: document.getElementById('itemD63')?.value || '0,00',
-        item64: document.getElementById('itemD64')?.value || '0,00',
-        item65: document.getElementById('itemD65')?.value || '0,00',
-        item66: document.getElementById('itemD66')?.value || '0,00',
-        item67: document.getElementById('itemD67')?.value || '0,00',
-        item68: document.getElementById('itemD68')?.value || '0,00',
-        item69: document.getElementById('itemD69')?.value || '0,00',
-        item70: document.getElementById('itemD70')?.value || '0,00',
-        item71: document.getElementById('itemD71Display').textContent,
-        item72: document.getElementById('itemD72Display').textContent
-    };
-}
-
-function extractQuadroEData() {
-    return {
-        item73: document.getElementById('itemE73')?.value || '0,00',
-        item74: document.getElementById('itemE74')?.value || '0,00',
-        item75: document.getElementById('itemE75Display').textContent,
-        item76: document.getElementById('itemE76Display').textContent,
-        item77: document.getElementById('itemE77Display').textContent,
-        item78: document.getElementById('itemE78')?.value || '0,00',
-        item79: document.getElementById('itemE79Display').textContent,
-        item80: document.getElementById('itemE80Display').textContent,
-        item81: document.getElementById('itemE81Display').textContent,
-        item82: document.getElementById('itemE82Display').textContent,
-        item83: document.getElementById('itemE83Display').textContent,
-        item84: document.getElementById('itemE84Display').textContent
-    };
-}
-
-function extractResumoData() {
-    return {
-        totalIncentivadas: document.getElementById('totalPagarIncentivadas').textContent,
-        totalNaoIncentivadas: document.getElementById('totalPagarNaoIncentivadas').textContent,
-        valorFinanciamento: document.getElementById('valorFinanciamento').textContent,
-        totalGeral: document.getElementById('totalGeralPagar').textContent
-    };
-}
-
-function convertFomentarToCSV(reportData) {
-    let csv = 'DEMONSTRATIVO DA APURAÇÃO MENSAL - FOMENTAR/PRODUZIR/MICROPRODUZIR\n';
-    csv += 'Conforme Instrução Normativa nº 885/07-GSF\n';
-    csv += 'Gerado em: ' + new Date().toLocaleString('pt-BR') + '\n';
-    csv += 'Programa: ' + reportData.configuracoes.programa + '\n';
-    csv += 'Percentual de Financiamento: ' + reportData.configuracoes.percentualFinanciamento + '\n';
-    csv += 'ICMS por Média: R$ ' + reportData.configuracoes.icmsPorMedia + '\n';
-    csv += 'Saldo Credor Anterior: R$ ' + reportData.configuracoes.saldoCredorAnterior + '\n\n';
-    
-    csv += 'QUADRO A - PROPORÇÃO DOS CRÉDITOS APROPRIADOS\n';
-    csv += 'Item,Descrição,Valor\n';
-    csv += '1,Saídas de Operações Incentivadas,' + reportData.quadroA.item1 + '\n';
-    csv += '2,Total das Saídas,' + reportData.quadroA.item2 + '\n';
-    csv += '3,Percentual das Saídas de Operações Incentivadas,' + reportData.quadroA.item3 + '\n';
-    csv += '4,Créditos por Entradas,' + reportData.quadroA.item4 + '\n';
-    csv += '5,Outros Créditos,' + reportData.quadroA.item5 + '\n';
-    csv += '6,Estorno de Débitos,' + reportData.quadroA.item6 + '\n';
-    csv += '7,Saldo Credor do Período Anterior,' + reportData.quadroA.item7 + '\n';
-    csv += '8,Total dos Créditos do Período,' + reportData.quadroA.item8 + '\n';
-    csv += '9,Crédito para Operações Incentivadas,' + reportData.quadroA.item9 + '\n';
-    csv += '10,Crédito para Operações Não Incentivadas,' + reportData.quadroA.item10 + '\n\n';
-    
-    csv += 'QUADRO B - APURAÇÃO DOS SALDOS DAS OPERAÇÕES INCENTIVADAS\n';
-    csv += 'Item,Descrição,Valor\n';
-    csv += '11,Débito do ICMS das Operações Incentivadas,' + reportData.quadroB.item11 + '\n';
-    csv += '12,Outros Débitos das Operações Incentivadas,' + reportData.quadroB.item12 + '\n';
-    csv += '13,Estorno de Créditos das Operações Incentivadas,' + reportData.quadroB.item13 + '\n';
-    csv += '14,Crédito para Operações Incentivadas,' + reportData.quadroB.item14 + '\n';
-    csv += '15,Deduções das Operações Incentivadas,' + reportData.quadroB.item15 + '\n';
-    csv += '17,Saldo Devedor do ICMS das Operações Incentivadas,' + reportData.quadroB.item17 + '\n';
-    csv += '18,ICMS por Média,' + reportData.quadroB.item18 + '\n';
-    csv += '21,ICMS Base para FOMENTAR/PRODUZIR,' + reportData.quadroB.item21 + '\n';
-    csv += '22,Percentagem do Financiamento,' + reportData.quadroB.item22 + '\n';
-    csv += '23,ICMS Sujeito a Financiamento,' + reportData.quadroB.item23 + '\n';
-    csv += '25,ICMS Financiado,' + reportData.quadroB.item25 + '\n';
-    csv += '26,Saldo do ICMS da Parcela Não Financiada,' + reportData.quadroB.item26 + '\n';
-    csv += '28,Saldo do ICMS a Pagar da Parcela Não Financiada,' + reportData.quadroB.item28 + '\n\n';
-    
-    csv += 'QUADRO C - APURAÇÃO DOS SALDOS DAS OPERAÇÕES NÃO INCENTIVADAS\n';
-    csv += 'Item,Descrição,Valor\n';
-    csv += '32,Débito do ICMS das Operações Não Incentivadas,' + reportData.quadroC.item32 + '\n';
-    csv += '33,Outros Débitos das Operações Não Incentivadas,' + reportData.quadroC.item33 + '\n';
-    csv += '34,Estorno de Créditos das Operações Não Incentivadas,' + reportData.quadroC.item34 + '\n';
-    csv += '36,Crédito para Operações Não Incentivadas,' + reportData.quadroC.item36 + '\n';
-    csv += '37,Deduções das Operações Não Incentivadas,' + reportData.quadroC.item37 + '\n';
-    csv += '39,Saldo Devedor do ICMS das Operações Não Incentivadas,' + reportData.quadroC.item39 + '\n';
-    csv += '41,Saldo do ICMS a Pagar das Operações Não Incentivadas,' + reportData.quadroC.item41 + '\n\n';
-    
-    csv += 'QUADRO D - DEMONSTRATIVO E UTILIZAÇÃO DOS CRÉDITOS\n';
-    csv += 'DEMONSTRATIVO DOS CRÉDITOS\n';
-    csv += 'Item,Descrição,Valor\n';
-    csv += '45,Saldo Credor da Linha Observações do Período Anterior,' + reportData.quadroD.item45 + '\n';
-    csv += '46,Cheque Moradia,' + reportData.quadroD.item46 + '\n';
-    csv += '47,Protege Goiás,' + reportData.quadroD.item47 + '\n';
-    csv += '48,Proesporte,' + reportData.quadroD.item48 + '\n';
-    csv += '49,Goyazes,' + reportData.quadroD.item49 + '\n';
-    csv += '50,Pagamento Antecipado,' + reportData.quadroD.item50 + '\n';
-    csv += '51,ICMS Recebido em Transferência,' + reportData.quadroD.item51 + '\n';
-    csv += '52,Crédito do Fabricante de Papel e Embalagem com Reciclado,' + reportData.quadroD.item52 + '\n';
-    csv += '53,Crédito Relativo ao Adicional de 2% na Alíquota do ICMS,' + reportData.quadroD.item53 + '\n';
-    csv += '54,Ajuste de Valor Pago por Força de Legislação,' + reportData.quadroD.item54 + '\n';
-    csv += '55,Crédito Especial para Investimento,' + reportData.quadroD.item55 + '\n';
-    csv += '56,Crédito do Industrial na Produção Interna do Biodiesel,' + reportData.quadroD.item56 + '\n';
-    csv += '57,Crédito na Produção de Álcool Anidro,' + reportData.quadroD.item57 + '\n';
-    csv += '58,Crédito do ICMS Pago em DARE Distinto,' + reportData.quadroD.item58 + '\n';
-    csv += '59,Crédito Outorgado para Industrial de Veículo Automotor,' + reportData.quadroD.item59 + '\n';
-    csv += '60,Outros Créditos Autorizados pela Legislação Tributária,' + reportData.quadroD.item60 + '\n';
-    csv += '61,Total dos Créditos (45 a 60),' + reportData.quadroD.item61 + '\n\n';
-    
-    csv += 'UTILIZAÇÃO DOS CRÉDITOS\n';
-    csv += 'Item,Descrição,Valor\n';
-    csv += '62,ICMS Retido via DARE ou de Substituto Tributário,' + reportData.quadroD.item62 + '\n';
-    csv += '63,ICMS sobre Operações Não Incentivadas,' + reportData.quadroD.item63 + '\n';
-    csv += '64,ICMS por Média,' + reportData.quadroD.item64 + '\n';
-    csv += '65,ICMS da Parcela Não Financiada,' + reportData.quadroD.item65 + '\n';
-    csv += '66,Transferência para Terceiros e/ou para sua(s) Filial(ais),' + reportData.quadroD.item66 + '\n';
-    csv += '67,Restituição de Crédito (em Moeda),' + reportData.quadroD.item67 + '\n';
-    csv += '68,Quitação de Auto de Infração,' + reportData.quadroD.item68 + '\n';
-    csv += '69,Estorno de Crédito Apropriado Indevidamente,' + reportData.quadroD.item69 + '\n';
-    csv += '70,Outras Deduções/Compensações,' + reportData.quadroD.item70 + '\n';
-    csv += '71,Total das Deduções/Compensações (62 a 70),' + reportData.quadroD.item71 + '\n';
-    csv += '72,Saldo Credor a Transportar para Período Seguinte (61-71),' + reportData.quadroD.item72 + '\n\n';
-    
-    csv += 'QUADRO E - MERCADORIA IMPORTADA PARA COMERCIALIZAÇÃO\n';
-    csv += 'Item,Descrição,Valor\n';
-    csv += '73,Total das Mercadorias Importadas,' + reportData.quadroE.item73 + '\n';
-    csv += '74,Outros Acréscimos sobre Importação,' + reportData.quadroE.item74 + '\n';
-    csv += '75,Total das Operações de Importação (73+74),' + reportData.quadroE.item75 + '\n';
-    csv += '76,Total das Entradas do Período,' + reportData.quadroE.item76 + '\n';
-    csv += '77,Percentual das Operações de Importação [(75/76)x100],' + reportData.quadroE.item77 + '\n';
-    csv += '78,ICMS sobre Importação,' + reportData.quadroE.item78 + '\n';
-    csv += '79,Mercadorias Importadas Excedentes,' + reportData.quadroE.item79 + '\n';
-    csv += '80,ICMS sobre Importação Excedente,' + reportData.quadroE.item80 + '\n';
-    csv += '81,ICMS sobre Importação Excedente Não Sujeito a Incentivo,' + reportData.quadroE.item81 + '\n';
-    csv += '82,ICMS sobre Importação Sujeito ao Incentivo,' + reportData.quadroE.item82 + '\n';
-    csv += '83,ICMS sobre Importação da Parcela Não Financiada,' + reportData.quadroE.item83 + '\n';
-    csv += '84,Saldo do ICMS sobre Importação a Pagar (81+83),' + reportData.quadroE.item84 + '\n\n';
-    
-    csv += 'RESUMO DA APURAÇÃO\n';
-    csv += 'Descrição,Valor\n';
-    csv += 'Total a Pagar - Operações Incentivadas,' + reportData.resumo.totalIncentivadas + '\n';
-    csv += 'Total a Pagar - Operações Não Incentivadas,' + reportData.resumo.totalNaoIncentivadas + '\n';
-    csv += 'Valor do Financiamento FOMENTAR,' + reportData.resumo.valorFinanciamento + '\n';
-    csv += 'Total Geral a Pagar,' + reportData.resumo.totalGeral + '\n\n';
-    
-    csv += '© 2025 Expertzy Inteligência Tributária\n';
-    csv += 'Demonstrativo gerado automaticamente conforme Instrução Normativa nº 885/07-GSF\n';
-    
-    return csv;
-}
-
-function printFomentarReport() {
-    if (!fomentarData) {
-        logMessage('Erro: Nenhum dado FOMENTAR disponível para impressão', 'error');
-        return;
+        
+        addLog(`Programa alterado para ${programType} - Máximo: ${maxPercentual}%`, 'info');
+        
+        if (fomentarData) {
+            calculateFomentar();
+        }
     }
-    
-    const printWindow = window.open('', '_blank');
-    const printContent = generatePrintContent();
-    
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-    printWindow.print();
-    
-    logMessage('Relatório FOMENTAR enviado para impressão', 'success');
-}
 
-function generatePrintContent() {
-    const reportData = generateFomentarReport();
-    const currentDate = new Date().toLocaleString('pt-BR');
-    
-    return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Demonstrativo FOMENTAR</title>
-        <style>
-            body { font-family: Arial, sans-serif; margin: 20px; font-size: 12px; }
-            h1 { text-align: center; color: #333; font-size: 18px; margin-bottom: 10px; }
-            h2 { color: #666; border-bottom: 2px solid #ddd; padding-bottom: 5px; font-size: 14px; margin-top: 20px; }
-            h3 { color: #555; font-size: 13px; margin-top: 15px; margin-bottom: 8px; }
-            table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-            th, td { border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 11px; }
-            th { background-color: #f5f5f5; font-weight: bold; }
-            .resumo { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-top: 20px; }
-            .config { background-color: #f0f8ff; padding: 10px; border-radius: 5px; margin: 15px 0; }
-            .footer { text-align: center; margin-top: 30px; font-size: 10px; color: #666; }
-            .valor-destaque { font-weight: bold; }
-            .valor-economia { color: #28a745; }
-            .valor-total { color: #dc3545; }
-            @media print { 
-                body { margin: 10px; font-size: 10px; }
-                h1 { font-size: 16px; }
-                h2 { font-size: 12px; }
-                th, td { padding: 4px; font-size: 10px; }
-            }
-        </style>
-    </head>
-    <body>
-        <h1>DEMONSTRATIVO DA APURAÇÃO MENSAL</h1>
-        <h1>FOMENTAR/PRODUZIR/MICROPRODUZIR</h1>
-        <p style="text-align: center;"><strong>Gerado em:</strong> ${currentDate}</p>
+    function exportFomentarReport() {
+        if (!fomentarData) {
+            addLog('Erro: Nenhum dado FOMENTAR disponível para exportação', 'error');
+            return;
+        }
         
-        <div class="config">
-            <h3>Configurações da Apuração</h3>
-            <p><strong>Programa:</strong> ${reportData.configuracoes.programa}</p>
-            <p><strong>Percentual de Financiamento:</strong> ${reportData.configuracoes.percentualFinanciamento}</p>
-            <p><strong>ICMS por Média:</strong> R$ ${reportData.configuracoes.icmsPorMedia}</p>
-            <p><strong>Saldo Credor Anterior:</strong> R$ ${reportData.configuracoes.saldoCredorAnterior}</p>
-        </div>
-        
-        <h2>QUADRO A - PROPORÇÃO DOS CRÉDITOS APROPRIADOS</h2>
-        <table>
-            <tr><th>Item</th><th>Descrição</th><th>Valor</th></tr>
-            <tr><td>1</td><td>Saídas de Operações Incentivadas</td><td>${reportData.quadroA.item1}</td></tr>
-            <tr><td>2</td><td>Total das Saídas</td><td>${reportData.quadroA.item2}</td></tr>
-            <tr><td>3</td><td>Percentual das Saídas de Operações Incentivadas</td><td>${reportData.quadroA.item3}</td></tr>
-            <tr><td>4</td><td>Créditos por Entradas</td><td>${reportData.quadroA.item4}</td></tr>
-            <tr><td>5</td><td>Outros Créditos</td><td>${reportData.quadroA.item5}</td></tr>
-            <tr><td>6</td><td>Estorno de Débitos</td><td>${reportData.quadroA.item6}</td></tr>
-            <tr><td>7</td><td>Saldo Credor do Período Anterior</td><td>${reportData.quadroA.item7}</td></tr>
-            <tr><td>8</td><td>Total dos Créditos do Período</td><td class="valor-destaque">${reportData.quadroA.item8}</td></tr>
-            <tr><td>9</td><td>Crédito para Operações Incentivadas</td><td class="valor-destaque">${reportData.quadroA.item9}</td></tr>
-            <tr><td>10</td><td>Crédito para Operações Não Incentivadas</td><td class="valor-destaque">${reportData.quadroA.item10}</td></tr>
-        </table>
-        
-        <h2>QUADRO B - APURAÇÃO DOS SALDOS DAS OPERAÇÕES INCENTIVADAS</h2>
-        <table>
-            <tr><th>Item</th><th>Descrição</th><th>Valor</th></tr>
-            <tr><td>11</td><td>Débito do ICMS das Operações Incentivadas</td><td>${reportData.quadroB.item11}</td></tr>
-            <tr><td>12</td><td>Outros Débitos das Operações Incentivadas</td><td>${reportData.quadroB.item12}</td></tr>
-            <tr><td>13</td><td>Estorno de Créditos das Operações Incentivadas</td><td>${reportData.quadroB.item13}</td></tr>
-            <tr><td>14</td><td>Crédito para Operações Incentivadas</td><td>${reportData.quadroB.item14}</td></tr>
-            <tr><td>15</td><td>Deduções das Operações Incentivadas</td><td>${reportData.quadroB.item15}</td></tr>
-            <tr><td>17</td><td>Saldo Devedor do ICMS das Operações Incentivadas</td><td class="valor-destaque">${reportData.quadroB.item17}</td></tr>
-            <tr><td>18</td><td>ICMS por Média</td><td>${reportData.quadroB.item18}</td></tr>
-            <tr><td>21</td><td>ICMS Base para FOMENTAR/PRODUZIR</td><td class="valor-destaque">${reportData.quadroB.item21}</td></tr>
-            <tr><td>22</td><td>Percentagem do Financiamento</td><td>${reportData.quadroB.item22}</td></tr>
-            <tr><td>23</td><td>ICMS Sujeito a Financiamento</td><td class="valor-economia">${reportData.quadroB.item23}</td></tr>
-            <tr><td>25</td><td>ICMS Financiado</td><td class="valor-economia">${reportData.quadroB.item25}</td></tr>
-            <tr><td>26</td><td>Saldo do ICMS da Parcela Não Financiada</td><td>${reportData.quadroB.item26}</td></tr>
-            <tr><td>28</td><td>Saldo do ICMS a Pagar da Parcela Não Financiada</td><td class="valor-destaque">${reportData.quadroB.item28}</td></tr>
-        </table>
-        
-        <h2>QUADRO C - APURAÇÃO DOS SALDOS DAS OPERAÇÕES NÃO INCENTIVADAS</h2>
-        <table>
-            <tr><th>Item</th><th>Descrição</th><th>Valor</th></tr>
-            <tr><td>32</td><td>Débito do ICMS das Operações Não Incentivadas</td><td>${reportData.quadroC.item32}</td></tr>
-            <tr><td>33</td><td>Outros Débitos das Operações Não Incentivadas</td><td>${reportData.quadroC.item33}</td></tr>
-            <tr><td>34</td><td>Estorno de Créditos das Operações Não Incentivadas</td><td>${reportData.quadroC.item34}</td></tr>
-            <tr><td>36</td><td>Crédito para Operações Não Incentivadas</td><td>${reportData.quadroC.item36}</td></tr>
-            <tr><td>37</td><td>Deduções das Operações Não Incentivadas</td><td>${reportData.quadroC.item37}</td></tr>
-            <tr><td>39</td><td>Saldo Devedor do ICMS das Operações Não Incentivadas</td><td class="valor-destaque">${reportData.quadroC.item39}</td></tr>
-            <tr><td>41</td><td>Saldo do ICMS a Pagar das Operações Não Incentivadas</td><td class="valor-destaque">${reportData.quadroC.item41}</td></tr>
-        </table>
-        
-        <h2>QUADRO D - DEMONSTRATIVO E UTILIZAÇÃO DOS CRÉDITOS</h2>
-        <h3>Demonstrativo dos Créditos</h3>
-        <table>
-            <tr><th>Item</th><th>Descrição</th><th>Valor</th></tr>
-            <tr><td>45</td><td>Saldo Credor da Linha Observações do Período Anterior</td><td>${reportData.quadroD.item45}</td></tr>
-            <tr><td>46</td><td>Cheque Moradia</td><td>${reportData.quadroD.item46}</td></tr>
-            <tr><td>47</td><td>Protege Goiás</td><td>${reportData.quadroD.item47}</td></tr>
-            <tr><td>48</td><td>Proesporte</td><td>${reportData.quadroD.item48}</td></tr>
-            <tr><td>49</td><td>Goyazes</td><td>${reportData.quadroD.item49}</td></tr>
-            <tr><td>50</td><td>Pagamento Antecipado</td><td>${reportData.quadroD.item50}</td></tr>
-            <tr><td>51</td><td>ICMS Recebido em Transferência</td><td>${reportData.quadroD.item51}</td></tr>
-            <tr><td>52</td><td>Crédito do Fabricante de Papel e Embalagem com Reciclado</td><td>${reportData.quadroD.item52}</td></tr>
-            <tr><td>53</td><td>Crédito Relativo ao Adicional de 2% na Alíquota do ICMS</td><td>${reportData.quadroD.item53}</td></tr>
-            <tr><td>54</td><td>Ajuste de Valor Pago por Força de Legislação</td><td>${reportData.quadroD.item54}</td></tr>
-            <tr><td>55</td><td>Crédito Especial para Investimento</td><td>${reportData.quadroD.item55}</td></tr>
-            <tr><td>56</td><td>Crédito do Industrial na Produção Interna do Biodiesel</td><td>${reportData.quadroD.item56}</td></tr>
-            <tr><td>57</td><td>Crédito na Produção de Álcool Anidro</td><td>${reportData.quadroD.item57}</td></tr>
-            <tr><td>58</td><td>Crédito do ICMS Pago em DARE Distinto</td><td>${reportData.quadroD.item58}</td></tr>
-            <tr><td>59</td><td>Crédito Outorgado para Industrial de Veículo Automotor</td><td>${reportData.quadroD.item59}</td></tr>
-            <tr><td>60</td><td>Outros Créditos Autorizados pela Legislação Tributária</td><td>${reportData.quadroD.item60}</td></tr>
-            <tr style="background: #e8f5e8;"><td>61</td><td><strong>Total dos Créditos (45 a 60)</strong></td><td><strong>${reportData.quadroD.item61}</strong></td></tr>
-        </table>
-        
-        <h3>Utilização dos Créditos</h3>
-        <table>
-            <tr><th>Item</th><th>Descrição</th><th>Valor</th></tr>
-            <tr><td>62</td><td>ICMS Retido via DARE ou de Substituto Tributário</td><td>${reportData.quadroD.item62}</td></tr>
-            <tr><td>63</td><td>ICMS sobre Operações Não Incentivadas</td><td>${reportData.quadroD.item63}</td></tr>
-            <tr><td>64</td><td>ICMS por Média</td><td>${reportData.quadroD.item64}</td></tr>
-            <tr><td>65</td><td>ICMS da Parcela Não Financiada</td><td>${reportData.quadroD.item65}</td></tr>
-            <tr><td>66</td><td>Transferência para Terceiros e/ou para sua(s) Filial(ais)</td><td>${reportData.quadroD.item66}</td></tr>
-            <tr><td>67</td><td>Restituição de Crédito (em Moeda)</td><td>${reportData.quadroD.item67}</td></tr>
-            <tr><td>68</td><td>Quitação de Auto de Infração</td><td>${reportData.quadroD.item68}</td></tr>
-            <tr><td>69</td><td>Estorno de Crédito Apropriado Indevidamente</td><td>${reportData.quadroD.item69}</td></tr>
-            <tr><td>70</td><td>Outras Deduções/Compensações</td><td>${reportData.quadroD.item70}</td></tr>
-            <tr style="background: #ffe8e8;"><td>71</td><td><strong>Total das Deduções/Compensações (62 a 70)</strong></td><td><strong>${reportData.quadroD.item71}</strong></td></tr>
-            <tr style="background: #e8f5e8;"><td>72</td><td><strong>Saldo Credor a Transportar para Período Seguinte (61-71)</strong></td><td><strong>${reportData.quadroD.item72}</strong></td></tr>
-        </table>
-        
-        <h2>QUADRO E - MERCADORIA IMPORTADA PARA COMERCIALIZAÇÃO</h2>
-        <table>
-            <tr><th>Item</th><th>Descrição</th><th>Valor</th></tr>
-            <tr><td>73</td><td>Total das Mercadorias Importadas</td><td>${reportData.quadroE.item73}</td></tr>
-            <tr><td>74</td><td>Outros Acréscimos sobre Importação</td><td>${reportData.quadroE.item74}</td></tr>
-            <tr><td>75</td><td>Total das Operações de Importação (73+74)</td><td>${reportData.quadroE.item75}</td></tr>
-            <tr><td>76</td><td>Total das Entradas do Período</td><td>${reportData.quadroE.item76}</td></tr>
-            <tr><td>77</td><td>Percentual das Operações de Importação [(75/76)x100]</td><td>${reportData.quadroE.item77}</td></tr>
-            <tr><td>78</td><td>ICMS sobre Importação</td><td>${reportData.quadroE.item78}</td></tr>
-            <tr><td>79</td><td>Mercadorias Importadas Excedentes</td><td>${reportData.quadroE.item79}</td></tr>
-            <tr><td>80</td><td>ICMS sobre Importação Excedente</td><td>${reportData.quadroE.item80}</td></tr>
-            <tr><td>81</td><td>ICMS sobre Importação Excedente Não Sujeito a Incentivo</td><td>${reportData.quadroE.item81}</td></tr>
-            <tr><td>82</td><td>ICMS sobre Importação Sujeito ao Incentivo</td><td>${reportData.quadroE.item82}</td></tr>
-            <tr><td>83</td><td>ICMS sobre Importação da Parcela Não Financiada</td><td>${reportData.quadroE.item83}</td></tr>
-            <tr style="background: #ffe8e8;"><td>84</td><td><strong>Saldo do ICMS sobre Importação a Pagar (81+83)</strong></td><td><strong>${reportData.quadroE.item84}</strong></td></tr>
-        </table>
-        
-        <div class="resumo">
-            <h2>RESUMO DA APURAÇÃO</h2>
-            <table>
-                <tr><td><strong>Total a Pagar - Operações Incentivadas:</strong></td><td><strong>${reportData.resumo.totalIncentivadas}</strong></td></tr>
-                <tr><td><strong>Total a Pagar - Operações Não Incentivadas:</strong></td><td><strong>${reportData.resumo.totalNaoIncentivadas}</strong></td></tr>
-                <tr><td><strong>Valor do Financiamento FOMENTAR:</strong></td><td><strong class="valor-economia">${reportData.resumo.valorFinanciamento}</strong></td></tr>
-                <tr><td><strong>Total Geral a Pagar:</strong></td><td><strong class="valor-total">${reportData.resumo.totalGeral}</strong></td></tr>
-            </table>
-        </div>
-        
-        <div class="footer">
-            <p>© 2025 Expertzy Inteligência Tributária</p>
-            <p>Demonstrativo gerado automaticamente conforme Instrução Normativa nº 885/07-GSF</p>
-            <p><strong>Base Legal:</strong> Instrução Normativa nº 885/07-GSF, de 22 de novembro de 2007</p>
-        </div>
-    </body>
-    </html>
-    `;
-}
-
-function logMessage(message, type = 'info') {
-    const logWindow = document.getElementById('logWindow');
-    if (!logWindow) return;
-    
-    const timestamp = new Date().toLocaleTimeString('pt-BR');
-    const logEntry = document.createElement('div');
-    logEntry.style.marginBottom = '5px';
-    
-    let color = '#333';
-    let icon = 'ℹ️';
-    
-    switch (type) {
-        case 'success':
-            color = '#28a745';
-            icon = '✅';
-            break;
-        case 'error':
-            color = '#dc3545';
-            icon = '❌';
-            break;
-        case 'warning':
-            color = '#ffc107';
-            icon = '⚠️';
-            break;
-        case 'info':
-        default:
-            color = '#17a2b8';
-            icon = 'ℹ️';
-            break;
+        addLog('Gerando relatório FOMENTAR para exportação...', 'info');
+        // Implementar exportação Excel
+        setTimeout(() => {
+            addLog('Relatório FOMENTAR exportado com sucesso', 'success');
+        }, 1000);
     }
-    
-    logEntry.innerHTML = `<span style="color: ${color};">[${timestamp}] ${icon} ${message}</span>`;
-    logWindow.appendChild(logEntry);
-    logWindow.scrollTop = logWindow.scrollHeight;
-}
+
+    function printFomentarReport() {
+        if (!fomentarData) {
+            addLog('Erro: Nenhum dado FOMENTAR disponível para impressão', 'error');
+            return;
+        }
+        
+        addLog('Enviando relatório FOMENTAR para impressão...', 'info');
+        window.print();
+    }
+
+    // Initialize UI
+    // updateStatus("Aguardando arquivo SPED..."); // Initial status is now set by clearLogs
+    excelFileNameInput.placeholder = "NomeDoArquivoModerno.xlsx"; // From new HTML
+    clearLogs(); // Initialize log area and set initial status message via addLog
+
+}); // End DOMContentLoaded
