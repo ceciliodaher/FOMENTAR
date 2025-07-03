@@ -77,10 +77,39 @@
                 </div>
 
                 <div class="fomentar-import-section">
-                    <p id="fomentarSpedStatus">Nenhum arquivo SPED importado</p>
-                    <button id="importSpedFomentar" class="btn-style btn-import">
-                        <span class="btn-icon">📂</span> Importar SPED para FOMENTAR
-                    </button>
+                    <div class="import-mode-selector">
+                        <label>
+                            <input type="radio" name="importMode" value="single" checked>
+                            <span>Período Único</span>
+                        </label>
+                        <label>
+                            <input type="radio" name="importMode" value="multiple">
+                            <span>Múltiplos Períodos</span>
+                        </label>
+                    </div>
+                    
+                    <div id="singleImportSection" class="import-section">
+                        <p id="fomentarSpedStatus">Nenhum arquivo SPED importado</p>
+                        <button id="importSpedFomentar" class="btn-style btn-import">
+                            <span class="btn-icon">📂</span> Importar SPED para FOMENTAR
+                        </button>
+                    </div>
+                    
+                    <div id="multipleImportSection" class="import-section" style="display: none;">
+                        <div id="multipleDropZone" class="multiple-import-zone">
+                            <span class="drop-zone-icon">📁</span>
+                            <p>Arraste e solte múltiplos arquivos SPED aqui</p>
+                            <p class="drop-zone-or">- ou -</p>
+                            <input type="file" id="multipleSpedFiles" multiple accept=".txt" style="display: none;">
+                            <button id="selectMultipleSpeds" class="btn-style btn-import">
+                                <span class="btn-icon">📂</span> Selecionar Múltiplos SPEDs
+                            </button>
+                            <div id="multipleSpedsList" class="selected-files-list"></div>
+                        </div>
+                        <button id="processMultipleSpeds" class="btn-style btn-process" style="display: none;">
+                            <span class="btn-icon">⚙️</span> Processar SPEDs em Sequência
+                        </button>
+                    </div>
                 </div>
 
                 <div class="fomentar-config">
@@ -113,6 +142,14 @@
                 </div>
 
                 <div id="fomentarResults" style="display: none;">
+                    <div id="periodsSelector" class="periods-selector" style="display: none;">
+                        <h3>📅 Períodos Processados</h3>
+                        <div id="periodsButtons" class="periods-buttons"></div>
+                        <div class="view-options">
+                            <button id="viewSinglePeriod" class="btn-style btn-small active">Visão Individual</button>
+                            <button id="viewComparative" class="btn-style btn-small">Visão Comparativa</button>
+                        </div>
+                    </div>
                     <!-- Quadro A: Proporção dos Créditos -->
                     <div class="quadro-section">
                         <h3>📈 QUADRO A - PROPORÇÃO DOS CRÉDITOS APROPRIADOS</h3>
@@ -225,6 +262,12 @@
                         <button id="exportFomentar" class="btn-style btn-export">
                             <span class="btn-icon">📊</span> Exportar Excel
                         </button>
+                        <button id="exportComparative" class="btn-style btn-export" style="display: none;">
+                            <span class="btn-icon">📈</span> Exportar Relatório Comparativo
+                        </button>
+                        <button id="exportPDF" class="btn-style btn-export" style="display: none;">
+                            <span class="btn-icon">📄</span> Exportar PDF Comparativo
+                        </button>
                         <button id="printFomentar" class="btn-style btn-secondary">
                             <span class="btn-icon">🖨️</span> Imprimir
                         </button>
@@ -239,6 +282,8 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/xlsx-populate/browser/xlsx-populate.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

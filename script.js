@@ -18,6 +18,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let sharedPeriodo = "";
     let fomentarData = null; // FOMENTAR specific data
     let registrosCompletos = null; // Complete SPED records for FOMENTAR
+    
+    // Multi-period variables
+    let multiPeriodData = []; // Array of period data objects
+    let selectedPeriodIndex = 0; // Currently selected period for display
+    let currentImportMode = 'single'; // 'single' or 'multiple'
 
     // --- Event Listeners ---
     // spedFileButtonLabel.addEventListener('click', () => { // This is handled by <label for="spedFile">
@@ -41,6 +46,20 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('percentualFinanciamento').addEventListener('input', handleConfigChange);
     document.getElementById('icmsPorMedia').addEventListener('input', handleConfigChange);
     document.getElementById('saldoCredorAnterior').addEventListener('input', handleConfigChange);
+    
+    // Multi-period listeners
+    document.querySelectorAll('input[name="importMode"]').forEach(radio => {
+        radio.addEventListener('change', handleImportModeChange);
+    });
+    document.getElementById('selectMultipleSpeds').addEventListener('click', () => {
+        document.getElementById('multipleSpedFiles').click();
+    });
+    document.getElementById('multipleSpedFiles').addEventListener('change', handleMultipleSpedSelection);
+    document.getElementById('processMultipleSpeds').addEventListener('click', processMultipleSpeds);
+    document.getElementById('viewSinglePeriod').addEventListener('click', () => switchView('single'));
+    document.getElementById('viewComparative').addEventListener('click', () => switchView('comparative'));
+    document.getElementById('exportComparative').addEventListener('click', exportComparativeReport);
+    document.getElementById('exportPDF').addEventListener('click', exportComparativePDF);
 
     // Drag and Drop Event Listeners for dropZone
     if (dropZone) {
@@ -59,6 +78,15 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault(); // Prevent browser opening file if dropped outside zone
             e.stopPropagation();
         }, false);
+    }
+    
+    // Drag and Drop Event Listeners for multipleDropZone
+    const multipleDropZone = document.getElementById('multipleDropZone');
+    if (multipleDropZone) {
+        multipleDropZone.addEventListener('dragenter', handleMultipleDragEnter, false);
+        multipleDropZone.addEventListener('dragover', handleMultipleDragOver, false);
+        multipleDropZone.addEventListener('dragleave', handleMultipleDragLeave, false);
+        multipleDropZone.addEventListener('drop', handleMultipleFileDrop, false);
     }
 
     // --- Functions --- (New/Modified Drag and Drop handlers)
@@ -98,6 +126,66 @@ document.addEventListener('DOMContentLoaded', () => {
         dropZone.classList.remove('highlight');
         dropZone.classList.remove('dragover');
         // addLog("Detecção de arquivo sobre a área removida.", "info"); // Optional: can be verbose
+    }
+    
+    // === Multiple Files Drag and Drop Handlers ===
+    
+    function handleMultipleDragEnter(e) {
+        preventDefaults(e);
+        highlightMultipleZone();
+    }
+    
+    function handleMultipleDragOver(e) {
+        preventDefaults(e);
+        highlightMultipleZone();
+    }
+    
+    function handleMultipleDragLeave(e) {
+        preventDefaults(e);
+        if (!multipleDropZone.contains(e.relatedTarget)) {
+            unhighlightMultipleZone();
+        }
+    }
+    
+    function handleMultipleFileDrop(e) {
+        preventDefaults(e);
+        unhighlightMultipleZone();
+        
+        const files = Array.from(e.dataTransfer.files);
+        const txtFiles = files.filter(file => file.name.toLowerCase().endsWith('.txt'));
+        
+        if (txtFiles.length === 0) {
+            addLog('Erro: Nenhum arquivo .txt encontrado', 'error');
+            return;
+        }
+        
+        if (txtFiles.length !== files.length) {
+            addLog(`Aviso: ${files.length - txtFiles.length} arquivo(s) ignorado(s) (apenas .txt são aceitos)`, 'warning');
+        }
+        
+        // Set files to the input element
+        const dt = new DataTransfer();
+        txtFiles.forEach(file => dt.items.add(file));
+        document.getElementById('multipleSpedFiles').files = dt.files;
+        
+        // Trigger the selection handler
+        handleMultipleSpedSelection({ target: { files: txtFiles } });
+        
+        addLog(`${txtFiles.length} arquivo(s) SPED adicionado(s) via drag & drop`, 'success');
+    }
+    
+    function highlightMultipleZone() {
+        const multipleDropZone = document.getElementById('multipleDropZone');
+        if (multipleDropZone) {
+            multipleDropZone.classList.add('dragover');
+        }
+    }
+    
+    function unhighlightMultipleZone() {
+        const multipleDropZone = document.getElementById('multipleDropZone');
+        if (multipleDropZone) {
+            multipleDropZone.classList.remove('dragover');
+        }
     }
 
     function handleFileDrop(e) { 
@@ -1722,6 +1810,951 @@ document.addEventListener('DOMContentLoaded', () => {
         window.print();
     }
 
+    // === Multi-Period Functions ===
+    
+    function handleImportModeChange(event) {
+        currentImportMode = event.target.value;
+        const singleSection = document.getElementById('singleImportSection');
+        const multipleSection = document.getElementById('multipleImportSection');
+        
+        if (currentImportMode === 'single') {
+            singleSection.style.display = 'block';
+            multipleSection.style.display = 'none';
+        } else {
+            singleSection.style.display = 'none';
+            multipleSection.style.display = 'block';
+        }
+        
+        addLog(`Modo de importação alterado para: ${currentImportMode === 'single' ? 'Período Único' : 'Múltiplos Períodos'}`, 'info');
+    }
+    
+    function handleMultipleSpedSelection(event) {
+        const files = Array.from(event.target.files);
+        if (files.length === 0) return;
+        
+        const filesList = document.getElementById('multipleSpedsList');
+        const processButton = document.getElementById('processMultipleSpeds');
+        
+        filesList.innerHTML = '';
+        
+        files.forEach((file, index) => {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'selected-file-item';
+            fileItem.innerHTML = `
+                <div class="file-info">
+                    <div class="file-name">${file.name}</div>
+                    <div class="file-period">Período: Aguardando análise...</div>
+                </div>
+                <span class="remove-file" onclick="removeFile(${index})">×</span>
+            `;
+            filesList.appendChild(fileItem);
+        });
+        
+        processButton.style.display = files.length > 0 ? 'block' : 'none';
+        addLog(`${files.length} arquivo(s) SPED selecionado(s) para processamento`, 'info');
+    }
+    
+    function removeFile(index) {
+        const fileInput = document.getElementById('multipleSpedFiles');
+        const dt = new DataTransfer();
+        const files = Array.from(fileInput.files);
+        
+        files.forEach((file, i) => {
+            if (i !== index) dt.items.add(file);
+        });
+        
+        fileInput.files = dt.files;
+        handleMultipleSpedSelection({ target: fileInput });
+    }
+    
+    async function processMultipleSpeds() {
+        const files = Array.from(document.getElementById('multipleSpedFiles').files);
+        if (files.length === 0) return;
+        
+        addLog('Iniciando processamento de múltiplos SPEDs...', 'info');
+        multiPeriodData = [];
+        
+        // Process each file
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            addLog(`Processando arquivo ${i + 1}/${files.length}: ${file.name}`, 'info');
+            
+            try {
+                const fileContent = await readFileContent(file);
+                const periodData = await processSingleSpedForPeriod(fileContent, file.name);
+                multiPeriodData.push(periodData);
+                
+                // Update file item with period info
+                const fileItems = document.querySelectorAll('.selected-file-item');
+                if (fileItems[i]) {
+                    const periodSpan = fileItems[i].querySelector('.file-period');
+                    periodSpan.textContent = `Período: ${periodData.periodo}`;
+                }
+                
+            } catch (error) {
+                addLog(`Erro ao processar ${file.name}: ${error.message}`, 'error');
+            }
+        }
+        
+        // Sort by period chronologically
+        multiPeriodData.sort((a, b) => {
+            const periodA = parsePeriod(a.periodo);
+            const periodB = parsePeriod(b.periodo);
+            return periodA.getTime() - periodB.getTime();
+        });
+        
+        // Apply automatic saldo credor carryover
+        applyAutomaticSaldoCredorCarryover();
+        
+        // Show results
+        showMultiPeriodResults();
+        
+        addLog(`Processamento concluído. ${multiPeriodData.length} períodos processados em ordem cronológica.`, 'success');
+    }
+    
+    function readFileContent(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
+            reader.readAsText(file);
+        });
+    }
+    
+    async function processSingleSpedForPeriod(fileContent, fileName) {
+        const registros = lerArquivoSpedCompleto(fileContent);
+        const dadosEmpresa = extrairDadosEmpresa(registros);
+        
+        // Log do processamento
+        addLog(`Processando: ${fileName} - ${dadosEmpresa.nome} (${dadosEmpresa.periodo})`, 'info');
+        
+        // Process FOMENTAR data
+        const operations = classifyOperations(registros);
+        const periodData = {
+            fileName: fileName,
+            periodo: dadosEmpresa.periodo,
+            nomeEmpresa: dadosEmpresa.nome,
+            fomentarData: operations,
+            registrosCompletos: registros,
+            calculatedValues: null
+        };
+        
+        return periodData;
+    }
+    
+    function extrairDadosEmpresa(registros) {
+        let nome = "Empresa";
+        let periodo = "";
+        let dataInicial = "";
+        let dataFinal = "";
+        
+        if (registros['0000'] && registros['0000'].length > 0) {
+            const reg0000 = registros['0000'][0];
+            
+            // Índices corretos para lerArquivoSpedCompleto (mantém pipes vazios):
+            // Array completo: ['', REG, COD_VER, TIPO_ESC, DT_INI, DT_FIN, NOME, CNPJ, ...]
+            // 0='', 1=REG, 2=COD_VER, 3=TIPO_ESC, 4=DT_INI, 5=DT_FIN, 6=NOME, 7=CNPJ
+            
+            const dtIniIndex = 4;  // DT_INI
+            const dtFinIndex = 5;  // DT_FIN  
+            const nomeIndex = 6;   // NOME
+            
+            // Extrair nome da empresa (campo 6)
+            if (reg0000.length > nomeIndex) {
+                nome = reg0000[nomeIndex] || "Empresa";
+            }
+            
+            // Extrair data inicial (campo 4)
+            if (reg0000.length > dtIniIndex) {
+                dataInicial = reg0000[dtIniIndex];
+                if (dataInicial && dataInicial.length === 8) {
+                    // Converte DDMMAAAA para MM/AAAA
+                    const dia = dataInicial.substring(0, 2);
+                    const mes = dataInicial.substring(2, 4);
+                    const ano = dataInicial.substring(4, 8);
+                    periodo = `${mes}/${ano}`;
+                }
+            }
+            
+            // Extrair data final (campo 5)
+            if (reg0000.length > dtFinIndex) {
+                dataFinal = reg0000[dtFinIndex];
+            }
+        }
+        
+        return { 
+            nome, 
+            periodo, 
+            dataInicial, 
+            dataFinal 
+        };
+    }
+    
+    function parsePeriod(periodo) {
+        // Convert period string like "01/2024" to Date object
+        const [month, year] = periodo.split('/');
+        return new Date(parseInt(year), parseInt(month) - 1, 1);
+    }
+    
+    function applyAutomaticSaldoCredorCarryover() {
+        for (let i = 1; i < multiPeriodData.length; i++) {
+            const previousPeriod = multiPeriodData[i - 1];
+            const currentPeriod = multiPeriodData[i];
+            
+            // Calculate previous period if not done yet
+            if (!previousPeriod.calculatedValues) {
+                previousPeriod.calculatedValues = calculateFomentarForPeriod(previousPeriod.fomentarData, 0);
+            }
+            
+            // Get saldo credor from previous period (simplified - would need actual calculation)
+            const saldoCredorAnterior = previousPeriod.calculatedValues.saldoCredorFinal || 0;
+            
+            // Calculate current period with carryover
+            currentPeriod.calculatedValues = calculateFomentarForPeriod(currentPeriod.fomentarData, saldoCredorAnterior);
+            
+            addLog(`Período ${currentPeriod.periodo}: Saldo credor anterior R$ ${saldoCredorAnterior.toFixed(2)}`, 'info');
+        }
+        
+        // Calculate first period (no carryover)
+        if (multiPeriodData.length > 0 && !multiPeriodData[0].calculatedValues) {
+            multiPeriodData[0].calculatedValues = calculateFomentarForPeriod(multiPeriodData[0].fomentarData, 0);
+        }
+    }
+    
+    function calculateFomentarForPeriod(fomentarData, saldoCredorAnterior, configOverrides = {}) {
+        // Configuration values
+        const percentualFinanciamento = configOverrides.percentualFinanciamento || 0.70;
+        const icmsPorMedia = configOverrides.icmsPorMedia || 0;
+        
+        // QUADRO A - Proporção dos Créditos
+        const saidasIncentivadas = fomentarData.saidasIncentivadas.reduce((total, op) => total + op.valorOperacao, 0);
+        const saidasNaoIncentivadas = fomentarData.saidasNaoIncentivadas.reduce((total, op) => total + op.valorOperacao, 0);
+        const totalSaidas = saidasIncentivadas + saidasNaoIncentivadas;
+        const percentualSaidas = totalSaidas > 0 ? (saidasIncentivadas / totalSaidas) * 100 : 0;
+        
+        const creditosEntradas = fomentarData.creditosEntradas || 0;
+        const outrosCreditos = fomentarData.outrosCreditos || 0;
+        const estornoDebitos = 0; // Default
+        const totalCreditos = creditosEntradas + outrosCreditos + estornoDebitos + saldoCredorAnterior;
+        
+        const creditoIncentivadas = (percentualSaidas / 100) * totalCreditos;
+        const creditoNaoIncentivadas = totalCreditos - creditoIncentivadas;
+        
+        // QUADRO B - Operações Incentivadas
+        const debitoIncentivadas = fomentarData.saidasIncentivadas.reduce((total, op) => total + op.valorIcms, 0);
+        const outrosDebitosIncentivadas = (fomentarData.outrosDebitos || 0) * (percentualSaidas / 100);
+        const estornoCreditosIncentivadas = 0;
+        const deducoesIncentivadas = 0;
+        
+        const saldoDevedorIncentivadas = Math.max(0, 
+            (debitoIncentivadas + outrosDebitosIncentivadas + estornoCreditosIncentivadas) - 
+            (creditoIncentivadas + deducoesIncentivadas)
+        );
+        
+        const icmsBaseFomentar = Math.max(0, saldoDevedorIncentivadas - icmsPorMedia);
+        const icmsSujeitoFinanciamento = icmsBaseFomentar * percentualFinanciamento;
+        const icmsFinanciado = icmsSujeitoFinanciamento;
+        const parcelaNaoFinanciada = icmsBaseFomentar - icmsSujeitoFinanciamento;
+        const saldoPagarParcelaNaoFinanciada = Math.max(0, parcelaNaoFinanciada);
+        
+        // QUADRO C - Operações Não Incentivadas
+        const debitoNaoIncentivadas = fomentarData.saidasNaoIncentivadas.reduce((total, op) => total + op.valorIcms, 0);
+        const outrosDebitosNaoIncentivadas = (fomentarData.outrosDebitos || 0) * ((100 - percentualSaidas) / 100);
+        const estornoCreditosNaoIncentivadas = 0;
+        const deducoesNaoIncentivadas = 0;
+        
+        const saldoDevedorNaoIncentivadas = Math.max(0,
+            (debitoNaoIncentivadas + outrosDebitosNaoIncentivadas + estornoCreditosNaoIncentivadas) - 
+            (creditoNaoIncentivadas + deducoesNaoIncentivadas)
+        );
+        
+        const saldoPagarNaoIncentivadas = Math.max(0, saldoDevedorNaoIncentivadas);
+        
+        // Cálculos finais
+        const totalPagarIncentivadas = saldoPagarParcelaNaoFinanciada;
+        const totalPagarNaoIncentivadas = saldoPagarNaoIncentivadas;
+        const valorFinanciamento = icmsFinanciado;
+        const totalGeralPagar = totalPagarIncentivadas + totalPagarNaoIncentivadas;
+        
+        // Saldo credor final (simplificado)
+        const saldoCredorFinal = Math.max(0, totalCreditos - (debitoIncentivadas + debitoNaoIncentivadas + outrosDebitosIncentivadas + outrosDebitosNaoIncentivadas));
+        
+        return {
+            // Quadro A
+            saidasIncentivadas,
+            saidasNaoIncentivadas,
+            totalSaidas,
+            percentualSaidas,
+            creditosEntradas,
+            outrosCreditos,
+            estornoDebitos,
+            saldoCredorAnterior,
+            totalCreditos,
+            creditoIncentivadas,
+            creditoNaoIncentivadas,
+            
+            // Quadro B
+            debitoIncentivadas,
+            outrosDebitosIncentivadas,
+            estornoCreditosIncentivadas,
+            deducoesIncentivadas,
+            saldoDevedorIncentivadas,
+            icmsPorMedia,
+            icmsBaseFomentar,
+            percentualFinanciamento: percentualFinanciamento * 100,
+            icmsSujeitoFinanciamento,
+            icmsFinanciado,
+            parcelaNaoFinanciada,
+            saldoPagarParcelaNaoFinanciada,
+            
+            // Quadro C
+            debitoNaoIncentivadas,
+            outrosDebitosNaoIncentivadas,
+            estornoCreditosNaoIncentivadas,
+            deducoesNaoIncentivadas,
+            saldoDevedorNaoIncentivadas,
+            saldoPagarNaoIncentivadas,
+            
+            // Resumo
+            totalPagarIncentivadas,
+            totalPagarNaoIncentivadas,
+            valorFinanciamento,
+            totalGeralPagar,
+            saldoCredorFinal
+        };
+    }
+    
+    function showMultiPeriodResults() {
+        const periodsSelector = document.getElementById('periodsSelector');
+        const periodsButtons = document.getElementById('periodsButtons');
+        const fomentarResults = document.getElementById('fomentarResults');
+        
+        periodsSelector.style.display = 'block';
+        fomentarResults.style.display = 'block';
+        
+        // Create period buttons
+        periodsButtons.innerHTML = '';
+        multiPeriodData.forEach((period, index) => {
+            const button = document.createElement('button');
+            button.className = 'period-button';
+            button.textContent = period.periodo;
+            button.onclick = () => selectPeriod(index);
+            if (index === 0) button.classList.add('active');
+            periodsButtons.appendChild(button);
+        });
+        
+        // Show first period by default
+        selectPeriod(0);
+    }
+    
+    function selectPeriod(index) {
+        selectedPeriodIndex = index;
+        const period = multiPeriodData[index];
+        
+        // Update active button
+        document.querySelectorAll('.period-button').forEach((btn, i) => {
+            btn.classList.toggle('active', i === index);
+        });
+        
+        // Update display with period data
+        fomentarData = period.fomentarData;
+        
+        // Set saldo credor anterior in the form
+        document.getElementById('saldoCredorAnterior').value = period.calculatedValues?.saldoCredorAnterior || 0;
+        
+        // Recalculate and display
+        calculateFomentar();
+        
+        addLog(`Exibindo dados do período: ${period.periodo}`, 'info');
+    }
+    
+    function switchView(viewType) {
+        const singleBtn = document.getElementById('viewSinglePeriod');
+        const comparativeBtn = document.getElementById('viewComparative');
+        const exportComparativeBtn = document.getElementById('exportComparative');
+        const exportPDFBtn = document.getElementById('exportPDF');
+        
+        if (viewType === 'single') {
+            singleBtn.classList.add('active');
+            comparativeBtn.classList.remove('active');
+            exportComparativeBtn.style.display = 'none';
+            exportPDFBtn.style.display = 'none';
+            
+            // Show individual period view
+            showIndividualPeriodView();
+        } else {
+            singleBtn.classList.remove('active');
+            comparativeBtn.classList.add('active');
+            exportComparativeBtn.style.display = 'inline-block';
+            exportPDFBtn.style.display = 'inline-block';
+            
+            // Show comparative view
+            showComparativeView();
+        }
+    }
+    
+    function showIndividualPeriodView() {
+        // Show normal quadros
+        document.querySelectorAll('.quadro-section').forEach(section => {
+            section.style.display = 'block';
+        });
+        
+        // Hide comparative table if exists
+        const comparativeTable = document.getElementById('comparativeTable');
+        if (comparativeTable) {
+            comparativeTable.style.display = 'none';
+        }
+    }
+    
+    function showComparativeView() {
+        // Hide normal quadros
+        document.querySelectorAll('.quadro-section').forEach(section => {
+            section.style.display = 'none';
+        });
+        
+        // Show or create comparative table
+        createComparativeTable();
+    }
+    
+    function createComparativeTable() {
+        let comparativeTable = document.getElementById('comparativeTable');
+        
+        if (!comparativeTable) {
+            comparativeTable = document.createElement('div');
+            comparativeTable.id = 'comparativeTable';
+            comparativeTable.innerHTML = '<h3>📊 Relatório Comparativo Multi-Período</h3>';
+            
+            const fomentarResults = document.getElementById('fomentarResults');
+            fomentarResults.appendChild(comparativeTable);
+        }
+        
+        // Build comparative table HTML
+        const tableHTML = buildComparativeTableHTML();
+        comparativeTable.innerHTML = '<h3>📊 Relatório Comparativo Multi-Período</h3>' + tableHTML;
+        comparativeTable.style.display = 'block';
+    }
+    
+    function buildComparativeTableHTML() {
+        if (multiPeriodData.length === 0) return '<p>Nenhum período processado.</p>';
+        
+        // Table headers with periods info
+        let html = '<div class="table-info">';
+        html += `<p><strong>Períodos analisados:</strong> ${multiPeriodData.map(p => p.periodo).join(', ')}</p>`;
+        html += `<p><strong>Empresa:</strong> ${multiPeriodData[0].nomeEmpresa}</p>`;
+        html += '</div>';
+        
+        html += '<table class="comparative-table"><thead><tr>';
+        html += '<th class="description-col">Item</th>';
+        html += '<th class="description-col">Descrição</th>';
+        multiPeriodData.forEach(period => {
+            html += `<th class="period-header">${period.periodo}</th>`;
+        });
+        html += '</tr></thead><tbody>';
+        
+        // Table rows for each calculation item
+        const items = [
+            { id: 'saidasIncentivadas', label: 'Saídas Incentivadas' },
+            { id: 'totalSaidas', label: 'Total das Saídas' },
+            { id: 'percentualSaidas', label: 'Percentual Saídas Incentivadas (%)' },
+            { id: 'creditoIncentivadas', label: 'Crédito para Operações Incentivadas' },
+            { id: 'saldoCredorAnterior', label: 'Saldo Credor Anterior' },
+            { id: 'valorFinanciamento', label: 'Valor do Financiamento' },
+            { id: 'totalGeralPagar', label: 'Total Geral a Pagar' }
+        ];
+        
+        items.forEach(item => {
+            html += `<tr><td class="description-col">${item.id || ''}</td>`;
+            html += `<td class="description-col">${item.label}</td>`;
+            multiPeriodData.forEach(period => {
+                const value = period.calculatedValues?.[item.id] || 0;
+                html += `<td class="value-col">R$ ${value.toFixed(2)}</td>`;
+            });
+            html += '</tr>';
+        });
+        
+        html += '</tbody></table>';
+        return html;
+    }
+    
+    async function exportComparativeReport() {
+        if (multiPeriodData.length === 0) {
+            addLog('Erro: Nenhum período processado para exportação comparativa', 'error');
+            return;
+        }
+        
+        addLog('Gerando relatório comparativo multi-período conforme modelo oficial...', 'info');
+        
+        try {
+            // Create workbook based on official template structure
+            const workbook = await XlsxPopulate.fromBlankAsync();
+            
+            // Set main sheet name
+            const mainSheet = workbook.sheet(0);
+            mainSheet.name("Demonstrativo FOMENTAR Multi-Período");
+            
+            // Create header section
+            await createComparativeExcelHeader(mainSheet);
+            
+            // Create Quadro A - Proporção dos Créditos
+            let currentRow = await createQuadroAComparative(mainSheet, 9);
+            
+            // Create Quadro B - Operações Incentivadas  
+            currentRow = await createQuadroBComparative(mainSheet, currentRow + 3);
+            
+            // Create Quadro C - Operações Não Incentivadas
+            currentRow = await createQuadroCComparative(mainSheet, currentRow + 3);
+            
+            // Create summary section
+            await createSummaryComparative(mainSheet, currentRow + 3);
+            
+            // Apply formatting
+            await formatComparativeSheet(mainSheet);
+            
+            // Generate download
+            const fileName = `FOMENTAR_Comparativo_${multiPeriodData[0].periodo.replace('/', '-')}_a_${multiPeriodData[multiPeriodData.length-1].periodo.replace('/', '-')}.xlsx`;
+            
+            const excelData = await workbook.outputAsync();
+            const blob = new Blob([excelData], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+            
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+            
+            addLog(`Relatório comparativo exportado: ${fileName}`, 'success');
+            
+        } catch (error) {
+            addLog(`Erro ao gerar relatório comparativo: ${error.message}`, 'error');
+        }
+    }
+    
+    async function createComparativeExcelHeader(sheet) {
+        // Header do demonstrativo conforme modelo oficial
+        sheet.cell("A1").value("DEMONSTRATIVO DA APURAÇÃO MENSAL - FOMENTAR/PRODUZIR/MICROPRODUZIR");
+        sheet.cell("A2").value("RELATÓRIO COMPARATIVO MULTI-PERÍODO");
+        sheet.cell("A3").value(`Empresa: ${multiPeriodData[0].nomeEmpresa}`);
+        sheet.cell("A4").value(`Períodos analisados: ${multiPeriodData.map(p => p.periodo).join(', ')}`);
+        sheet.cell("A5").value(`Período de análise: ${multiPeriodData[0].periodo} a ${multiPeriodData[multiPeriodData.length-1].periodo}`);
+        
+        // Calculate merge range based on number of periods
+        const lastColumn = String.fromCharCode('B'.charCodeAt(0) + multiPeriodData.length);
+        
+        // Merge header cells
+        sheet.range(`A1:${lastColumn}1`).merged(true);
+        sheet.range(`A2:${lastColumn}2`).merged(true);
+        sheet.range(`A3:${lastColumn}3`).merged(true);
+        sheet.range(`A4:${lastColumn}4`).merged(true);
+        sheet.range(`A5:${lastColumn}5`).merged(true);
+    }
+    
+    async function createQuadroAComparative(sheet, startRow) {
+        // Quadro A header
+        sheet.cell(`A${startRow}`).value("A - PROPORÇÃO DOS CRÉDITOS APROPRIADOS");
+        sheet.range(`A${startRow}:H${startRow}`).merged(true);
+        
+        startRow++;
+        
+        // Column headers
+        sheet.cell(`A${startRow}`).value("Item");
+        sheet.cell(`B${startRow}`).value("Descrição");
+        
+        let col = 'C';
+        multiPeriodData.forEach(period => {
+            sheet.cell(`${col}${startRow}`).value(period.periodo);
+            col = String.fromCharCode(col.charCodeAt(0) + 1);
+        });
+        
+        startRow++;
+        
+        // Quadro A items
+        const quadroAItems = [
+            { id: '1', desc: 'Saídas das Operações Incentivadas', field: 'saidasIncentivadas' },
+            { id: '2', desc: 'Total das Saídas', field: 'totalSaidas' },
+            { id: '3', desc: 'Percentual das Saídas das Operações Incentivadas (%)', field: 'percentualSaidas' },
+            { id: '4', desc: 'Créditos por Entradas', field: 'creditosEntradas' },
+            { id: '5', desc: 'Outros Créditos', field: 'outrosCreditos' },
+            { id: '6', desc: 'Estorno de Débitos', field: 'estornoDebitos' },
+            { id: '7', desc: 'Saldo Credor do Período Anterior', field: 'saldoCredorAnterior' },
+            { id: '8', desc: 'Total dos Créditos do Período', field: 'totalCreditos' },
+            { id: '9', desc: 'Crédito para Operações Incentivadas', field: 'creditoIncentivadas' },
+            { id: '10', desc: 'Crédito para Operações Não Incentivadas', field: 'creditoNaoIncentivadas' }
+        ];
+        
+        quadroAItems.forEach(item => {
+            sheet.cell(`A${startRow}`).value(item.id);
+            sheet.cell(`B${startRow}`).value(item.desc);
+            
+            let col = 'C';
+            multiPeriodData.forEach(period => {
+                const value = period.calculatedValues?.[item.field] || 0;
+                sheet.cell(`${col}${startRow}`).value(value);
+                col = String.fromCharCode(col.charCodeAt(0) + 1);
+            });
+            
+            startRow++;
+        });
+        
+        return startRow;
+    }
+    
+    async function createQuadroBComparative(sheet, startRow) {
+        // Quadro B header
+        sheet.cell(`A${startRow}`).value("B - APURAÇÃO DOS SALDOS DAS OPERAÇÕES INCENTIVADAS");
+        sheet.range(`A${startRow}:H${startRow}`).merged(true);
+        
+        startRow++;
+        
+        // Column headers
+        sheet.cell(`A${startRow}`).value("Item");
+        sheet.cell(`B${startRow}`).value("Descrição");
+        
+        let col = 'C';
+        multiPeriodData.forEach(period => {
+            sheet.cell(`${col}${startRow}`).value(period.periodo);
+            col = String.fromCharCode(col.charCodeAt(0) + 1);
+        });
+        
+        startRow++;
+        
+        // Quadro B items
+        const quadroBItems = [
+            { id: '11', desc: 'Débito do ICMS das Operações Incentivadas', field: 'debitoIncentivadas' },
+            { id: '12', desc: 'Outros Débitos das Operações Incentivadas', field: 'outrosDebitosIncentivadas' },
+            { id: '13', desc: 'Estorno de Créditos das Operações Incentivadas', field: 'estornoCreditosIncentivadas' },
+            { id: '14', desc: 'Crédito para Operações Incentivadas', field: 'creditoIncentivadas' },
+            { id: '15', desc: 'Deduções das Operações Incentivadas', field: 'deducoesIncentivadas' },
+            { id: '17', desc: 'Saldo Devedor do ICMS das Operações Incentivadas', field: 'saldoDevedorIncentivadas' },
+            { id: '18', desc: 'ICMS por Média', field: 'icmsPorMedia' },
+            { id: '21', desc: 'ICMS Base para FOMENTAR/PRODUZIR', field: 'icmsBaseFomentar' },
+            { id: '22', desc: 'Percentagem do Financiamento (%)', field: 'percentualFinanciamento' },
+            { id: '23', desc: 'ICMS Sujeito a Financiamento', field: 'icmsSujeitoFinanciamento' },
+            { id: '25', desc: 'ICMS Financiado', field: 'icmsFinanciado' },
+            { id: '26', desc: 'Saldo do ICMS da Parcela Não Financiada', field: 'parcelaNaoFinanciada' },
+            { id: '28', desc: 'Saldo do ICMS a Pagar da Parcela Não Financiada', field: 'saldoPagarParcelaNaoFinanciada' }
+        ];
+        
+        quadroBItems.forEach(item => {
+            sheet.cell(`A${startRow}`).value(item.id);
+            sheet.cell(`B${startRow}`).value(item.desc);
+            
+            let col = 'C';
+            multiPeriodData.forEach(period => {
+                const value = period.calculatedValues?.[item.field] || 0;
+                sheet.cell(`${col}${startRow}`).value(value);
+                col = String.fromCharCode(col.charCodeAt(0) + 1);
+            });
+            
+            startRow++;
+        });
+        
+        return startRow;
+    }
+    
+    async function createQuadroCComparative(sheet, startRow) {
+        // Quadro C header
+        sheet.cell(`A${startRow}`).value("C - APURAÇÃO DOS SALDOS DAS OPERAÇÕES NÃO INCENTIVADAS");
+        sheet.range(`A${startRow}:H${startRow}`).merged(true);
+        
+        startRow++;
+        
+        // Column headers
+        sheet.cell(`A${startRow}`).value("Item");
+        sheet.cell(`B${startRow}`).value("Descrição");
+        
+        let col = 'C';
+        multiPeriodData.forEach(period => {
+            sheet.cell(`${col}${startRow}`).value(period.periodo);
+            col = String.fromCharCode(col.charCodeAt(0) + 1);
+        });
+        
+        startRow++;
+        
+        // Quadro C items
+        const quadroCItems = [
+            { id: '32', desc: 'Débito do ICMS das Operações Não Incentivadas', field: 'debitoNaoIncentivadas' },
+            { id: '33', desc: 'Outros Débitos das Operações Não Incentivadas', field: 'outrosDebitosNaoIncentivadas' },
+            { id: '34', desc: 'Estorno de Créditos das Operações Não Incentivadas', field: 'estornoCreditosNaoIncentivadas' },
+            { id: '36', desc: 'Crédito para Operações Não Incentivadas', field: 'creditoNaoIncentivadas' },
+            { id: '37', desc: 'Deduções das Operações Não Incentivadas', field: 'deducoesNaoIncentivadas' },
+            { id: '39', desc: 'Saldo Devedor do ICMS das Operações Não Incentivadas', field: 'saldoDevedorNaoIncentivadas' },
+            { id: '41', desc: 'Saldo do ICMS a Pagar das Operações Não Incentivadas', field: 'saldoPagarNaoIncentivadas' }
+        ];
+        
+        quadroCItems.forEach(item => {
+            sheet.cell(`A${startRow}`).value(item.id);
+            sheet.cell(`B${startRow}`).value(item.desc);
+            
+            let col = 'C';
+            multiPeriodData.forEach(period => {
+                const value = period.calculatedValues?.[item.field] || 0;
+                sheet.cell(`${col}${startRow}`).value(value);
+                col = String.fromCharCode(col.charCodeAt(0) + 1);
+            });
+            
+            startRow++;
+        });
+        
+        return startRow;
+    }
+    
+    async function createSummaryComparative(sheet, startRow) {
+        // Summary header
+        sheet.cell(`A${startRow}`).value("RESUMO DA APURAÇÃO");
+        sheet.range(`A${startRow}:H${startRow}`).merged(true);
+        
+        startRow++;
+        
+        // Column headers
+        sheet.cell(`A${startRow}`).value("Descrição");
+        sheet.cell(`B${startRow}`).value("");
+        
+        let col = 'C';
+        multiPeriodData.forEach(period => {
+            sheet.cell(`${col}${startRow}`).value(period.periodo);
+            col = String.fromCharCode(col.charCodeAt(0) + 1);
+        });
+        
+        startRow++;
+        
+        // Summary items
+        const summaryItems = [
+            { desc: 'Total a Pagar - Operações Incentivadas', field: 'totalPagarIncentivadas' },
+            { desc: 'Total a Pagar - Operações Não Incentivadas', field: 'totalPagarNaoIncentivadas' },
+            { desc: 'Valor do Financiamento FOMENTAR', field: 'valorFinanciamento' },
+            { desc: 'Total Geral a Pagar', field: 'totalGeralPagar' }
+        ];
+        
+        summaryItems.forEach(item => {
+            sheet.cell(`A${startRow}`).value(item.desc);
+            
+            let col = 'C';
+            multiPeriodData.forEach(period => {
+                const value = period.calculatedValues?.[item.field] || 0;
+                sheet.cell(`${col}${startRow}`).value(value);
+                col = String.fromCharCode(col.charCodeAt(0) + 1);
+            });
+            
+            startRow++;
+        });
+        
+        return startRow;
+    }
+    
+    async function formatComparativeSheet(sheet) {
+        // Apply number formatting for currency values
+        const lastColumn = String.fromCharCode('B'.charCodeAt(0) + multiPeriodData.length);
+        
+        // Format header rows
+        const headerRange = `A1:${lastColumn}5`;
+        sheet.range(headerRange).style({
+            fontFamily: "Arial",
+            fontSize: 12,
+            bold: true,
+            horizontalAlignment: "center",
+            fill: "E8F4F8"
+        });
+        
+        // Format section headers
+        const sectionRows = ["A8", "A19", "A32", "A42"]; // Adjust based on actual rows
+        sectionRows.forEach(cell => {
+            if (sheet.cell(cell).value()) {
+                sheet.row(sheet.cell(cell).rowNumber()).style({
+                    fontFamily: "Arial",
+                    fontSize: 11,
+                    bold: true,
+                    fill: "D6EAF8",
+                    horizontalAlignment: "center"
+                });
+            }
+        });
+        
+        // Format value columns as currency
+        for (let col = 'C'; col <= lastColumn; col = String.fromCharCode(col.charCodeAt(0) + 1)) {
+            sheet.column(col).style({
+                numberFormat: "#,##0.00",
+                horizontalAlignment: "right"
+            });
+        }
+        
+        // Auto-fit columns
+        sheet.column("A").width(8);
+        sheet.column("B").width(50);
+        for (let col = 'C'; col <= lastColumn; col = String.fromCharCode(col.charCodeAt(0) + 1)) {
+            sheet.column(col).width(15);
+        }
+    }
+    
+    // === PDF Export Functions ===
+    
+    async function exportComparativePDF() {
+        if (multiPeriodData.length === 0) {
+            addLog('Erro: Nenhum período processado para exportação PDF', 'error');
+            return;
+        }
+        
+        addLog('Gerando relatório PDF comparativo multi-período...', 'info');
+        
+        try {
+            // Create PDF document
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('landscape', 'mm', 'a4');
+            
+            // Set font
+            doc.setFont('helvetica');
+            
+            // Header
+            doc.setFontSize(16);
+            doc.setFont('helvetica', 'bold');
+            doc.text('DEMONSTRATIVO DA APURAÇÃO MENSAL - FOMENTAR/PRODUZIR/MICROPRODUZIR', 20, 20);
+            
+            doc.setFontSize(14);
+            doc.text('RELATÓRIO COMPARATIVO MULTI-PERÍODO', 20, 30);
+            
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Empresa: ${multiPeriodData[0].nomeEmpresa}`, 20, 40);
+            doc.text(`Períodos analisados: ${multiPeriodData.map(p => p.periodo).join(', ')}`, 20, 50);
+            doc.text(`Período de análise: ${multiPeriodData[0].periodo} a ${multiPeriodData[multiPeriodData.length-1].periodo}`, 20, 60);
+            
+            let yPosition = 70;
+            
+            // Quadro A
+            yPosition = await addQuadroToPDF(doc, 'A - PROPORÇÃO DOS CRÉDITOS APROPRIADOS', getQuadroAData(), yPosition);
+            
+            // Quadro B
+            yPosition = await addQuadroToPDF(doc, 'B - APURAÇÃO DOS SALDOS DAS OPERAÇÕES INCENTIVADAS', getQuadroBData(), yPosition + 10);
+            
+            // Check if need new page
+            if (yPosition > 140) {
+                doc.addPage();
+                yPosition = 20;
+            }
+            
+            // Quadro C
+            yPosition = await addQuadroToPDF(doc, 'C - APURAÇÃO DOS SALDOS DAS OPERAÇÕES NÃO INCENTIVADAS', getQuadroCData(), yPosition + 10);
+            
+            // Summary
+            if (yPosition > 110) {
+                doc.addPage();
+                yPosition = 20;
+            }
+            yPosition = await addQuadroToPDF(doc, 'RESUMO DA APURAÇÃO', getSummaryData(), yPosition + 10);
+            
+            // Save PDF
+            const fileName = `FOMENTAR_Comparativo_${multiPeriodData[0].periodo.replace('/', '-')}_a_${multiPeriodData[multiPeriodData.length-1].periodo.replace('/', '-')}.pdf`;
+            doc.save(fileName);
+            
+            addLog(`Relatório PDF exportado: ${fileName}`, 'success');
+            
+        } catch (error) {
+            addLog(`Erro ao gerar relatório PDF: ${error.message}`, 'error');
+        }
+    }
+    
+    async function addQuadroToPDF(doc, title, data, yPosition) {
+        // Title
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(title, 20, yPosition);
+        
+        yPosition += 10;
+        
+        // Prepare table data
+        const headers = ['Item', 'Descrição', ...multiPeriodData.map(p => p.periodo)];
+        const rows = data.map(item => [
+            item.id || '',
+            item.desc,
+            ...multiPeriodData.map(period => {
+                const value = period.calculatedValues?.[item.field] || 0;
+                return typeof value === 'number' ? 
+                    (value % 1 === 0 ? value.toFixed(0) : value.toFixed(2)) : 
+                    value.toString();
+            })
+        ]);
+        
+        // Add table
+        doc.autoTable({
+            head: [headers],
+            body: rows,
+            startY: yPosition,
+            styles: {
+                fontSize: 8,
+                cellPadding: 2,
+                lineColor: [0, 0, 0],
+                lineWidth: 0.1
+            },
+            headStyles: {
+                fillColor: [200, 220, 255],
+                textColor: [0, 0, 0],
+                fontStyle: 'bold'
+            },
+            columnStyles: {
+                0: { cellWidth: 15, halign: 'center' },
+                1: { cellWidth: 80, halign: 'left' }
+            },
+            margin: { left: 20, right: 20 }
+        });
+        
+        return doc.lastAutoTable.finalY;
+    }
+    
+    function getQuadroAData() {
+        return [
+            { id: '1', desc: 'Saídas das Operações Incentivadas', field: 'saidasIncentivadas' },
+            { id: '2', desc: 'Total das Saídas', field: 'totalSaidas' },
+            { id: '3', desc: 'Percentual das Saídas das Operações Incentivadas (%)', field: 'percentualSaidas' },
+            { id: '4', desc: 'Créditos por Entradas', field: 'creditosEntradas' },
+            { id: '5', desc: 'Outros Créditos', field: 'outrosCreditos' },
+            { id: '6', desc: 'Estorno de Débitos', field: 'estornoDebitos' },
+            { id: '7', desc: 'Saldo Credor do Período Anterior', field: 'saldoCredorAnterior' },
+            { id: '8', desc: 'Total dos Créditos do Período', field: 'totalCreditos' },
+            { id: '9', desc: 'Crédito para Operações Incentivadas', field: 'creditoIncentivadas' },
+            { id: '10', desc: 'Crédito para Operações Não Incentivadas', field: 'creditoNaoIncentivadas' }
+        ];
+    }
+    
+    function getQuadroBData() {
+        return [
+            { id: '11', desc: 'Débito do ICMS das Operações Incentivadas', field: 'debitoIncentivadas' },
+            { id: '12', desc: 'Outros Débitos das Operações Incentivadas', field: 'outrosDebitosIncentivadas' },
+            { id: '13', desc: 'Estorno de Créditos das Operações Incentivadas', field: 'estornoCreditosIncentivadas' },
+            { id: '14', desc: 'Crédito para Operações Incentivadas', field: 'creditoIncentivadas' },
+            { id: '15', desc: 'Deduções das Operações Incentivadas', field: 'deducoesIncentivadas' },
+            { id: '17', desc: 'Saldo Devedor do ICMS das Operações Incentivadas', field: 'saldoDevedorIncentivadas' },
+            { id: '18', desc: 'ICMS por Média', field: 'icmsPorMedia' },
+            { id: '21', desc: 'ICMS Base para FOMENTAR/PRODUZIR', field: 'icmsBaseFomentar' },
+            { id: '22', desc: 'Percentagem do Financiamento (%)', field: 'percentualFinanciamento' },
+            { id: '23', desc: 'ICMS Sujeito a Financiamento', field: 'icmsSujeitoFinanciamento' },
+            { id: '25', desc: 'ICMS Financiado', field: 'icmsFinanciado' },
+            { id: '26', desc: 'Saldo do ICMS da Parcela Não Financiada', field: 'parcelaNaoFinanciada' },
+            { id: '28', desc: 'Saldo do ICMS a Pagar da Parcela Não Financiada', field: 'saldoPagarParcelaNaoFinanciada' }
+        ];
+    }
+    
+    function getQuadroCData() {
+        return [
+            { id: '32', desc: 'Débito do ICMS das Operações Não Incentivadas', field: 'debitoNaoIncentivadas' },
+            { id: '33', desc: 'Outros Débitos das Operações Não Incentivadas', field: 'outrosDebitosNaoIncentivadas' },
+            { id: '34', desc: 'Estorno de Créditos das Operações Não Incentivadas', field: 'estornoCreditosNaoIncentivadas' },
+            { id: '36', desc: 'Crédito para Operações Não Incentivadas', field: 'creditoNaoIncentivadas' },
+            { id: '37', desc: 'Deduções das Operações Não Incentivadas', field: 'deducoesNaoIncentivadas' },
+            { id: '39', desc: 'Saldo Devedor do ICMS das Operações Não Incentivadas', field: 'saldoDevedorNaoIncentivadas' },
+            { id: '41', desc: 'Saldo do ICMS a Pagar das Operações Não Incentivadas', field: 'saldoPagarNaoIncentivadas' }
+        ];
+    }
+    
+    function getSummaryData() {
+        return [
+            { desc: 'Total a Pagar - Operações Incentivadas', field: 'totalPagarIncentivadas' },
+            { desc: 'Total a Pagar - Operações Não Incentivadas', field: 'totalPagarNaoIncentivadas' },
+            { desc: 'Valor do Financiamento FOMENTAR', field: 'valorFinanciamento' },
+            { desc: 'Total Geral a Pagar', field: 'totalGeralPagar' }
+        ];
+    }
+    
     // Initialize UI
     // updateStatus("Aguardando arquivo SPED..."); // Initial status is now set by clearLogs
     excelFileNameInput.placeholder = "NomeDoArquivoModerno.xlsx"; // From new HTML
