@@ -13,7 +13,7 @@ body {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); /* Purple Gradient */
+    background: linear-gradient(135deg, #FF2A2A 0%, #1B1B3B 50%, #2A2A5B 100%); /* Expertzy Brand Gradient */
     color: #333; /* Default text color for content on white backgrounds */
     padding: 20px;
     overflow-x: hidden; 
@@ -31,12 +31,45 @@ body {
     margin-bottom: 30px;
 }
 
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.logo-expertzy {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    box-shadow: 0 4px 15px rgba(255, 42, 42, 0.3);
+    transition: transform 0.3s ease;
+}
+
+.logo-expertzy:hover {
+    transform: scale(1.05);
+}
+
+.header-text {
+    text-align: left;
+}
+
 .app-header h1 {
     font-size: 2.8em; 
     font-weight: 700;
     color: #ffffff; /* Title remains white against gradient */
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
     letter-spacing: 1px;
+    margin: 0;
+}
+
+.subtitle {
+    font-size: 1.2rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin: 5px 0 0 0;
+    font-weight: 300;
+    letter-spacing: 0.5px;
 }
 
 .title-icon {
@@ -84,12 +117,12 @@ body {
 .drop-zone.highlight,
 .drop-zone.dragover {
     background-color: #e0e0e0; 
-    border-color: #8A2BE2; /* Vibrant purple border on drag over */
+    border-color: #FF2A2A; /* Expertzy red border on drag over */
 }
 
 .drop-zone-icon {
     font-size: 3em;
-    color: #8A2BE2; /* Purple icon */
+    color: #FF2A2A; /* Expertzy red icon */
     display: block;
     margin-bottom: 15px;
 }
@@ -196,8 +229,8 @@ body {
 
 .input-style:focus {
     outline: none;
-    border-color: #8A2BE2; /* Vibrant purple focus */
-    box-shadow: 0 0 0 2px rgba(138, 43, 226, 0.2);
+    border-color: #FF2A2A; /* Expertzy red focus */
+    box-shadow: 0 0 0 2px rgba(255, 42, 42, 0.2);
 }
 
 /* --- Buttons --- */
@@ -340,7 +373,7 @@ body {
 
 .tab-button.active {
     color: white;
-    border-bottom-color: #29ffc6;
+    border-bottom-color: #FF2A2A;
     background: rgba(255, 255, 255, 0.15);
 }
 
@@ -644,7 +677,7 @@ body {
     padding: 25px;
     border-radius: 12px;
     margin: 25px 0;
-    border-left: 4px solid #8A2BE2;
+    border-left: 4px solid #FF2A2A;
     text-align: left;
 }
 
@@ -678,7 +711,7 @@ body {
     border-radius: 12px;
     padding: 20px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-    border-left: 4px solid #8A2BE2;
+    border-left: 4px solid #FF2A2A;
     text-align: left;
 }
 
@@ -702,7 +735,7 @@ body {
 }
 
 .fomentar-table th {
-    background: linear-gradient(45deg, #8A2BE2, #9A3BE2);
+    background: linear-gradient(45deg, #FF2A2A, #1B1B3B);
     color: white;
     padding: 12px;
     text-align: left;
@@ -715,7 +748,7 @@ body {
 }
 
 .fomentar-table tr:hover {
-    background: rgba(138, 43, 226, 0.05);
+    background: rgba(255, 42, 42, 0.05);
 }
 
 .fomentar-table tr:nth-child(even) {
@@ -819,9 +852,28 @@ body {
 
 /* Responsive adjustments */
 @media (max-width: 600px) {
+    .header-content {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .header-text {
+        text-align: center;
+    }
+    
+    .logo-expertzy {
+        width: 60px;
+        height: 60px;
+    }
+    
     .app-header h1 {
         font-size: 2em;
     }
+    
+    .subtitle {
+        font-size: 1rem;
+    }
+    
     .converter-panel {
         padding: 20px;
     }
@@ -852,6 +904,6 @@ body {
         border-right: 3px solid transparent;
     }
     .tab-button.active {
-        border-right-color: #29ffc6;
+        border-right-color: #FF2A2A;
     }
 }
