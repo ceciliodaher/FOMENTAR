@@ -96,10 +96,15 @@
                     </div>
                     
                     <div id="singleImportSection" class="import-section">
+                        <div id="fomentarDropZone" class="drop-zone">
+                            <span class="drop-zone-icon">📁</span>
+                            <p class="drop-zone-text">Arraste e solte o arquivo SPED aqui</p>
+                            <p class="drop-zone-or">- ou -</p>
+                            <button id="importSpedFomentar" class="btn-style btn-import">
+                                <span class="btn-icon">📂</span> Importar SPED para FOMENTAR
+                            </button>
+                        </div>
                         <p id="fomentarSpedStatus">Nenhum arquivo SPED importado</p>
-                        <button id="importSpedFomentar" class="btn-style btn-import">
-                            <span class="btn-icon">📂</span> Importar SPED para FOMENTAR
-                        </button>
                     </div>
                     
                     <div id="multipleImportSection" class="import-section" style="display: none;">
@@ -269,6 +274,9 @@
                         <button id="exportFomentar" class="btn-style btn-export">
                             <span class="btn-icon">📊</span> Exportar Excel
                         </button>
+                        <button id="exportFomentarMemoria" class="btn-style btn-export">
+                            <span class="btn-icon">🔍</span> Exportar Memória de Cálculo
+                        </button>
                         <button id="exportComparative" class="btn-style btn-export" style="display: none;">
                             <span class="btn-icon">📈</span> Exportar Relatório Comparativo
                         </button>
@@ -312,10 +320,15 @@
                     </div>
                     
                     <div id="singleImportSectionProgoias" class="import-section">
+                        <div id="progoisDropZone" class="drop-zone">
+                            <span class="drop-zone-icon">📁</span>
+                            <p class="drop-zone-text">Arraste e solte o arquivo SPED aqui</p>
+                            <p class="drop-zone-or">- ou -</p>
+                            <button id="importSpedProgoias" class="btn-style btn-import">
+                                <span class="btn-icon">📂</span> Importar SPED para ProGoiás
+                            </button>
+                        </div>
                         <p id="progoisSpedStatus">Nenhum arquivo SPED importado</p>
-                        <button id="importSpedProgoias" class="btn-style btn-import">
-                            <span class="btn-icon">📂</span> Importar SPED para ProGoiás
-                        </button>
                     </div>
                     
                     <div id="multipleImportSectionProgoias" class="import-section" style="display: none;">
@@ -329,9 +342,6 @@
                             </button>
                             <div id="multipleSpedListProgoias" class="selected-files-list"></div>
                         </div>
-                        <button id="processMultipleSpedsProgoias" class="btn-style btn-process" style="display: none;">
-                            <span class="btn-icon">⚙️</span> Processar SPEDs em Sequência
-                        </button>
                     </div>
                 </div>
 
@@ -347,9 +357,13 @@
                             </select>
                         </div>
                         <div class="config-item">
-                            <label for="progoisPercentual">Percentual do Incentivo (%):</label>
-                            <input type="number" id="progoisPercentual" class="input-style" 
-                                   min="0" max="75" step="0.01" value="75.00">
+                            <label for="progoisAno">Ano de Fruição:</label>
+                            <select id="progoisAno" class="input-style">
+                                <option value="1">1º Ano (ProGoiás: 64% | PROTEGE: 10%)</option>
+                                <option value="2">2º Ano (ProGoiás: 65% | PROTEGE: 8%)</option>
+                                <option value="3">3º Ano+ (ProGoiás: 66% | PROTEGE: 6%)</option>
+                                <option value="0">Sem PROTEGE (apenas ProGoiás)</option>
+                            </select>
                         </div>
                         <div class="config-item">
                             <label for="progoisIcmsPorMedia">ICMS por Média (R$):</label>
@@ -361,6 +375,12 @@
                             <input type="number" id="progoisSaldoCredorAnterior" class="input-style" 
                                    step="0.01" value="0.00">
                         </div>
+                    </div>
+                    
+                    <div class="fomentar-process-section">
+                        <button id="processProgoisData" class="btn-style btn-process" style="display: none;">
+                            <span class="btn-icon">⚙️</span> Processar Apuração ProGoiás
+                        </button>
                     </div>
                 </div>
 
@@ -418,10 +438,12 @@
                                 </thead>
                                 <tbody>
                                     <tr><td>13</td><td>Base de Cálculo para o Incentivo</td><td id="progoisItemB13">0,00</td></tr>
-                                    <tr><td>14</td><td>Percentual do Incentivo (%)</td><td id="progoisItemB14">0,00</td></tr>
+                                    <tr><td>14</td><td>Percentual do Incentivo ProGoiás (%)</td><td id="progoisItemB14">0,00</td></tr>
                                     <tr><td>15</td><td>Valor do Incentivo ProGoiás</td><td id="progoisItemB15">0,00</td></tr>
-                                    <tr><td>16</td><td>ICMS Devido após Incentivo</td><td id="progoisItemB16">0,00</td></tr>
-                                    <tr><td>17</td><td>Valor da Economia Fiscal</td><td id="progoisItemB17">0,00</td></tr>
+                                    <tr><td>16</td><td>Percentual PROTEGE (%)</td><td id="progoisItemB16">0,00</td></tr>
+                                    <tr><td>17</td><td>Valor do PROTEGE</td><td id="progoisItemB17">0,00</td></tr>
+                                    <tr><td>18</td><td>Total dos Incentivos</td><td id="progoisItemB18">0,00</td></tr>
+                                    <tr><td>19</td><td>ICMS Devido após Incentivos</td><td id="progoisItemB19">0,00</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -456,7 +478,7 @@
                         <h3>💰 RESUMO DA APURAÇÃO PROGOIÁS</h3>
                         <div class="resumo-grid">
                             <div class="resumo-item">
-                                <label>ICMS Devido antes do Incentivo:</label>
+                                <label>ICMS Devido antes dos Incentivos:</label>
                                 <span id="progoisIcmsDevido" class="valor-destaque">R$ 0,00</span>
                             </div>
                             <div class="resumo-item">
@@ -464,7 +486,11 @@
                                 <span id="progoisValorIncentivo" class="valor-destaque valor-economia">R$ 0,00</span>
                             </div>
                             <div class="resumo-item">
-                                <label>ICMS a Recolher após Incentivo:</label>
+                                <label>Valor do PROTEGE:</label>
+                                <span id="progoisValorProtege" class="valor-destaque valor-economia">R$ 0,00</span>
+                            </div>
+                            <div class="resumo-item">
+                                <label>ICMS a Recolher após Incentivos:</label>
                                 <span id="progoisIcmsRecolher" class="valor-destaque">R$ 0,00</span>
                             </div>
                             <div class="resumo-item">
@@ -478,6 +504,9 @@
                     <div class="fomentar-actions">
                         <button id="exportProgoias" class="btn-style btn-export">
                             <span class="btn-icon">📊</span> Exportar Excel
+                        </button>
+                        <button id="exportProgoisMemoria" class="btn-style btn-export">
+                            <span class="btn-icon">🔍</span> Exportar Memória de Cálculo
                         </button>
                         <button id="exportProgoisComparative" class="btn-style btn-export" style="display: none;">
                             <span class="btn-icon">📈</span> Exportar Relatório Comparativo
