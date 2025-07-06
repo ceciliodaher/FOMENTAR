@@ -24,6 +24,7 @@
         <div class="tab-navigation">
             <button id="tabConverter" class="tab-button active">Conversor SPED</button>
             <button id="tabFomentar" class="tab-button">Apuração FOMENTAR</button>
+            <button id="tabProgoias" class="tab-button">Apuração ProGoiás</button>
         </div>
 
         <main class="main-content">
@@ -275,6 +276,216 @@
                             <span class="btn-icon">📄</span> Exportar PDF Comparativo
                         </button>
                         <button id="printFomentar" class="btn-style btn-secondary">
+                            <span class="btn-icon">🖨️</span> Imprimir
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Painel ProGoiás -->
+            <div id="progoisPanel" class="converter-panel tab-content">
+                <div class="fomentar-header">
+                    <h2>🏛️ Apuração ProGoiás</h2>
+                    <p class="fomentar-subtitle">Conforme Instrução Normativa nº 1478/2020 e Decreto nº 9.724/2020</p>
+                </div>
+
+                <div class="instrucoes-uso">
+                    <h3>📋 Instruções de Uso</h3>
+                    <div class="instrucoes-content">
+                        <p><strong>1. Importação do SPED:</strong> Clique em "Importar SPED" para carregar os dados fiscais do período.</p>
+                        <p><strong>2. Configurações:</strong> Ajuste os parâmetros específicos do ProGoiás conforme sua situação.</p>
+                        <p><strong>3. Verificação:</strong> <em>Revise os valores calculados automaticamente</em> e preencha campos editáveis conforme necessário.</p>
+                        <p><strong>4. Exportação:</strong> Gere o demonstrativo em Excel ou imprima diretamente.</p>
+                    </div>
+                </div>
+
+                <div class="fomentar-import-section">
+                    <div class="import-mode-selector">
+                        <label>
+                            <input type="radio" name="importModeProgoias" value="single" checked>
+                            <span>Período Único</span>
+                        </label>
+                        <label>
+                            <input type="radio" name="importModeProgoias" value="multiple">
+                            <span>Múltiplos Períodos</span>
+                        </label>
+                    </div>
+                    
+                    <div id="singleImportSectionProgoias" class="import-section">
+                        <p id="progoisSpedStatus">Nenhum arquivo SPED importado</p>
+                        <button id="importSpedProgoias" class="btn-style btn-import">
+                            <span class="btn-icon">📂</span> Importar SPED para ProGoiás
+                        </button>
+                    </div>
+                    
+                    <div id="multipleImportSectionProgoias" class="import-section" style="display: none;">
+                        <div id="multipleDropZoneProgoias" class="multiple-import-zone">
+                            <span class="drop-zone-icon">📁</span>
+                            <p>Arraste e solte múltiplos arquivos SPED aqui</p>
+                            <p class="drop-zone-or">- ou -</p>
+                            <input type="file" id="multipleSpedFilesProgoias" multiple accept=".txt" style="display: none;">
+                            <button id="selectMultipleSpedsProgoias" class="btn-style btn-import">
+                                <span class="btn-icon">📂</span> Selecionar Múltiplos SPEDs
+                            </button>
+                            <div id="multipleSpedListProgoias" class="selected-files-list"></div>
+                        </div>
+                        <button id="processMultipleSpedsProgoias" class="btn-style btn-process" style="display: none;">
+                            <span class="btn-icon">⚙️</span> Processar SPEDs em Sequência
+                        </button>
+                    </div>
+                </div>
+
+                <div class="fomentar-config">
+                    <h3>⚙️ Configurações da Apuração ProGoiás</h3>
+                    <div class="config-grid">
+                        <div class="config-item">
+                            <label for="progoisTipoEmpresa">Tipo de Empresa:</label>
+                            <select id="progoisTipoEmpresa" class="input-style">
+                                <option value="MICRO">Microempresa</option>
+                                <option value="PEQUENA">Empresa de Pequeno Porte</option>
+                                <option value="MEDIA">Empresa de Médio Porte</option>
+                            </select>
+                        </div>
+                        <div class="config-item">
+                            <label for="progoisPercentual">Percentual do Incentivo (%):</label>
+                            <input type="number" id="progoisPercentual" class="input-style" 
+                                   min="0" max="75" step="0.01" value="75.00">
+                        </div>
+                        <div class="config-item">
+                            <label for="progoisIcmsPorMedia">ICMS por Média (R$):</label>
+                            <input type="number" id="progoisIcmsPorMedia" class="input-style" 
+                                   step="0.01" value="0.00">
+                        </div>
+                        <div class="config-item">
+                            <label for="progoisSaldoCredorAnterior">Saldo Credor Anterior (R$):</label>
+                            <input type="number" id="progoisSaldoCredorAnterior" class="input-style" 
+                                   step="0.01" value="0.00">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="progoisResults" style="display: none;">
+                    <div id="progoisPeriodsSelector" class="periods-selector" style="display: none;">
+                        <h3>📅 Períodos Processados</h3>
+                        <div id="progoisPeriodsButtons" class="periods-buttons"></div>
+                        <div class="view-options">
+                            <button id="progoisViewSinglePeriod" class="btn-style btn-small active">Visão Individual</button>
+                            <button id="progoisViewComparative" class="btn-style btn-small">Visão Comparativa</button>
+                        </div>
+                    </div>
+
+                    <!-- Quadro A: Apuração do ICMS -->
+                    <div class="quadro-section">
+                        <h3>📈 QUADRO A - APURAÇÃO DO ICMS</h3>
+                        <div class="quadro-table">
+                            <table class="fomentar-table">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Descrição</th>
+                                        <th>Valor (R$)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>01</td><td>Débito do ICMS</td><td id="progoisItemA01">0,00</td></tr>
+                                    <tr><td>02</td><td>Outros Débitos</td><td id="progoisItemA02">0,00</td></tr>
+                                    <tr><td>03</td><td>Estorno de Créditos</td><td id="progoisItemA03">0,00</td></tr>
+                                    <tr><td>04</td><td>Total de Débitos</td><td id="progoisItemA04">0,00</td></tr>
+                                    <tr><td>05</td><td>Créditos por Entradas</td><td id="progoisItemA05">0,00</td></tr>
+                                    <tr><td>06</td><td>Outros Créditos</td><td id="progoisItemA06">0,00</td></tr>
+                                    <tr><td>07</td><td>Estorno de Débitos</td><td id="progoisItemA07">0,00</td></tr>
+                                    <tr><td>08</td><td>Saldo Credor do Período Anterior</td><td id="progoisItemA08">0,00</td></tr>
+                                    <tr><td>09</td><td>Total de Créditos</td><td id="progoisItemA09">0,00</td></tr>
+                                    <tr><td>10</td><td>Saldo Devedor do ICMS</td><td id="progoisItemA10">0,00</td></tr>
+                                    <tr><td>11</td><td>Deduções</td><td id="progoisItemA11">0,00</td></tr>
+                                    <tr><td>12</td><td>ICMS a Recolher</td><td id="progoisItemA12">0,00</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Quadro B: Cálculo do Incentivo -->
+                    <div class="quadro-section">
+                        <h3>🎯 QUADRO B - CÁLCULO DO INCENTIVO PROGOIÁS</h3>
+                        <div class="quadro-table">
+                            <table class="fomentar-table">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Descrição</th>
+                                        <th>Valor (R$)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>13</td><td>Base de Cálculo para o Incentivo</td><td id="progoisItemB13">0,00</td></tr>
+                                    <tr><td>14</td><td>Percentual do Incentivo (%)</td><td id="progoisItemB14">0,00</td></tr>
+                                    <tr><td>15</td><td>Valor do Incentivo ProGoiás</td><td id="progoisItemB15">0,00</td></tr>
+                                    <tr><td>16</td><td>ICMS Devido após Incentivo</td><td id="progoisItemB16">0,00</td></tr>
+                                    <tr><td>17</td><td>Valor da Economia Fiscal</td><td id="progoisItemB17">0,00</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Quadro C: Demonstrativo de Operações -->
+                    <div class="quadro-section">
+                        <h3>📊 QUADRO C - DEMONSTRATIVO DE OPERAÇÕES</h3>
+                        <div class="quadro-table">
+                            <table class="fomentar-table">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Descrição</th>
+                                        <th>Valor (R$)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>18</td><td>Saídas com Incentivo</td><td id="progoisItemC18">0,00</td></tr>
+                                    <tr><td>19</td><td>Saídas sem Incentivo</td><td id="progoisItemC19">0,00</td></tr>
+                                    <tr><td>20</td><td>Total das Saídas</td><td id="progoisItemC20">0,00</td></tr>
+                                    <tr><td>21</td><td>Entradas com Incentivo</td><td id="progoisItemC21">0,00</td></tr>
+                                    <tr><td>22</td><td>Entradas sem Incentivo</td><td id="progoisItemC22">0,00</td></tr>
+                                    <tr><td>23</td><td>Total das Entradas</td><td id="progoisItemC23">0,00</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Resumo Final -->
+                    <div class="resumo-section">
+                        <h3>💰 RESUMO DA APURAÇÃO PROGOIÁS</h3>
+                        <div class="resumo-grid">
+                            <div class="resumo-item">
+                                <label>ICMS Devido antes do Incentivo:</label>
+                                <span id="progoisIcmsDevido" class="valor-destaque">R$ 0,00</span>
+                            </div>
+                            <div class="resumo-item">
+                                <label>Valor do Incentivo ProGoiás:</label>
+                                <span id="progoisValorIncentivo" class="valor-destaque valor-economia">R$ 0,00</span>
+                            </div>
+                            <div class="resumo-item">
+                                <label>ICMS a Recolher após Incentivo:</label>
+                                <span id="progoisIcmsRecolher" class="valor-destaque">R$ 0,00</span>
+                            </div>
+                            <div class="resumo-item">
+                                <label>Economia Fiscal Total:</label>
+                                <span id="progoisEconomiaTotal" class="valor-destaque valor-total">R$ 0,00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ações -->
+                    <div class="fomentar-actions">
+                        <button id="exportProgoias" class="btn-style btn-export">
+                            <span class="btn-icon">📊</span> Exportar Excel
+                        </button>
+                        <button id="exportProgoisComparative" class="btn-style btn-export" style="display: none;">
+                            <span class="btn-icon">📈</span> Exportar Relatório Comparativo
+                        </button>
+                        <button id="exportProgoisPDF" class="btn-style btn-export" style="display: none;">
+                            <span class="btn-icon">📄</span> Exportar PDF Comparativo
+                        </button>
+                        <button id="printProgoias" class="btn-style btn-secondary">
                             <span class="btn-icon">🖨️</span> Imprimir
                         </button>
                     </div>
