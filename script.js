@@ -2399,13 +2399,20 @@ document.addEventListener('DOMContentLoaded', () => {
             ];
             
             resumoItems.forEach((item, index) => {
-                mainSheet.cell(`A${currentRow}`).value(item.desc)
+                // Deixar coluna A vazia para manter alinhamento com outros quadros
+                mainSheet.cell(`A${currentRow}`).value('')
+                    .style('border', true)
+                    .style('fill', index === 3 ? 'E8F5E8' : 'F5F5F5');
+                
+                // Descrição na coluna B
+                mainSheet.cell(`B${currentRow}`).value(item.desc)
                     .style('bold', true)
                     .style('border', true)
                     .style('fill', index === 3 ? 'E8F5E8' : 'F5F5F5'); // Destaque no total geral
                 
+                // Valores a partir da coluna C
                 periodsData.forEach((period, periodIndex) => {
-                    const col = String.fromCharCode(66 + periodIndex); // B, C, D, etc.
+                    const col = String.fromCharCode(67 + periodIndex); // C, D, E, etc.
                     const data = period.calculatedValues || period.fomentarData;
                     const value = data && data[item.field] !== undefined ? data[item.field] : 0;
                     
