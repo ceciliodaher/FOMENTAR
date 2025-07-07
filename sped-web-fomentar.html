@@ -394,9 +394,37 @@
                         </div>
                     </div>
 
-                    <!-- Quadro A: Apuração do ICMS -->
+                    <!-- ABA 1: CÁLCULO DO PROGOIÁS -->
                     <div class="quadro-section">
-                        <h3>📈 QUADRO A - APURAÇÃO DO ICMS</h3>
+                        <h3>📋 ABA 1 - CÁLCULO DO PROGOIÁS (Progoias.xlsx)</h3>
+                        <div class="quadro-table">
+                            <table class="fomentar-table">
+                                <thead>
+                                    <tr>
+                                        <th>Código</th>
+                                        <th>Descrição</th>
+                                        <th>Valor (R$)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>GO100002</td><td>ICMS Saídas Incentivadas</td><td id="progoisItemA01">0,00</td></tr>
+                                    <tr><td>GO100003</td><td>ICMS Entradas Incentivadas</td><td id="progoisItemA02">0,00</td></tr>
+                                    <tr><td>GO100004</td><td>Outros Créditos (Anexo II)</td><td id="progoisItemA03">0,00</td></tr>
+                                    <tr><td>GO100005</td><td>Outros Débitos (Anexo II)</td><td id="progoisItemA04">0,00</td></tr>
+                                    <tr><td>GO100007</td><td>Ajuste Período Anterior</td><td id="progoisItemA05">0,00</td></tr>
+                                    <tr><td>GO100006</td><td>Média ICMS (se aplicável)</td><td id="progoisItemA06">0,00</td></tr>
+                                    <tr><td>-</td><td><strong>Base de Cálculo</strong></td><td id="progoisItemA07" style="background: #e3f2fd; font-weight: bold;">0,00</td></tr>
+                                    <tr><td>GO100001</td><td>Percentual ProGoiás (%)</td><td id="progoisItemA08">0,00</td></tr>
+                                    <tr><td>GO100009</td><td><strong>Crédito Outorgado ProGoiás</strong></td><td id="progoisItemA09" style="background: #c8e6c9; font-weight: bold;">0,00</td></tr>
+                                    <tr><td>GO100008</td><td>Ajuste Próximo Período</td><td id="progoisItemA10">0,00</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- ABA 2: APURAÇÃO DO ICMS -->
+                    <div class="quadro-section">
+                        <h3>📈 ABA 2 - APURAÇÃO DO ICMS (Progoias.xlsx)</h3>
                         <div class="quadro-table">
                             <table class="fomentar-table">
                                 <thead>
@@ -407,51 +435,26 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr><td>01</td><td>Débito do ICMS</td><td id="progoisItemA01">0,00</td></tr>
-                                    <tr><td>02</td><td>Outros Débitos</td><td id="progoisItemA02">0,00</td></tr>
-                                    <tr><td>03</td><td>Estorno de Créditos</td><td id="progoisItemA03">0,00</td></tr>
-                                    <tr><td>04</td><td>Total de Débitos</td><td id="progoisItemA04">0,00</td></tr>
-                                    <tr><td>05</td><td>Créditos por Entradas</td><td id="progoisItemA05">0,00</td></tr>
-                                    <tr><td>06</td><td>Outros Créditos</td><td id="progoisItemA06">0,00</td></tr>
-                                    <tr><td>07</td><td>Estorno de Débitos</td><td id="progoisItemA07">0,00</td></tr>
-                                    <tr><td>08</td><td>Saldo Credor do Período Anterior</td><td id="progoisItemA08">0,00</td></tr>
-                                    <tr><td>09</td><td>Total de Créditos</td><td id="progoisItemA09">0,00</td></tr>
-                                    <tr><td>10</td><td>Saldo Devedor do ICMS</td><td id="progoisItemA10">0,00</td></tr>
-                                    <tr><td>11</td><td>Deduções</td><td id="progoisItemA11">0,00</td></tr>
-                                    <tr><td>12</td><td>ICMS a Recolher</td><td id="progoisItemA12">0,00</td></tr>
+                                    <tr><td>01</td><td>Débito do ICMS</td><td id="progoisItemB13">0,00</td></tr>
+                                    <tr><td>02</td><td>Outros Débitos</td><td id="progoisItemB14">0,00</td></tr>
+                                    <tr><td>03</td><td>Estorno de Créditos</td><td id="progoisItemB15">0,00</td></tr>
+                                    <tr><td>04</td><td><strong>Total de Débitos</strong></td><td id="progoisItemB16" style="background: #ffebee; font-weight: bold;">0,00</td></tr>
+                                    <tr><td>05</td><td>Créditos por Entradas</td><td id="progoisItemB17">0,00</td></tr>
+                                    <tr><td>06</td><td>Outros Créditos</td><td id="progoisItemB18">0,00</td></tr>
+                                    <tr><td>09</td><td><strong>Crédito ProGoiás</strong></td><td id="progoisItemB19" style="background: #c8e6c9; font-weight: bold;">0,00</td></tr>
+                                    <tr><td>-</td><td>Resumo ICMS</td><td colspan="2" style="background: #f5f5f5; text-align: center; font-style: italic;">Valores Finais</td></tr>
+                                    <tr><td>13</td><td><strong>ICMS a Recolher</strong></td><td id="progoisIcmsDevido" style="background: #fff3e0; font-weight: bold;">R$ 0,00</td></tr>
+                                    <tr><td>14</td><td>PROTEGE</td><td id="progoisValorProtege">R$ 0,00</td></tr>
+                                    <tr><td>15</td><td><strong>ICMS Final</strong></td><td id="progoisIcmsRecolher" style="background: #e8f5e8; font-weight: bold;">R$ 0,00</td></tr>
+                                    <tr><td>-</td><td><strong>Economia Total</strong></td><td id="progoisEconomiaTotal" style="background: #e3f2fd; font-weight: bold;">R$ 0,00</td></tr>
                                 </tbody>
                             </table>
                         </div>
                     </div>
 
-                    <!-- Quadro B: Cálculo do Incentivo -->
+                    <!-- DEMONSTRATIVO DETALHADO -->
                     <div class="quadro-section">
-                        <h3>🎯 QUADRO B - CÁLCULO DO INCENTIVO PROGOIÁS</h3>
-                        <div class="quadro-table">
-                            <table class="fomentar-table">
-                                <thead>
-                                    <tr>
-                                        <th>Item</th>
-                                        <th>Descrição</th>
-                                        <th>Valor (R$)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr><td>13</td><td>Base de Cálculo para o Incentivo</td><td id="progoisItemB13">0,00</td></tr>
-                                    <tr><td>14</td><td>Percentual do Incentivo ProGoiás (%)</td><td id="progoisItemB14">0,00</td></tr>
-                                    <tr><td>15</td><td>Valor do Incentivo ProGoiás</td><td id="progoisItemB15">0,00</td></tr>
-                                    <tr><td>16</td><td>Percentual PROTEGE (%)</td><td id="progoisItemB16">0,00</td></tr>
-                                    <tr><td>17</td><td>Valor do PROTEGE</td><td id="progoisItemB17">0,00</td></tr>
-                                    <tr><td>18</td><td>Total dos Incentivos</td><td id="progoisItemB18">0,00</td></tr>
-                                    <tr><td>19</td><td>ICMS Devido após Incentivos</td><td id="progoisItemB19">0,00</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Quadro C: Demonstrativo de Operações -->
-                    <div class="quadro-section">
-                        <h3>📊 QUADRO C - DEMONSTRATIVO DE OPERAÇÕES</h3>
+                        <h3>📊 DEMONSTRATIVO DETALHADO - OPERAÇÕES E ICMS</h3>
                         <div class="quadro-table">
                             <table class="fomentar-table">
                                 <thead>

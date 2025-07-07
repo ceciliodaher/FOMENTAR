@@ -1476,22 +1476,60 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Códigos de ajuste incentivados conforme Anexo III da IN 885/07-GSF
     const CODIGOS_AJUSTE_INCENTIVADOS = [
-        'GO-ICMS-001', 'GO-ICMS-002', 'GO-ICMS-003', 'GO-ICMS-004', 'GO-ICMS-005',
-        'GO-ICMS-006', 'GO-ICMS-007', 'GO-ICMS-008', 'GO-ICMS-009', 'GO-ICMS-010',
-        'GO-ICMS-011', 'GO-ICMS-012', 'GO-ICMS-013', 'GO-ICMS-014', 'GO-ICMS-015',
-        'GO-ICMS-016', 'GO-ICMS-017', 'GO-ICMS-018', 'GO-ICMS-019', 'GO-ICMS-020',
-        'GO020021', // Incentivado conforme IN
-        'GO020079', // Incentivado conforme IN
-        // Adicionar outros códigos conforme necessário
+        // Estorno de débitos
+        'GO030003', 'GO20000000',
+
+        // Outros créditos GO020xxx
+        'GO020159', 'GO020007', 'GO020160', 'GO020162', 'GO020014', 'GO020021', 
+        'GO020023', 'GO020025', 'GO020026', 'GO020027', 'GO020029', 'GO020030', 
+        'GO020031', 'GO020033', 'GO020034', 'GO020035', 'GO020036', 'GO020039', 
+        'GO020041', 'GO020048', 'GO020050', 'GO020051', 'GO020052', 'GO020059', 
+        'GO020063', 'GO020069', 'GO020070', 'GO020072', 'GO020079', 'GO020081', 
+        'GO020093', 'GO020102', 'GO020103', 'GO020104', 'GO020105', 'GO020107', 
+        'GO020110', 'GO020111', 'GO020114', 'GO020122', 'GO020124', 'GO020125', 
+        'GO020128', 'GO020129', 'GO020133', 'GO020142', 'GO020151', 'GO020152', 
+        'GO020153', 'GO020155', 'GO020156', 'GO020157',
+
+        // Outros créditos GO00xxx e GO10xxx
+        'GO00009037', 'GO10990020', 'GO10990025', 'GO10991019', 'GO10991023', 
+        'GO10993022', 'GO10993024',
+
+        // Estorno de créditos (débitos para o contribuinte)
+        'GO010016', 'GO010017', 'GO010068', 'GO010063', 'GO010064', 'GO010026', 
+        'GO010028', 'GO010034', 'GO010036', 'GO010065', 'GO010066', 'GO010067', 
+        'GO010047', 'GO010053', 'GO010054', 'GO010055', 'GO010060', 'GO010061',
+
+        // Outros débitos GO40xxx
+        'GO40009035', 'GO40990021', 'GO40991022', 'GO40993020'
     ];
 
     // Códigos de ajuste incentivados específicos do ProGoiás conforme IN 1478/2020
     const CODIGOS_AJUSTE_INCENTIVADOS_PROGOIAS = [
-        'GO020021', // Incentivado ProGoiás
-        'GO020079', // Incentivado ProGoiás
-        'GO40000029', // Débito incentivado ProGoiás (exemplo - verificar IN completa)
-        // Adicionar outros códigos GO4* que constam da IN ProGoiás
-        // Adicionar outros códigos conforme IN 1478/2020
+        // Estorno de débitos
+        'GO030003', 'GO20000000',
+
+        // Outros créditos GO020xxx
+        'GO020159', 'GO020007', 'GO020160', 'GO020162', 'GO020014', 'GO020021', 
+        'GO020023', 'GO020025', 'GO020026', 'GO020027', 'GO020029', 'GO020030', 
+        'GO020031', 'GO020033', 'GO020034', 'GO020035', 'GO020036', 'GO020039', 
+        'GO020041', 'GO020048', 'GO020050', 'GO020051', 'GO020052', 'GO020059', 
+        'GO020063', 'GO020069', 'GO020070', 'GO020072', 'GO020079', 'GO020081', 
+        'GO020093', 'GO020102', 'GO020103', 'GO020104', 'GO020105', 'GO020107', 
+        'GO020110', 'GO020111', 'GO020114', 'GO020122', 'GO020124', 'GO020125', 
+        'GO020128', 'GO020129', 'GO020133', 'GO020142', 'GO020151', 'GO020152', 
+        'GO020153', 'GO020155', 'GO020156', 'GO020157',
+
+        // Outros créditos GO00xxx e GO10xxx
+        'GO00009037', 'GO10990020', 'GO10990025', 'GO10991019', 'GO10991023', 
+        'GO10993022', 'GO10993024',
+
+        // Estorno de créditos (débitos para o contribuinte)
+        'GO010016', 'GO010017', 'GO010068', 'GO010063', 'GO010064', 'GO010026', 
+        'GO010028', 'GO010034', 'GO010036', 'GO010065', 'GO010066', 'GO010067', 
+        'GO010047', 'GO010053', 'GO010054', 'GO010055', 'GO010060', 'GO010061',
+
+        // Outros débitos GO40xxx
+        'GO40009035', 'GO40990021', 'GO40991022', 'GO40993020'
     ];
 
     // Códigos de crédito FOMENTAR/PRODUZIR/MICROPRODUZIR que devem ser EXCLUÍDOS da base de cálculo
@@ -1501,7 +1539,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'GO040009', // MICROPRODUZIR
         'GO040010', // FOMENTAR variação
         'GO040011', // PRODUZIR variação
-        'GO040012'  // MICROPRODUZIR variação
+        'GO040012',  // MICROPRODUZIR variação        
+        'GO040137'  // Créditos oriundos do registro 1200 (conforme art. 9º IN 1478)
     ];
 
     // --- Tab Navigation Functions ---
@@ -1590,6 +1629,14 @@ document.addEventListener('DOMContentLoaded', () => {
             outrosDebitos: 0,
             saldoCredorAnterior: 0,
             
+            // Separação para ProGoiás - créditos e débitos incentivados/não incentivados
+            creditosEntradasIncentivadas: 0,
+            creditosEntradasNaoIncentivadas: 0,
+            outrosCreditosIncentivados: 0,
+            outrosCreditosNaoIncentivados: 0,
+            outrosDebitosIncentivados: 0,
+            outrosDebitosNaoIncentivados: 0,
+            
             // Memória de cálculo detalhada
             memoriaCalculo: {
                 operacoesDetalhadas: [],
@@ -1666,8 +1713,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tipoOperacao === 'ENTRADA') {
                 if (isIncentivada) {
                     operations.entradasIncentivadas.push(operacao);
+                    operations.creditosEntradasIncentivadas += valorIcms;
                 } else {
                     operations.entradasNaoIncentivadas.push(operacao);
+                    operations.creditosEntradasNaoIncentivadas += valorIcms;
                 }
                 operations.creditosEntradas += valorIcms;
                 operations.memoriaCalculo.totalCreditos.porEntradas += valorIcms;
@@ -1734,8 +1783,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tipoOperacao === 'ENTRADA') {
                 if (isIncentivada) {
                     operations.entradasIncentivadas.push(operacao);
+                    operations.creditosEntradasIncentivadas += valorIcms;
                 } else {
                     operations.entradasNaoIncentivadas.push(operacao);
+                    operations.creditosEntradasNaoIncentivadas += valorIcms;
                 }
                 operations.creditosEntradas += valorIcms;
                 operations.memoriaCalculo.totalCreditos.porEntradas += valorIcms;
@@ -1805,10 +1856,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (valorAjuste > 0) { // Crédito
                         operations.outrosCreditos += valorAjuste;
                         operations.memoriaCalculo.totalCreditos.porAjustesE111 += valorAjuste;
+                        
+                        // Separar créditos incentivados/não incentivados para ProGoiás
+                        if (isIncentivado) {
+                            operations.outrosCreditosIncentivados += valorAjuste;
+                        } else {
+                            operations.outrosCreditosNaoIncentivados += valorAjuste;
+                        }
+                        
                         addLog(`E111 Crédito: ${codAjuste} = R$ ${formatCurrency(valorAjuste)} ${isIncentivado ? '(Incentivado)' : '(Não Incentivado)'}`, 'info');
                     } else { // Débito
                         operations.outrosDebitos += Math.abs(valorAjuste);
                         operations.memoriaCalculo.totalDebitos.porAjustesE111 += Math.abs(valorAjuste);
+                        
+                        // Separar débitos incentivados/não incentivados para ProGoiás
+                        if (isIncentivado) {
+                            operations.outrosDebitosIncentivados += Math.abs(valorAjuste);
+                        } else {
+                            operations.outrosDebitosNaoIncentivados += Math.abs(valorAjuste);
+                        }
+                        
                         addLog(`E111 Débito: ${codAjuste} = R$ ${formatCurrency(Math.abs(valorAjuste))} ${isIncentivado ? '(Incentivado)' : '(Não Incentivado)'}`, 'info');
                     }
                 }
@@ -1872,6 +1939,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Incluir débitos GO4* e outros no cálculo
                         operations.outrosDebitos += Math.abs(valorIcms);
                         operations.memoriaCalculo.totalDebitos.porAjustesC197 += Math.abs(valorIcms);
+                        
+                        // Separar débitos incentivados/não incentivados para ProGoiás
+                        if (ehIncentivadoProgoias) {
+                            operations.outrosDebitosIncentivados += Math.abs(valorIcms);
+                        } else {
+                            operations.outrosDebitosNaoIncentivados += Math.abs(valorIcms);
+                        }
                         
                         const tipoLog = ehDebitoGO4 ? 
                             (ehIncentivadoProgoias ? 'GO4 Incentivado ProGoiás' : 'GO4 Não Incentivado') : 
@@ -1943,6 +2017,21 @@ document.addEventListener('DOMContentLoaded', () => {
         addLog(`Créditos de entradas: R$ ${formatCurrency(operations.creditosEntradas)}, Outros créditos: R$ ${formatCurrency(operations.outrosCreditos)}`, 'success');
         addLog(`Débitos de operações: R$ ${formatCurrency(operations.debitosOperacoes)}, Outros débitos (E111+C197+D197): R$ ${formatCurrency(operations.outrosDebitos)}`, 'success');
         addLog(`Total de exclusões aplicadas: ${operations.memoriaCalculo.exclusoes.length}`, 'info');
+        
+        // LOGS DE SEPARAÇÃO PARA DEBUG PROGOIÁS
+        addLog('=== DEBUG SEPARAÇÃO PROGOIÁS ===', 'warn');
+        addLog(`Outros Débitos TOTAL: R$ ${formatCurrency(operations.outrosDebitos)}`, 'info');
+        addLog(`  - Incentivados: R$ ${formatCurrency(operations.outrosDebitosIncentivados)} (${operations.outrosDebitos > 0 ? ((operations.outrosDebitosIncentivados / operations.outrosDebitos) * 100).toFixed(1) : 0}%)`, 'info');
+        addLog(`  - Não Incentivados: R$ ${formatCurrency(operations.outrosDebitosNaoIncentivados)}`, 'info');
+        addLog(`  - Soma: R$ ${formatCurrency(operations.outrosDebitosIncentivados + operations.outrosDebitosNaoIncentivados)} - ${Math.abs((operations.outrosDebitosIncentivados + operations.outrosDebitosNaoIncentivados) - operations.outrosDebitos) < 0.01 ? 'OK' : 'ERRO'}`, Math.abs((operations.outrosDebitosIncentivados + operations.outrosDebitosNaoIncentivados) - operations.outrosDebitos) < 0.01 ? 'success' : 'error');
+        
+        addLog(`Outros Créditos TOTAL: R$ ${formatCurrency(operations.outrosCreditos)}`, 'info');
+        addLog(`  - Incentivados: R$ ${formatCurrency(operations.outrosCreditosIncentivados)} (${operations.outrosCreditos > 0 ? ((operations.outrosCreditosIncentivados / operations.outrosCreditos) * 100).toFixed(1) : 0}%)`, 'info');
+        addLog(`  - Não Incentivados: R$ ${formatCurrency(operations.outrosCreditosNaoIncentivados)}`, 'info');
+        
+        addLog(`Créditos Entradas TOTAL: R$ ${formatCurrency(operations.creditosEntradas)}`, 'info');
+        addLog(`  - Incentivados: R$ ${formatCurrency(operations.creditosEntradasIncentivadas)} (${operations.creditosEntradas > 0 ? ((operations.creditosEntradasIncentivadas / operations.creditosEntradas) * 100).toFixed(1) : 0}%)`, 'info');
+        addLog(`  - Não Incentivados: R$ ${formatCurrency(operations.creditosEntradasNaoIncentivadas)}`, 'info');
         
         return operations;
     }
@@ -3215,7 +3304,8 @@ document.addEventListener('DOMContentLoaded', () => {
             percentualIncentivo: PROGOIAS_CONFIG.PERCENTUAIS_POR_ANO[ano] || 64,
             percentualProtege: ano === 0 ? 0 : PROGOIAS_CONFIG.PROTEGE_POR_ANO[ano] || 0,
             icmsPorMedia: parseFloat(document.getElementById('progoisIcmsPorMedia').value) || 0,
-            saldoCredorAnterior: parseFloat(document.getElementById('progoisSaldoCredorAnterior').value) || 0
+            saldoCredorAnterior: parseFloat(document.getElementById('progoisSaldoCredorAnterior').value) || 0,
+            ajustePeridoAnterior: 0  // GO100007 - Ajuste da base de cálculo ProGoiás período anterior
         };
         
         // Usar as mesmas funções de classificação do FOMENTAR
@@ -3226,11 +3316,11 @@ document.addEventListener('DOMContentLoaded', () => {
         addLog(`Operações classificadas: ${operacoesClassificadas.saidasIncentivadas?.length || 0} saídas incentivadas, ${operacoesClassificadas.saidasNaoIncentivadas?.length || 0} saídas não incentivadas`, 'info');
         addLog(`Créditos de entradas: R$ ${formatCurrency(operacoesClassificadas.creditosEntradas || 0)}, Outros créditos: R$ ${formatCurrency(operacoesClassificadas.outrosCreditos || 0)}`, 'info');
         
-        // Calcular ICMS conforme ProGoiás
-        addLog('Calculando quadros ProGoiás...', 'info');
-        const quadroA = calculateProgoisQuadroA(operacoesClassificadas, config);
-        const quadroB = calculateProgoisQuadroB(quadroA, config);
-        const quadroC = calculateProgoisQuadroC(operacoesClassificadas, config);
+        // Calcular conforme IN 1478/2020
+        addLog('Calculando ProGoiás conforme IN 1478/2020...', 'info');
+        const quadroA = calculateProgoisApuracao(operacoesClassificadas, config);        // Cálculo do ProGoiás
+        const quadroB = calculateIcmsComProgoias(quadroA, operacoesClassificadas, config); // ICMS com crédito ProGoiás
+        const quadroC = calculateDemonstrativoDetalhado(operacoesClassificadas, config);    // Demonstrativo detalhado
         
         return {
             empresa: registros.empresa || 'Empresa',
@@ -3246,101 +3336,244 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
     
-    function calculateProgoisQuadroA(operacoes, config) {
-        // Quadro A: Apuração do ICMS
+    function calculateProgoisApuracao(operacoes, config) {
+        // ABA 1 - CÁLCULO DO PROGOIÁS (conforme Progoias.xlsx)
+        // Seguindo exatamente a estrutura da planilha oficial
         
-        // Calcular débitos do ICMS (saídas)
-        const debitoIcms = [...(operacoes.saidasIncentivadas || []), ...(operacoes.saidasNaoIncentivadas || [])]
+        addLog('=== ABA 1: CÁLCULO DO PROGOIÁS (Planilha Oficial) ===', 'info');
+        
+        // ITENS CONFORME PLANILHA PROGOIAS.XLSX
+        
+        // GO100002 = ICMS correspondente às saídas incentivadas (Anexo I)
+        const GO100002 = (operacoes.saidasIncentivadas || [])
             .reduce((total, op) => total + (op.valorIcms || 0), 0);
         
-        const outrosDebitos = operacoes.outrosDebitos || 0;
-        const estornoCreditos = 0; // Configurável
-        const totalDebitos = debitoIcms + outrosDebitos + estornoCreditos;
+        // GO100003 = ICMS correspondente às entradas incentivadas (Anexo I)
+        const GO100003 = operacoes.creditosEntradasIncentivadas || 0;
         
-        // Calcular créditos
-        const creditoEntradas = operacoes.creditosEntradas || 0;
-        const outrosCreditos = operacoes.outrosCreditos || 0;
-        const estornoDebitos = 0; // Configurável
-        const saldoCredorAnterior = config.saldoCredorAnterior || 0;
-        const totalCreditos = creditoEntradas + outrosCreditos + estornoDebitos + saldoCredorAnterior;
+        // GO100004 = Outros Créditos e Estorno de Débitos (APENAS códigos incentivados do Anexo II)
+        const GO100004 = operacoes.outrosCreditosIncentivados || 0;
         
-        const saldoDevedor = Math.max(0, totalDebitos - totalCreditos);
-        const deducoes = 0; // Configurável conforme necessário
-        const icmsRecolher = Math.max(0, saldoDevedor - deducoes);
+        // GO100005 = Outros Débitos e Estorno de Créditos (APENAS códigos incentivados do Anexo II)
+        const GO100005 = operacoes.outrosDebitosIncentivados || 0;
         
-        addLog(`ProGoiás Quadro A: Débito ICMS: R$ ${formatCurrency(debitoIcms)}, Créditos: R$ ${formatCurrency(totalCreditos)}, ICMS a Recolher: R$ ${formatCurrency(icmsRecolher)}`, 'info');
+        // LOGS DETALHADOS PARA DEBUG
+        addLog(`=== DEBUG ABA 1 - COMPONENTES ===`, 'info');
+        addLog(`GO100002 (Saídas Incentivadas): ${operacoes.saidasIncentivadas?.length || 0} registros = R$ ${formatCurrency(GO100002)}`, 'info');
+        addLog(`GO100003 (Entradas Incentivadas): R$ ${formatCurrency(GO100003)}`, 'info');
+        addLog(`GO100004 (Outros Créditos Incentivados): R$ ${formatCurrency(GO100004)}`, 'info');
+        addLog(`GO100005 (Outros Débitos Incentivados): R$ ${formatCurrency(GO100005)}`, 'info');
+        addLog(`VERIFICAÇÃO: GO100005 <= Outros Débitos Total? ${GO100005} <= ${operacoes.outrosDebitos || 0} = ${GO100005 <= (operacoes.outrosDebitos || 0)}`, 'warn');
+        
+        // GO100007 = Ajuste da base de cálculo do período anterior
+        const GO100007 = parseFloat(config.ajustePeridoAnterior) || 0;
+        
+        // GO100006 = Média (se aplicável)
+        const GO100006 = parseFloat(config.icmsPorMedia) || 0;
+        
+        // GO100001 = Percentual do Crédito Outorgado ProGoiás
+        const GO100001 = config.percentualIncentivo;
+        
+        // CÁLCULO CONFORME PLANILHA:
+        // Base = GO100002 - GO100003 - GO100004 + GO100005 - GO100007 - GO100006
+        const baseCalculo = GO100002 - GO100003 - GO100004 + GO100005 - GO100007 - GO100006;
+        
+        // GO100009 = Valor do Crédito Outorgado ProGoiás
+        let GO100009 = 0;
+        let GO100008 = 0; // Ajuste para transportar
+        
+        if (baseCalculo > 0) {
+            GO100009 = baseCalculo * (GO100001 / 100);
+            addLog(`Base positiva: R$ ${formatCurrency(baseCalculo)} x ${GO100001}% = R$ ${formatCurrency(GO100009)}`, 'info');
+        } else {
+            GO100009 = 0;
+            GO100008 = Math.abs(baseCalculo); // Transportar saldo negativo
+            addLog(`Base negativa: R$ ${formatCurrency(baseCalculo)} - Transportar para próximo período`, 'warn');
+        }
+        
+        // Logs finais da ABA 1
+        addLog(`=== RESULTADO ABA 1 ===`, 'info');
+        addLog(`Fórmula: ${formatCurrency(GO100002)} - ${formatCurrency(GO100003)} - ${formatCurrency(GO100004)} + ${formatCurrency(GO100005)} - ${formatCurrency(GO100007)} - ${formatCurrency(GO100006)}`, 'info');
+        addLog(`Base de Cálculo: R$ ${formatCurrency(baseCalculo)}`, 'info');
+        addLog(`Percentual (GO100001): ${GO100001}%`, 'info');
+        addLog(`GO100009 (CRÉDITO OUTORGADO PROGOIÁS): R$ ${formatCurrency(GO100009)}`, 'success');
+        if (GO100008 > 0) {
+            addLog(`GO100008 (Transportar próximo): R$ ${formatCurrency(GO100008)}`, 'warn');
+        }
         
         return {
-            debitoIcms: debitoIcms,
-            outrosDebitos: outrosDebitos,
-            estornoCreditos: estornoCreditos,
-            totalDebitos: totalDebitos,
-            creditoEntradas: creditoEntradas,
-            outrosCreditos: outrosCreditos,
-            estornoDebitos: estornoDebitos,
-            saldoCredorAnterior: saldoCredorAnterior,
-            totalCreditos: totalCreditos,
-            saldoDevedor: saldoDevedor,
-            deducoes: deducoes,
-            icmsRecolher: icmsRecolher
-        };
-    }
-    
-    function calculateProgoisQuadroB(quadroA, config) {
-        // Quadro B: Cálculo dos Incentivos ProGoiás e PROTEGE
-        const baseCalculo = quadroA.icmsRecolher;
-        
-        // Cálculo ProGoiás
-        const percentualProgoias = config.percentualIncentivo;
-        const valorProgoias = baseCalculo * (percentualProgoias / 100);
-        
-        // Cálculo PROTEGE (sobre a base original)
-        const percentualProtege = config.percentualProtege;
-        const valorProtege = baseCalculo * (percentualProtege / 100);
-        
-        // Total dos incentivos
-        const totalIncentivos = valorProgoias + valorProtege;
-        const icmsAposIncentivos = Math.max(0, baseCalculo - totalIncentivos);
-        const economiaFiscalTotal = totalIncentivos;
-        
-        return {
+            // Códigos conforme planilha oficial
+            GO100001: GO100001,  // Percentual
+            GO100002: GO100002,  // ICMS Saídas Incentivadas
+            GO100003: GO100003,  // ICMS Entradas Incentivadas
+            GO100004: GO100004,  // Outros Créditos
+            GO100005: GO100005,  // Outros Débitos
+            GO100006: GO100006,  // Média
+            GO100007: GO100007,  // Ajuste Período Anterior
+            GO100008: GO100008,  // Ajuste para Próximo Período
+            GO100009: GO100009,  // Crédito Outorgado ProGoiás
+            
+            // Cálculos
             baseCalculo: baseCalculo,
-            percentualProgoias: percentualProgoias,
-            valorProgoias: valorProgoias,
-            percentualProtege: percentualProtege,
-            valorProtege: valorProtege,
-            totalIncentivos: totalIncentivos,
-            icmsAposIncentivos: icmsAposIncentivos,
-            economiaFiscalTotal: economiaFiscalTotal
+            creditoOutorgadoProgoias: GO100009  // Alias para compatibilidade
         };
     }
     
-    function calculateProgoisQuadroC(operacoes, config) {
-        // Quadro C: Demonstrativo de Operações
+    function calculateIcmsComProgoias(quadroA, operacoes, config) {
+        // ABA 2 - APURAÇÃO DO ICMS (conforme Progoias.xlsx)
+        // Inclui o crédito outorgado ProGoiás da Aba 1
         
-        // Calcular valores das saídas
-        const saidasComIncentivo = (operacoes.saidasIncentivadas || [])
-            .reduce((total, op) => total + (op.valorOperacao || 0), 0);
-        const saidasSemIncentivo = (operacoes.saidasNaoIncentivadas || [])
-            .reduce((total, op) => total + (op.valorOperacao || 0), 0);
-        const totalSaidas = saidasComIncentivo + saidasSemIncentivo;
+        addLog('=== ABA 2: APURAÇÃO DO ICMS (Planilha Oficial) ===', 'info');
         
-        // Calcular valores das entradas
-        const entradasComIncentivo = (operacoes.entradasIncentivadas || [])
-            .reduce((total, op) => total + (op.valorOperacao || 0), 0);
-        const entradasSemIncentivo = (operacoes.entradasNaoIncentivadas || [])
-            .reduce((total, op) => total + (op.valorOperacao || 0), 0);
-        const totalEntradas = entradasComIncentivo + entradasSemIncentivo;
+        // ESTRUTURA CONFORME PLANILHA DE APURAÇÃO
         
-        addLog(`ProGoiás Quadro C: Saídas Incentivadas: R$ ${formatCurrency(saidasComIncentivo)}, Total Saídas: R$ ${formatCurrency(totalSaidas)}`, 'info');
+        // 1. DÉBITOS DO ICMS
+        const item01_debitoIcms = [...(operacoes.saidasIncentivadas || []), ...(operacoes.saidasNaoIncentivadas || [])]
+            .reduce((total, op) => total + (op.valorIcms || 0), 0);
+        
+        const item02_outrosDebitos = operacoes.outrosDebitos || 0;
+        const item03_estornoCreditos = 0; // Configurável
+        const item04_totalDebitos = item01_debitoIcms + item02_outrosDebitos + item03_estornoCreditos;
+        
+        // 2. CRÉDITOS DO ICMS
+        const item05_creditosEntradas = operacoes.creditosEntradas || 0;
+        const item06_outrosCreditos = operacoes.outrosCreditos || 0;
+        const item07_estornoDebitos = 0; // Configurável
+        const item08_saldoCredorAnterior = config.saldoCredorAnterior || 0;
+        
+        // 3. CRÉDITO PROGOIÁS (da Aba 1)
+        const item09_creditoProgoias = quadroA.GO100009;
+        
+        const item10_totalCreditos = item05_creditosEntradas + item06_outrosCreditos + 
+                                   item07_estornoDebitos + item08_saldoCredorAnterior + item09_creditoProgoias;
+        
+        // 4. SALDO DEVEDOR
+        const item11_saldoDevedor = Math.max(0, item04_totalDebitos - item10_totalCreditos);
+        
+        // 5. DEDUÇÕES
+        const item12_deducoes = 0; // Configurável
+        
+        // 6. ICMS A RECOLHER
+        const item13_icmsARecolher = Math.max(0, item11_saldoDevedor - item12_deducoes);
+        
+        // 7. PROTEGE (separado)
+        const percentualProtege = config.percentualProtege || 0;
+        const item14_valorProtege = item13_icmsARecolher * (percentualProtege / 100);
+        
+        // 8. ICMS FINAL
+        const item15_icmsFinal = Math.max(0, item13_icmsARecolher - item14_valorProtege);
+        
+        // 9. ECONOMIA TOTAL
+        const economiaTotal = item09_creditoProgoias + item14_valorProtege;
+        
+        // LOGS DETALHADOS PARA DEBUG ABA 2
+        addLog(`=== DEBUG ABA 2 - COMPONENTES ===`, 'info');
+        addLog(`01. Débito ICMS: ${[...(operacoes.saidasIncentivadas || []), ...(operacoes.saidasNaoIncentivadas || [])].length} registros = R$ ${formatCurrency(item01_debitoIcms)}`, 'info');
+        addLog(`02. Outros Débitos TOTAL: R$ ${formatCurrency(item02_outrosDebitos)}`, 'info');
+        addLog(`    COMPARAÇÃO: GO100005 (${formatCurrency(quadroA.GO100005)}) vs Total (${formatCurrency(item02_outrosDebitos)})`, 'warn');
+        addLog(`05. Créditos Entradas TOTAL: R$ ${formatCurrency(item05_creditosEntradas)}`, 'info');
+        addLog(`    COMPARAÇÃO: GO100003 (${formatCurrency(quadroA.GO100003)}) vs Total (${formatCurrency(item05_creditosEntradas)})`, 'warn');
+        addLog(`06. Outros Créditos TOTAL: R$ ${formatCurrency(item06_outrosCreditos)}`, 'info');
+        addLog(`    COMPARAÇÃO: GO100004 (${formatCurrency(quadroA.GO100004)}) vs Total (${formatCurrency(item06_outrosCreditos)})`, 'warn');
+        addLog(`09. Crédito ProGoiás (da ABA 1): R$ ${formatCurrency(item09_creditoProgoias)}`, 'info');
+        
+        addLog(`=== RESULTADO ABA 2 ===`, 'info');
+        addLog(`Total Débitos: R$ ${formatCurrency(item04_totalDebitos)}`, 'info');
+        addLog(`Total Créditos: R$ ${formatCurrency(item10_totalCreditos)}`, 'info');
+        addLog(`ICMS a Recolher: R$ ${formatCurrency(item13_icmsARecolher)}`, 'info');
+        addLog(`PROTEGE (${percentualProtege}%): R$ ${formatCurrency(item14_valorProtege)}`, 'info');
+        addLog(`ICMS FINAL: R$ ${formatCurrency(item15_icmsFinal)}`, 'success');
+        addLog(`ECONOMIA TOTAL: R$ ${formatCurrency(economiaTotal)}`, 'success');
         
         return {
-            saidasComIncentivo: saidasComIncentivo,
-            saidasSemIncentivo: saidasSemIncentivo,
-            totalSaidas: totalSaidas,
-            entradasComIncentivo: entradasComIncentivo,
-            entradasSemIncentivo: entradasSemIncentivo,
-            totalEntradas: totalEntradas
+            // Itens conforme planilha
+            item01_debitoIcms: item01_debitoIcms,
+            item02_outrosDebitos: item02_outrosDebitos,
+            item03_estornoCreditos: item03_estornoCreditos,
+            item04_totalDebitos: item04_totalDebitos,
+            item05_creditosEntradas: item05_creditosEntradas,
+            item06_outrosCreditos: item06_outrosCreditos,
+            item07_estornoDebitos: item07_estornoDebitos,
+            item08_saldoCredorAnterior: item08_saldoCredorAnterior,
+            item09_creditoProgoias: item09_creditoProgoias,
+            item10_totalCreditos: item10_totalCreditos,
+            item11_saldoDevedor: item11_saldoDevedor,
+            item12_deducoes: item12_deducoes,
+            item13_icmsARecolher: item13_icmsARecolher,
+            item14_valorProtege: item14_valorProtege,
+            item15_icmsFinal: item15_icmsFinal,
+            
+            // Resultado
+            percentualProtege: percentualProtege,
+            economiaTotal: economiaTotal
+        };
+    }
+    
+    function calculateDemonstrativoDetalhado(operacoes, config) {
+        // QUADRO III - DEMONSTRATIVO DETALHADO DE OPERAÇÕES E ICMS
+        // Inclui valores das operações E valores do ICMS separadamente
+        
+        addLog('=== QUADRO III: DEMONSTRATIVO DETALHADO ===', 'info');
+        
+        // SAÍDAS - Valores das operações
+        const valorSaidasIncentivadas = (operacoes.saidasIncentivadas || [])
+            .reduce((total, op) => total + (op.valorOperacao || 0), 0);
+        const valorSaidasNaoIncentivadas = (operacoes.saidasNaoIncentivadas || [])
+            .reduce((total, op) => total + (op.valorOperacao || 0), 0);
+        const totalValorSaidas = valorSaidasIncentivadas + valorSaidasNaoIncentivadas;
+        
+        // SAÍDAS - ICMS
+        const icmsSaidasIncentivadas = (operacoes.saidasIncentivadas || [])
+            .reduce((total, op) => total + (op.valorIcms || 0), 0);
+        const icmsSaidasNaoIncentivadas = (operacoes.saidasNaoIncentivadas || [])
+            .reduce((total, op) => total + (op.valorIcms || 0), 0);
+        const totalIcmsSaidas = icmsSaidasIncentivadas + icmsSaidasNaoIncentivadas;
+        
+        // ENTRADAS - Valores das operações
+        const valorEntradasIncentivadas = (operacoes.entradasIncentivadas || [])
+            .reduce((total, op) => total + (op.valorOperacao || 0), 0);
+        const valorEntradasNaoIncentivadas = (operacoes.entradasNaoIncentivadas || [])
+            .reduce((total, op) => total + (op.valorOperacao || 0), 0);
+        const totalValorEntradas = valorEntradasIncentivadas + valorEntradasNaoIncentivadas;
+        
+        // ENTRADAS - ICMS (créditos)
+        const icmsEntradasIncentivadas = operacoes.creditosEntradasIncentivadas || 0;
+        const icmsEntradasNaoIncentivadas = operacoes.creditosEntradasNaoIncentivadas || 0;
+        const totalIcmsEntradas = icmsEntradasIncentivadas + icmsEntradasNaoIncentivadas;
+        
+        addLog(`Saídas Incentivadas - Valor: R$ ${formatCurrency(valorSaidasIncentivadas)}, ICMS: R$ ${formatCurrency(icmsSaidasIncentivadas)}`, 'info');
+        addLog(`Saídas Não Incentivadas - Valor: R$ ${formatCurrency(valorSaidasNaoIncentivadas)}, ICMS: R$ ${formatCurrency(icmsSaidasNaoIncentivadas)}`, 'info');
+        addLog(`Entradas Incentivadas - Valor: R$ ${formatCurrency(valorEntradasIncentivadas)}, ICMS: R$ ${formatCurrency(icmsEntradasIncentivadas)}`, 'info');
+        addLog(`Entradas Não Incentivadas - Valor: R$ ${formatCurrency(valorEntradasNaoIncentivadas)}, ICMS: R$ ${formatCurrency(icmsEntradasNaoIncentivadas)}`, 'info');
+        
+        return {
+            // Saídas - Valores
+            valorSaidasIncentivadas: valorSaidasIncentivadas,
+            valorSaidasNaoIncentivadas: valorSaidasNaoIncentivadas,
+            totalValorSaidas: totalValorSaidas,
+            
+            // Saídas - ICMS
+            icmsSaidasIncentivadas: icmsSaidasIncentivadas,
+            icmsSaidasNaoIncentivadas: icmsSaidasNaoIncentivadas,
+            totalIcmsSaidas: totalIcmsSaidas,
+            
+            // Entradas - Valores
+            valorEntradasIncentivadas: valorEntradasIncentivadas,
+            valorEntradasNaoIncentivadas: valorEntradasNaoIncentivadas,
+            totalValorEntradas: totalValorEntradas,
+            
+            // Entradas - ICMS
+            icmsEntradasIncentivadas: icmsEntradasIncentivadas,
+            icmsEntradasNaoIncentivadas: icmsEntradasNaoIncentivadas,
+            totalIcmsEntradas: totalIcmsEntradas,
+            
+            // Aliases para compatibilidade
+            saidasComIncentivo: valorSaidasIncentivadas,
+            saidasSemIncentivo: valorSaidasNaoIncentivadas,
+            totalSaidas: totalValorSaidas,
+            entradasComIncentivo: valorEntradasIncentivadas,
+            entradasSemIncentivo: valorEntradasNaoIncentivadas,
+            totalEntradas: totalValorEntradas
         };
     }
     
@@ -3349,47 +3582,89 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const { quadroA, quadroB, quadroC } = dados;
         
-        // Atualizar Quadro A
-        document.getElementById('progoisItemA01').textContent = formatCurrency(quadroA.debitoIcms);
-        document.getElementById('progoisItemA02').textContent = formatCurrency(quadroA.outrosDebitos);
-        document.getElementById('progoisItemA03').textContent = formatCurrency(quadroA.estornoCreditos);
-        document.getElementById('progoisItemA04').textContent = formatCurrency(quadroA.totalDebitos);
-        document.getElementById('progoisItemA05').textContent = formatCurrency(quadroA.creditoEntradas);
-        document.getElementById('progoisItemA06').textContent = formatCurrency(quadroA.outrosCreditos);
-        document.getElementById('progoisItemA07').textContent = formatCurrency(quadroA.estornoDebitos);
-        document.getElementById('progoisItemA08').textContent = formatCurrency(quadroA.saldoCredorAnterior);
-        document.getElementById('progoisItemA09').textContent = formatCurrency(quadroA.totalCreditos);
-        document.getElementById('progoisItemA10').textContent = formatCurrency(quadroA.saldoDevedor);
-        document.getElementById('progoisItemA11').textContent = formatCurrency(quadroA.deducoes);
-        document.getElementById('progoisItemA12').textContent = formatCurrency(quadroA.icmsRecolher);
+        // ABA 1 - CÁLCULO DO PROGOIÁS (conforme Progoias.xlsx)
+        // Itens conforme estrutura da planilha oficial
+        document.getElementById('progoisItemA01').textContent = formatCurrency(quadroA.GO100002);   // ICMS Saídas Incentivadas
+        document.getElementById('progoisItemA02').textContent = formatCurrency(quadroA.GO100003);   // ICMS Entradas Incentivadas
+        document.getElementById('progoisItemA03').textContent = formatCurrency(quadroA.GO100004);   // Outros Créditos
+        document.getElementById('progoisItemA04').textContent = formatCurrency(quadroA.GO100005);   // Outros Débitos
+        document.getElementById('progoisItemA05').textContent = formatCurrency(quadroA.GO100007);   // Ajuste Período Anterior
+        document.getElementById('progoisItemA06').textContent = formatCurrency(quadroA.GO100006);   // Média
+        document.getElementById('progoisItemA07').textContent = formatCurrency(quadroA.baseCalculo); // Base de Cálculo
+        document.getElementById('progoisItemA08').textContent = quadroA.GO100001.toFixed(2) + '%';  // Percentual ProGoiás
+        document.getElementById('progoisItemA09').textContent = formatCurrency(quadroA.GO100009);   // Crédito Outorgado
+        document.getElementById('progoisItemA10').textContent = formatCurrency(quadroA.GO100008);   // Ajuste Próximo Período
         
-        // Atualizar Quadro B
-        document.getElementById('progoisItemB13').textContent = formatCurrency(quadroB.baseCalculo);
-        document.getElementById('progoisItemB14').textContent = quadroB.percentualProgoias.toFixed(2) + '%';
-        document.getElementById('progoisItemB15').textContent = formatCurrency(quadroB.valorProgoias);
-        document.getElementById('progoisItemB16').textContent = quadroB.percentualProtege.toFixed(2) + '%';
-        document.getElementById('progoisItemB17').textContent = formatCurrency(quadroB.valorProtege);
-        document.getElementById('progoisItemB18').textContent = formatCurrency(quadroB.totalIncentivos);
-        document.getElementById('progoisItemB19').textContent = formatCurrency(quadroB.icmsAposIncentivos);
+        // ABA 2 - APURAÇÃO DO ICMS (conforme Progoias.xlsx)
+        // Itens numerados conforme planilha de apuração
+        document.getElementById('progoisItemB13').textContent = formatCurrency(quadroB.item01_debitoIcms);        // 01. Débito ICMS
+        document.getElementById('progoisItemB14').textContent = formatCurrency(quadroB.item02_outrosDebitos);     // 02. Outros Débitos
+        document.getElementById('progoisItemB15').textContent = formatCurrency(quadroB.item03_estornoCreditos);   // 03. Estorno Créditos
+        document.getElementById('progoisItemB16').textContent = formatCurrency(quadroB.item04_totalDebitos);      // 04. Total Débitos
+        document.getElementById('progoisItemB17').textContent = formatCurrency(quadroB.item05_creditosEntradas);  // 05. Créditos Entradas
+        document.getElementById('progoisItemB18').textContent = formatCurrency(quadroB.item06_outrosCreditos);    // 06. Outros Créditos
+        document.getElementById('progoisItemB19').textContent = formatCurrency(quadroB.item09_creditoProgoias);   // 09. Crédito ProGoiás
         
-        // Atualizar Quadro C
-        document.getElementById('progoisItemC18').textContent = formatCurrency(quadroC.saidasComIncentivo);
-        document.getElementById('progoisItemC19').textContent = formatCurrency(quadroC.saidasSemIncentivo);
-        document.getElementById('progoisItemC20').textContent = formatCurrency(quadroC.totalSaidas);
-        document.getElementById('progoisItemC21').textContent = formatCurrency(quadroC.entradasComIncentivo);
-        document.getElementById('progoisItemC22').textContent = formatCurrency(quadroC.entradasSemIncentivo);
-        document.getElementById('progoisItemC23').textContent = formatCurrency(quadroC.totalEntradas);
+        // DEMONSTRATIVO DETALHADO - VALORES E ICMS
+        document.getElementById('progoisItemC18').textContent = formatCurrency(quadroC.valorSaidasIncentivadas);    // Saídas Incentivadas - Valor
+        document.getElementById('progoisItemC19').textContent = formatCurrency(quadroC.valorSaidasNaoIncentivadas); // Saídas Não Incentivadas - Valor
+        document.getElementById('progoisItemC20').textContent = formatCurrency(quadroC.totalValorSaidas);           // Total Saídas - Valor
+        document.getElementById('progoisItemC21').textContent = formatCurrency(quadroC.valorEntradasIncentivadas);  // Entradas Incentivadas - Valor
+        document.getElementById('progoisItemC22').textContent = formatCurrency(quadroC.valorEntradasNaoIncentivadas); // Entradas Não Incentivadas - Valor
+        document.getElementById('progoisItemC23').textContent = formatCurrency(quadroC.totalValorEntradas);         // Total Entradas - Valor
         
-        // Atualizar Resumo
-        document.getElementById('progoisIcmsDevido').textContent = 'R$ ' + formatCurrency(quadroA.icmsRecolher);
-        document.getElementById('progoisValorIncentivo').textContent = 'R$ ' + formatCurrency(quadroB.valorProgoias);
-        document.getElementById('progoisValorProtege').textContent = 'R$ ' + formatCurrency(quadroB.valorProtege);
-        document.getElementById('progoisIcmsRecolher').textContent = 'R$ ' + formatCurrency(quadroB.icmsAposIncentivos);
-        document.getElementById('progoisEconomiaTotal').textContent = 'R$ ' + formatCurrency(quadroB.economiaFiscalTotal);
+        // ICMS das operações (se elementos existirem)
+        const icmsElements = {
+            'progoisItemC18Icms': quadroC.icmsSaidasIncentivadas,
+            'progoisItemC19Icms': quadroC.icmsSaidasNaoIncentivadas,
+            'progoisItemC20Icms': quadroC.totalIcmsSaidas,
+            'progoisItemC21Icms': quadroC.icmsEntradasIncentivadas,
+            'progoisItemC22Icms': quadroC.icmsEntradasNaoIncentivadas,
+            'progoisItemC23Icms': quadroC.totalIcmsEntradas
+        };
         
-        // Atualizar status
-        document.getElementById('progoisSpedStatus').textContent = 
-            `${dados.empresa} - ${dados.periodo} (${dados.totalOperacoes} operações)`;
+        Object.keys(icmsElements).forEach(id => {
+            const elemento = document.getElementById(id);
+            if (elemento) {
+                elemento.textContent = formatCurrency(icmsElements[id]);
+            }
+        });
+        
+        // RESUMO PRINCIPAL - conforme planilha
+        const elementos = {
+            'progoisIcmsDevido': quadroB.item13_icmsARecolher,   // ICMS a Recolher
+            'progoisValorProtege': quadroB.item14_valorProtege,  // PROTEGE
+            'progoisIcmsRecolher': quadroB.item15_icmsFinal,     // ICMS Final
+            'progoisEconomiaTotal': quadroB.economiaTotal        // Economia Total
+        };
+        
+        // Atualizar elementos do resumo
+        Object.keys(elementos).forEach(id => {
+            const elemento = document.getElementById(id);
+            if (elemento) {
+                elemento.textContent = 'R$ ' + formatCurrency(elementos[id]);
+            }
+        });
+        
+        // Status
+        const statusElement = document.getElementById('progoisSpedStatus');
+        if (statusElement) {
+            statusElement.textContent = `${dados.empresa} - ${dados.periodo} (${dados.totalOperacoes} operações)`;
+        }
+        
+        // Verificação de consistência
+        addLog('=== VERIFICAÇÃO DE CONSISTÊNCIA ===', 'warn');
+        const consistenciaOK = (
+            quadroA.GO100005 <= quadroB.item02_outrosDebitos &&
+            quadroA.GO100003 <= quadroB.item05_creditosEntradas &&
+            quadroA.GO100004 <= quadroB.item06_outrosCreditos
+        );
+        addLog(`Consistência Lógica: ${consistenciaOK ? 'OK' : 'ERRO'}`, consistenciaOK ? 'success' : 'error');
+        
+        addLog('=== RESUMO FINAL ===', 'info');
+        addLog(`ABA 1 - Crédito ProGoiás: R$ ${formatCurrency(quadroA.GO100009)}`, 'success');
+        addLog(`ABA 2 - ICMS Final: R$ ${formatCurrency(quadroB.item15_icmsFinal)}`, 'success');
+        addLog(`ECONOMIA TOTAL: R$ ${formatCurrency(quadroB.economiaTotal)}`, 'success');
     }
     
     function handleProgoisConfigChange() {
