@@ -2217,17 +2217,243 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function exportFomentarReport() {
-        if (!fomentarData) {
+    async function exportFomentarReport() {
+        // Determinar se é período único ou múltiplos períodos
+        const isMultiplePeriods = multiPeriodData.length > 1;
+        const periodsData = isMultiplePeriods ? multiPeriodData : [{ 
+            periodo: sharedPeriodo, 
+            nomeEmpresa: sharedNomeEmpresa, 
+            fomentarData: fomentarData, 
+            calculatedValues: fomentarData 
+        }];
+        
+        if (!periodsData.length || (!isMultiplePeriods && !fomentarData)) {
             addLog('Erro: Nenhum dado FOMENTAR disponível para exportação', 'error');
             return;
         }
         
-        addLog('Gerando relatório FOMENTAR para exportação...', 'info');
-        // Implementar exportação Excel
-        setTimeout(() => {
+        try {
+            addLog('Gerando relatório FOMENTAR para exportação...', 'info');
+            
+            const workbook = await XlsxPopulate.fromBlankAsync();
+            const mainSheet = workbook.sheet(0);
+            mainSheet.name('Demonstrativo FOMENTAR');
+            
+            let currentRow = 1;
+            
+            // Cabeçalho principal
+            mainSheet.cell(`A${currentRow}`).value('DEMONSTRATIVO DE APURAÇÃO FOMENTAR/PRODUZIR/MICROPRODUZIR')
+                .style('bold', true)
+                .style('fontSize', 16)
+                .style('horizontalAlignment', 'center')
+                .style('fill', 'E3F2FD');
+            
+            // Mesclar células do título
+            const lastCol = String.fromCharCode(66 + periodsData.length); // B + number of periods
+            mainSheet.range(`A${currentRow}:${lastCol}${currentRow}`).merged(true);
+            currentRow += 2;
+            
+            // Informações da empresa
+            mainSheet.cell(`A${currentRow}`).value(`Empresa: ${periodsData[0].nomeEmpresa}`)
+                .style('bold', true).style('fontSize', 12);
+            currentRow++;
+            
+            if (isMultiplePeriods) {
+                mainSheet.cell(`A${currentRow}`).value(`Períodos: ${periodsData.map(p => p.periodo).join(', ')}`)
+                    .style('bold', true).style('fontSize', 12);
+            } else {
+                mainSheet.cell(`A${currentRow}`).value(`Período: ${periodsData[0].periodo}`)
+                    .style('bold', true).style('fontSize', 12);
+            }
+            currentRow++;
+            
+            mainSheet.cell(`A${currentRow}`).value(`Gerado em: ${new Date().toLocaleString('pt-BR')}`)
+                .style('fontSize', 10).style('italic', true);
+            currentRow += 2;
+            
+            // Função para criar seção do quadro
+            const createQuadroSection = (title, items, startRow) => {
+                let row = startRow;
+                
+                // Título da seção
+                mainSheet.cell(`A${row}`).value(title)
+                    .style('bold', true)
+                    .style('fontSize', 14)
+                    .style('fill', 'F5F5F5')
+                    .style('horizontalAlignment', 'center');
+                mainSheet.range(`A${row}:${lastCol}${row}`).merged(true);
+                row++;
+                
+                // Cabeçalhos
+                mainSheet.cell(`A${row}`).value('Item')
+                    .style('bold', true)
+                    .style('fill', 'E8F5E8')
+                    .style('horizontalAlignment', 'center')
+                    .style('border', true);
+                    
+                mainSheet.cell(`B${row}`).value('Descrição')
+                    .style('bold', true)
+                    .style('fill', 'E8F5E8')
+                    .style('horizontalAlignment', 'center')
+                    .style('border', true);
+                
+                // Cabeçalhos dos períodos
+                periodsData.forEach((period, index) => {
+                    const col = String.fromCharCode(67 + index); // C, D, E, etc.
+                    mainSheet.cell(`${col}${row}`).value(period.periodo)
+                        .style('bold', true)
+                        .style('fill', 'E8F5E8')
+                        .style('horizontalAlignment', 'center')
+                        .style('border', true);
+                });
+                row++;
+                
+                // Dados
+                items.forEach(item => {
+                    mainSheet.cell(`A${row}`).value(item.item)
+                        .style('horizontalAlignment', 'center')
+                        .style('border', true);
+                        
+                    mainSheet.cell(`B${row}`).value(item.desc)
+                        .style('border', true);
+                    
+                    // Valores por período
+                    periodsData.forEach((period, index) => {
+                        const col = String.fromCharCode(67 + index); // C, D, E, etc.
+                        const data = period.calculatedValues || period.fomentarData;
+                        const value = data && data[item.field] !== undefined ? data[item.field] : 0;
+                        
+                        mainSheet.cell(`${col}${row}`).value(value)
+                            .style('numberFormat', '#,##0.00')
+                            .style('horizontalAlignment', 'right')
+                            .style('border', true);
+                    });
+                    row++;
+                });
+                
+                return row + 1; // Retorna próxima linha disponível
+            };
+            
+            // QUADRO A - PROPORÇÃO DOS CRÉDITOS APROPRIADOS
+            const quadroA = [
+                {item: '1', desc: 'Saídas de Operações Incentivadas', field: 'saidasIncentivadas'},
+                {item: '2', desc: 'Total das Saídas', field: 'totalSaidas'},
+                {item: '3', desc: 'Percentual das Saídas de Operações Incentivadas (%)', field: 'percentualSaidasIncentivadas'},
+                {item: '4', desc: 'Créditos por Entradas', field: 'creditosEntradas'},
+                {item: '5', desc: 'Outros Créditos', field: 'outrosCreditos'},
+                {item: '6', desc: 'Estorno de Débitos', field: 'estornoDebitos'},
+                {item: '7', desc: 'Saldo Credor do Período Anterior', field: 'saldoCredorAnterior'},
+                {item: '8', desc: 'Total dos Créditos do Período', field: 'totalCreditos'},
+                {item: '9', desc: 'Crédito para Operações Incentivadas', field: 'creditoIncentivadas'},
+                {item: '10', desc: 'Crédito para Operações Não Incentivadas', field: 'creditoNaoIncentivadas'}
+            ];
+            
+            currentRow = createQuadroSection('QUADRO A - PROPORÇÃO DOS CRÉDITOS APROPRIADOS', quadroA, currentRow);
+            
+            // QUADRO B - APURAÇÃO DOS SALDOS DAS OPERAÇÕES INCENTIVADAS
+            const quadroB = [
+                {item: '11', desc: 'Débito do ICMS das Operações Incentivadas', field: 'debitoIncentivadas'},
+                {item: '12', desc: 'Outros Débitos das Operações Incentivadas', field: 'outrosDebitosIncentivadas'},
+                {item: '13', desc: 'Estorno de Créditos das Operações Incentivadas', field: 'estornoCreditosIncentivadas'},
+                {item: '14', desc: 'Crédito para Operações Incentivadas', field: 'creditoIncentivadas'},
+                {item: '15', desc: 'Deduções das Operações Incentivadas', field: 'deducoesIncentivadas'},
+                {item: '17', desc: 'Saldo Devedor do ICMS das Operações Incentivadas', field: 'saldoDevedorIncentivadas'},
+                {item: '18', desc: 'ICMS por Média', field: 'icmsPorMedia'},
+                {item: '21', desc: 'ICMS Base para FOMENTAR/PRODUZIR', field: 'icmsBaseFomentar'},
+                {item: '22', desc: 'Percentagem do Financiamento (%)', field: 'percentualFinanciamento'},
+                {item: '23', desc: 'ICMS Sujeito a Financiamento', field: 'icmsSujeitoFinanciamento'},
+                {item: '25', desc: 'ICMS Financiado', field: 'icmsFinanciado'},
+                {item: '26', desc: 'Saldo do ICMS da Parcela Não Financiada', field: 'saldoNaoFinanciada'},
+                {item: '28', desc: 'Saldo do ICMS a Pagar da Parcela Não Financiada', field: 'saldoPagarNaoFinanciada'}
+            ];
+            
+            currentRow = createQuadroSection('QUADRO B - APURAÇÃO DOS SALDOS DAS OPERAÇÕES INCENTIVADAS', quadroB, currentRow);
+            
+            // QUADRO C - APURAÇÃO DOS SALDOS DAS OPERAÇÕES NÃO INCENTIVADAS
+            const quadroC = [
+                {item: '32', desc: 'Débito do ICMS das Operações Não Incentivadas', field: 'debitoNaoIncentivadas'},
+                {item: '33', desc: 'Outros Débitos das Operações Não Incentivadas', field: 'outrosDebitosNaoIncentivadas'},
+                {item: '34', desc: 'Estorno de Créditos das Operações Não Incentivadas', field: 'estornoCreditosNaoIncentivadas'},
+                {item: '36', desc: 'Crédito para Operações Não Incentivadas', field: 'creditoNaoIncentivadas'},
+                {item: '37', desc: 'Deduções das Operações Não Incentivadas', field: 'deducoesNaoIncentivadas'},
+                {item: '39', desc: 'Saldo Devedor do ICMS das Operações Não Incentivadas', field: 'saldoDevedorNaoIncentivadas'},
+                {item: '41', desc: 'Saldo do ICMS a Pagar das Operações Não Incentivadas', field: 'saldoPagarNaoIncentivadas'}
+            ];
+            
+            currentRow = createQuadroSection('QUADRO C - APURAÇÃO DOS SALDOS DAS OPERAÇÕES NÃO INCENTIVADAS', quadroC, currentRow);
+            
+            // RESUMO FINAL
+            mainSheet.cell(`A${currentRow}`).value('RESUMO DA APURAÇÃO')
+                .style('bold', true)
+                .style('fontSize', 14)
+                .style('fill', 'FFF3E0')
+                .style('horizontalAlignment', 'center');
+            mainSheet.range(`A${currentRow}:${lastCol}${currentRow}`).merged(true);
+            currentRow++;
+            
+            const resumoItems = [
+                {desc: 'Total a Pagar - Operações Incentivadas', field: 'totalPagarIncentivadas'},
+                {desc: 'Total a Pagar - Operações Não Incentivadas', field: 'totalPagarNaoIncentivadas'},
+                {desc: 'Valor do Financiamento FOMENTAR', field: 'valorFinanciamento'},
+                {desc: 'Total Geral a Pagar', field: 'totalGeralPagar'}
+            ];
+            
+            resumoItems.forEach((item, index) => {
+                mainSheet.cell(`A${currentRow}`).value(item.desc)
+                    .style('bold', true)
+                    .style('border', true)
+                    .style('fill', index === 3 ? 'E8F5E8' : 'F5F5F5'); // Destaque no total geral
+                
+                periodsData.forEach((period, periodIndex) => {
+                    const col = String.fromCharCode(66 + periodIndex); // B, C, D, etc.
+                    const data = period.calculatedValues || period.fomentarData;
+                    const value = data && data[item.field] !== undefined ? data[item.field] : 0;
+                    
+                    mainSheet.cell(`${col}${currentRow}`).value(value)
+                        .style('numberFormat', '#,##0.00')
+                        .style('horizontalAlignment', 'right')
+                        .style('border', true)
+                        .style('bold', index === 3) // Negrito no total geral
+                        .style('fill', index === 3 ? 'E8F5E8' : 'F5F5F5');
+                });
+                currentRow++;
+            });
+            
+            // Ajustar largura das colunas
+            mainSheet.column('A').width(8);
+            mainSheet.column('B').width(50);
+            for (let i = 0; i < periodsData.length; i++) {
+                const col = String.fromCharCode(67 + i); // C, D, E, etc.
+                mainSheet.column(col).width(16);
+            }
+            
+            // Gerar nome do arquivo
+            let fileName;
+            if (isMultiplePeriods) {
+                const firstPeriod = periodsData[0].periodo.replace(/\//g, '_');
+                const lastPeriod = periodsData[periodsData.length - 1].periodo.replace(/\//g, '_');
+                fileName = `Demonstrativo_FOMENTAR_${firstPeriod}_a_${lastPeriod}.xlsx`;
+            } else {
+                fileName = `Demonstrativo_FOMENTAR_${periodsData[0].periodo.replace(/\//g, '_')}.xlsx`;
+            }
+            
+            // Gerar e baixar o arquivo
+            const blob = await workbook.outputAsync();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
             addLog('Relatório FOMENTAR exportado com sucesso', 'success');
-        }, 1000);
+            
+        } catch (error) {
+            console.error('Erro ao exportar relatório FOMENTAR:', error);
+            addLog('Erro ao exportar relatório FOMENTAR: ' + error.message, 'error');
+        }
     }
 
     function printFomentarReport() {
