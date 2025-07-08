@@ -4040,6 +4040,105 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Funções auxiliares para múltiplos períodos e outras funcionalidades do ProGoiás
+    
+    function convertPeriodToSortable(periodo) {
+        // Converter formatos como "01/2024", "2024-01", "012024" para "2024-01"
+        if (!periodo) return '';
+        
+        const str = periodo.toString();
+        
+        // Formato MM/YYYY
+        if (str.match(/^\d{2}\/\d{4}$/)) {
+            const [mes, ano] = str.split('/');
+            return `${ano}-${mes}`;
+        }
+        
+        // Formato YYYY-MM
+        if (str.match(/^\d{4}-\d{2}$/)) {
+            return str;
+        }
+        
+        // Formato MMYYYY (ex: 012024)
+        if (str.match(/^\d{6}$/) && parseInt(str.substring(0, 2)) <= 12) {
+            const mes = str.substring(0, 2);
+            const ano = str.substring(2, 6);
+            return `${ano}-${mes}`;
+        }
+        
+        // Formato YYYYMM (ex: 202401)
+        if (str.match(/^\d{6}$/) && parseInt(str.substring(0, 4)) > 1900) {
+            const ano = str.substring(0, 4);
+            const mes = str.substring(4, 6);
+            return `${ano}-${mes}`;
+        }
+        
+        return str; // Retornar como está se não reconhecer formato
+    }
+    
+    function calculateAutomaticAdjustments() {
+        addLog('Calculando ajustes automáticos entre períodos...', 'info');
+        
+        for (let i = 0; i < progoisMultiPeriodData.length; i++) {
+            const currentPeriod = progoisMultiPeriodData[i];
+            
+            // Ajuste Período Anterior (GO100007)
+            if (i > 0) {
+                const previousPeriod = progoisMultiPeriodData[i - 1];
+                const ajustePeriodoAnterior = previousPeriod.calculo?.quadroA?.GO100008 || 0;
+                
+                if (currentPeriod.calculo?.quadroA) {
+                    currentPeriod.calculo.quadroA.GO100007 = ajustePeriodoAnterior;
+                    addLog(`Período ${currentPeriod.periodo}: Ajuste Período Anterior = R$ ${ajustePeriodoAnterior.toFixed(2)}`, 'info');
+                }
+            } else {
+                // Primeiro período não tem ajuste anterior
+                if (currentPeriod.calculo?.quadroA) {
+                    currentPeriod.calculo.quadroA.GO100007 = 0;
+                }
+            }
+            
+            // Ajuste Próximo Período (GO100008)
+            if (i < progoisMultiPeriodData.length - 1) {
+                // Calcular ajuste baseado no crédito outorgado atual
+                const creditoOutorgado = currentPeriod.calculo?.quadroA?.GO100009 || 0;
+                const baseCalculo = currentPeriod.calculo?.quadroA?.baseCalculo || 0;
+                
+                // Regra: Se crédito outorgado excede 73% da base de cálculo, o excesso vai para próximo período
+                const limiteCredito = baseCalculo * 0.73;
+                const ajusteProximoPeriodo = Math.max(0, creditoOutorgado - limiteCredito);
+                
+                if (currentPeriod.calculo?.quadroA) {
+                    currentPeriod.calculo.quadroA.GO100008 = ajusteProximoPeriodo;
+                    addLog(`Período ${currentPeriod.periodo}: Ajuste Próximo Período = R$ ${ajusteProximoPeriodo.toFixed(2)}`, 'info');
+                }
+            } else {
+                // Último período não tem ajuste para próximo
+                if (currentPeriod.calculo?.quadroA) {
+                    currentPeriod.calculo.quadroA.GO100008 = 0;
+                }
+            }
+            
+            // Recalcular base de cálculo considerando ajustes
+            if (currentPeriod.calculo?.quadroA) {
+                const quadroA = currentPeriod.calculo.quadroA;
+                const novaBaseCalculo = (quadroA.GO100002 || 0) + 
+                                      (quadroA.GO100003 || 0) + 
+                                      (quadroA.GO100004 || 0) - 
+                                      (quadroA.GO100005 || 0) + 
+                                      (quadroA.GO100007 || 0); // Incluir ajuste período anterior
+                
+                quadroA.baseCalculo = Math.max(0, novaBaseCalculo);
+                
+                // Recalcular crédito outorgado
+                const percentualPrograma = quadroA.GO100001 || 0;
+                quadroA.GO100009 = (quadroA.baseCalculo * percentualPrograma / 100) - (quadroA.GO100008 || 0);
+                quadroA.GO100009 = Math.max(0, quadroA.GO100009);
+            }
+        }
+        
+        addLog(`Ajustes automáticos calculados para ${progoisMultiPeriodData.length} períodos`, 'success');
+    }
+    
     function handleProgoisImportModeChange(event) {
         progoisCurrentImportMode = event.target.value;
         
@@ -4155,10 +4254,17 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Sort by period chronologically
         progoisMultiPeriodData.sort((a, b) => {
-            if (a.periodo < b.periodo) return -1;
-            if (a.periodo > b.periodo) return 1;
+            // Converter período para formato comparable (YYYY-MM)
+            const periodA = convertPeriodToSortable(a.periodo);
+            const periodB = convertPeriodToSortable(b.periodo);
+            
+            if (periodA < periodB) return -1;
+            if (periodA > periodB) return 1;
             return 0;
         });
+        
+        // Calcular ajustes automáticos após ordenação
+        calculateAutomaticAdjustments();
         
         // Finalizar processamento
         progressBar.style.width = '100%';
