@@ -705,6 +705,141 @@ body {
     color: #333;
 }
 
+/* --- Multiple Period Config Section --- */
+.multiple-period-config {
+    background: #e3f2fd;
+    padding: 20px;
+    border-radius: 10px;
+    margin-top: 20px;
+    border: 1px solid #90caf9;
+}
+
+.multiple-period-config h4 {
+    color: #1976d2;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.config-note {
+    background: #fff3e0;
+    padding: 12px;
+    border-radius: 6px;
+    border-left: 4px solid #ff9800;
+    font-size: 0.9rem;
+    color: #f57c00;
+    margin-top: 15px;
+    text-align: left;
+    line-height: 1.4;
+}
+
+/* --- Comparative View Styles --- */
+.comparative-view {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    margin: 25px 0;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.comparative-view h3 {
+    color: #333;
+    margin-bottom: 20px;
+    text-align: center;
+    font-size: 1.4rem;
+    font-weight: 600;
+}
+
+.comparative-table-container {
+    overflow-x: auto;
+    margin-bottom: 30px;
+}
+
+.comparative-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.comparative-table th,
+.comparative-table td {
+    padding: 8px 6px;
+    text-align: center;
+    border: 1px solid #ddd;
+    font-size: 0.85rem;
+}
+
+.comparative-table .rubrica-desc {
+    text-align: left;
+    font-weight: 600;
+    background: #f8f9fa;
+    min-width: 200px;
+}
+
+.comparative-table th {
+    background: linear-gradient(135deg, #FF2A2A, #1B1B3B);
+    color: white;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.comparative-table tr:nth-child(even) {
+    background: #f8f9fa;
+}
+
+.comparative-table tr:hover {
+    background: #e3f2fd;
+}
+
+.comparative-summary {
+    background: #f0f7ff;
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid #2196F3;
+}
+
+.comparative-summary h4 {
+    color: #1976D2;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 15px;
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #e3f2fd;
+}
+
+.summary-item label {
+    font-weight: 600;
+    color: #555;
+}
+
+.valor-total {
+    color: #1976D2;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.valor-economia {
+    color: #388E3C;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
 .quadro-section {
     margin: 25px 0;
     background: white;

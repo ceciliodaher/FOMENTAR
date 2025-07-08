@@ -342,6 +342,7 @@
                             </button>
                             <div id="multipleSpedListProgoias" class="selected-files-list"></div>
                         </div>
+                        
                     </div>
                 </div>
 
@@ -375,12 +376,46 @@
                             <input type="number" id="progoisSaldoCredorAnterior" class="input-style" 
                                    step="0.01" value="0.00">
                         </div>
+                        <div class="config-item">
+                            <label for="progoisPeriodoInicialMes">Mês de Início da Fruição:</label>
+                            <select id="progoisPeriodoInicialMes" class="input-style">
+                                <option value="01">Janeiro</option>
+                                <option value="02">Fevereiro</option>
+                                <option value="03">Março</option>
+                                <option value="04">Abril</option>
+                                <option value="05">Maio</option>
+                                <option value="06">Junho</option>
+                                <option value="07">Julho</option>
+                                <option value="08">Agosto</option>
+                                <option value="09">Setembro</option>
+                                <option value="10">Outubro</option>
+                                <option value="11">Novembro</option>
+                                <option value="12">Dezembro</option>
+                            </select>
+                        </div>
+                        <div class="config-item">
+                            <label for="progoisPeriodoInicialAno">Ano de Início da Fruição:</label>
+                            <input type="number" id="progoisPeriodoInicialAno" class="input-style" 
+                                   min="2020" max="2030" value="2024" step="1">
+                        </div>
+                    </div>
+                    
+                    <div class="config-note">
+                        ℹ️ <strong>Para múltiplos períodos:</strong> O sistema calculará automaticamente o ano de fruição (1º, 2º, 3º+) para cada SPED 
+                        baseado no período do arquivo e na data de início informada acima.
                     </div>
                     
                     <div class="fomentar-process-section">
                         <button id="processProgoisData" class="btn-style btn-process" style="display: none;">
                             <span class="btn-icon">⚙️</span> Processar Apuração ProGoiás
                         </button>
+                        
+                        <div id="progoisProgressSection" class="progress-section" style="display: none;">
+                            <div class="progress-bar-container-style">
+                                <div id="progoisProgressBar" class="progress-bar-style" style="width: 0%;">0%</div>
+                            </div>
+                            <p id="progoisProgressMessage" class="status-message-text">Processando arquivos...</p>
+                        </div>
                     </div>
                 </div>
 
