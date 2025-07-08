@@ -3922,14 +3922,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    function exportProgoisReport() {
+    async function exportProgoisReport() {
         if (!progoisData) {
             alert('Nenhum dado ProGoiás para exportar. Importe um arquivo SPED primeiro.');
             return;
         }
         
         try {
-            generateProgoisExcel(progoisData);
+            await generateProgoisExcel(progoisData);
             addLog('Relatório ProGoiás exportado com sucesso!', 'success');
         } catch (error) {
             console.error('Erro ao exportar relatório ProGoiás:', error);
@@ -3949,10 +3949,10 @@ document.addEventListener('DOMContentLoaded', () => {
         window.print();
     }
     
-    function generateProgoisExcel(dados) {
+    async function generateProgoisExcel(dados) {
         // Implementar geração de Excel específica para ProGoiás
         // Similar ao generateFomentarExcel mas com layout ProGoiás
-        const workbook = XlsxPopulate.fromBlankSync();
+        const workbook = await XlsxPopulate.fromBlankAsync();
         const worksheet = workbook.sheet("ProGoiás");
         
         // Cabeçalho
@@ -4030,14 +4030,13 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Salvar arquivo
         const filename = `ProGoias_${dados.empresa}_${dados.periodo}.xlsx`;
-        workbook.outputAsync().then(blob => {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            a.click();
-            URL.revokeObjectURL(url);
-        });
+        const blob = await workbook.outputAsync();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
     }
     
     // Funções auxiliares para múltiplos períodos e outras funcionalidades do ProGoiás
@@ -4648,14 +4647,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    function exportProgoisComparativeReport() {
+    async function exportProgoisComparativeReport() {
         if (progoisMultiPeriodData.length === 0) {
             alert('Nenhum dado ProGoiás para exportar. Processe múltiplos SPEDs primeiro.');
             return;
         }
         
         try {
-            generateProgoisComparativeExcel();
+            await generateProgoisComparativeExcel();
             addLog('Relatório comparativo ProGoiás exportado com sucesso!', 'success');
         } catch (error) {
             console.error('Erro ao exportar relatório comparativo ProGoiás:', error);
@@ -4801,10 +4800,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    function generateProgoisComparativeExcel() {
+    async function generateProgoisComparativeExcel() {
         try {
-            // Usar método síncrono mais estável
-            const workbook = XlsxPopulate.fromBlankSync();
+            // Usar método assíncrono correto
+            const workbook = await XlsxPopulate.fromBlankAsync();
             const worksheet = workbook.sheet("Sheet1");
             worksheet.name("Comparativo ProGoiás");
             
@@ -4981,7 +4980,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Salvar arquivo
             const filename = `Comparativo_ProGoias_${progoisMultiPeriodData.length}_periodos.xlsx`;
-            const blob = workbook.outputAsync();
+            const blob = await workbook.outputAsync();
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
