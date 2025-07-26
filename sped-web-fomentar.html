@@ -343,28 +343,106 @@
                             <div id="multipleSpedListProgoias" class="selected-files-list"></div>
                         </div>
                         
+                        <!-- Configurações específicas para múltiplos períodos -->
+                        <div class="fomentar-config" id="progoisMultipleConfig" style="display: none;">
+                            <h3>⚙️ Configurações para Múltiplos Períodos ProGoiás</h3>
+                            <div class="config-grid">
+                                <div class="config-item">
+                                    <label for="progoisMultipleTipoEmpresa">Tipo de Empresa:</label>
+                                    <select id="progoisMultipleTipoEmpresa" class="input-style">
+                                        <option value="">Selecione...</option>
+                                        <option value="MICRO">Microempresa</option>
+                                        <option value="PEQUENA">Empresa de Pequeno Porte</option>
+                                        <option value="MEDIA">Empresa de Médio Porte</option>
+                                        <option value="GRANDE">Empresa de Grande Porte</option>
+                                    </select>
+                                </div>
+                                <div class="config-item">
+                                    <label for="progoisMultipleInicioFruicao">Início da Fruição (Mês/Ano):</label>
+                                    <div style="display: flex; gap: 10px;">
+                                        <select id="progoisMultipleMesInicio" class="input-style" style="flex: 1;">
+                                            <option value="">Mês...</option>
+                                            <option value="01">Janeiro</option>
+                                            <option value="02">Fevereiro</option>
+                                            <option value="03">Março</option>
+                                            <option value="04">Abril</option>
+                                            <option value="05">Maio</option>
+                                            <option value="06">Junho</option>
+                                            <option value="07">Julho</option>
+                                            <option value="08">Agosto</option>
+                                            <option value="09">Setembro</option>
+                                            <option value="10">Outubro</option>
+                                            <option value="11">Novembro</option>
+                                            <option value="12">Dezembro</option>
+                                        </select>
+                                        <input type="number" id="progoisMultipleAnoInicio" class="input-style" 
+                                               placeholder="2024" min="2020" max="2030" style="flex: 1;">
+                                    </div>
+                                    <small style="color: #666; font-size: 0.9em;">
+                                        ℹ️ Cada período será calculado automaticamente com base no tempo de fruição
+                                    </small>
+                                </div>
+                                <div class="config-item">
+                                    <label for="progoisMultipleIcmsPorMedia">ICMS por Média (R$):</label>
+                                    <input type="number" id="progoisMultipleIcmsPorMedia" class="input-style" 
+                                           step="0.01" value="0.00">
+                                </div>
+                                <div class="config-item">
+                                    <label for="progoisMultipleSaldoCredor">Saldo Credor Anterior - 1º Período (R$):</label>
+                                    <input type="number" id="progoisMultipleSaldoCredor" class="input-style" 
+                                           step="0.01" value="0.00">
+                                </div>
+                                <div class="config-item">
+                                    <label for="progoisMultipleAjustePeriodoAnterior">Ajuste Período Anterior - 1º Período (R$):</label>
+                                    <input type="number" id="progoisMultipleAjustePeriodoAnterior" class="input-style" 
+                                           step="0.01" value="0.00">
+                                </div>
+                            </div>
+                        </div>
+                        
                     </div>
                 </div>
 
-                <div class="fomentar-config">
-                    <h3>⚙️ Configurações da Apuração ProGoiás</h3>
+                <!-- Configuração para período único (só aparece quando necessário) -->
+                <div class="fomentar-config" id="progoisSingleConfig" style="display: block;">
+                    <h3>⚙️ Configurações da Apuração ProGoiás - Período Único</h3>
                     <div class="config-grid">
                         <div class="config-item">
                             <label for="progoisTipoEmpresa">Tipo de Empresa:</label>
                             <select id="progoisTipoEmpresa" class="input-style">
+                                <option value="">Selecione...</option>
                                 <option value="MICRO">Microempresa</option>
                                 <option value="PEQUENA">Empresa de Pequeno Porte</option>
                                 <option value="MEDIA">Empresa de Médio Porte</option>
+                                <option value="GRANDE">Empresa de Grande Porte</option>
                             </select>
                         </div>
                         <div class="config-item">
-                            <label for="progoisAno">Ano de Fruição:</label>
-                            <select id="progoisAno" class="input-style">
+                            <label for="progoisOpcaoCalculo">Opção de Cálculo:</label>
+                            <select id="progoisOpcaoCalculo" class="input-style">
+                                <option value="">Selecione...</option>
+                                <option value="ano">Informar Ano de Fruição Atual</option>
+                                <option value="manual">Informar Percentual Manualmente</option>
+                            </select>
+                        </div>
+                        <div class="config-item" id="progoisGrupoAno" style="display: none;">
+                            <label for="progoisAnoFruicao">Ano de Fruição:</label>
+                            <select id="progoisAnoFruicao" class="input-style">
+                                <option value="">Selecione...</option>
                                 <option value="1">1º Ano (ProGoiás: 64% | PROTEGE: 10%)</option>
                                 <option value="2">2º Ano (ProGoiás: 65% | PROTEGE: 8%)</option>
                                 <option value="3">3º Ano+ (ProGoiás: 66% | PROTEGE: 6%)</option>
-                                <option value="0">Sem PROTEGE (apenas ProGoiás)</option>
                             </select>
+                        </div>
+                        <div class="config-item" id="progoisGrupoManual" style="display: none;">
+                            <label for="progoisPercentualManual">Percentual ProGoiás (%):</label>
+                            <input type="number" id="progoisPercentualManual" class="input-style" 
+                                   step="0.01" min="0" max="100" placeholder="Digite o percentual">
+                        </div>
+                        <div class="config-item">
+                            <label for="progoisPercentualCalculado">Percentual Calculado:</label>
+                            <input type="text" id="progoisPercentualCalculado" class="input-style" 
+                                   readonly placeholder="Será calculado automaticamente" style="background-color: #f5f5f5;">
                         </div>
                         <div class="config-item">
                             <label for="progoisIcmsPorMedia">ICMS por Média (R$):</label>
@@ -377,35 +455,14 @@
                                    step="0.01" value="0.00">
                         </div>
                         <div class="config-item">
-                            <label for="progoisPeriodoInicialMes">Mês de Início da Fruição:</label>
-                            <select id="progoisPeriodoInicialMes" class="input-style">
-                                <option value="01">Janeiro</option>
-                                <option value="02">Fevereiro</option>
-                                <option value="03">Março</option>
-                                <option value="04">Abril</option>
-                                <option value="05">Maio</option>
-                                <option value="06">Junho</option>
-                                <option value="07">Julho</option>
-                                <option value="08">Agosto</option>
-                                <option value="09">Setembro</option>
-                                <option value="10">Outubro</option>
-                                <option value="11">Novembro</option>
-                                <option value="12">Dezembro</option>
-                            </select>
-                        </div>
-                        <div class="config-item">
-                            <label for="progoisPeriodoInicialAno">Ano de Início da Fruição:</label>
-                            <input type="number" id="progoisPeriodoInicialAno" class="input-style" 
-                                   min="2020" max="2030" value="2024" step="1">
+                            <label for="progoisAjustePeriodoAnterior">Ajuste Período Anterior (R$):</label>
+                            <input type="number" id="progoisAjustePeriodoAnterior" class="input-style" 
+                                   step="0.01" value="0.00">
                         </div>
                     </div>
-                    
-                    <div class="config-note">
-                        ℹ️ <strong>Para múltiplos períodos:</strong> O sistema calculará automaticamente o ano de fruição (1º, 2º, 3º+) para cada SPED 
-                        baseado no período do arquivo e na data de início informada acima.
-                    </div>
-                    
-                    <div class="fomentar-process-section">
+                </div>
+
+                <div class="fomentar-process-section">
                         <button id="processProgoisData" class="btn-style btn-process" style="display: none;">
                             <span class="btn-icon">⚙️</span> Processar Apuração ProGoiás
                         </button>

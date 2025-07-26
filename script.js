@@ -64,10 +64,23 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // ProGoiás Configuration listeners
     document.getElementById('progoisTipoEmpresa').addEventListener('change', handleProgoisConfigChange);
-    document.getElementById('progoisAno').addEventListener('change', handleProgoisConfigChange);
+    document.getElementById('progoisOpcaoCalculo').addEventListener('change', handleProgoisOpcaoCalculoChange);
+    document.getElementById('progoisAnoFruicao').addEventListener('change', handleProgoisConfigChange);
+    document.getElementById('progoisPercentualManual').addEventListener('input', handleProgoisConfigChange);
     document.getElementById('progoisIcmsPorMedia').addEventListener('input', handleProgoisConfigChange);
     document.getElementById('progoisSaldoCredorAnterior').addEventListener('input', handleProgoisConfigChange);
     document.getElementById('processProgoisData').addEventListener('click', processProgoisData);
+    
+    // ProGoiás Multiple Period Configuration listeners  
+    document.getElementById('progoisMultipleTipoEmpresa').addEventListener('change', handleProgoisMultipleConfigChange);
+    document.getElementById('progoisMultipleMesInicio').addEventListener('change', handleProgoisMultipleConfigChange);
+    document.getElementById('progoisMultipleAnoInicio').addEventListener('input', handleProgoisMultipleConfigChange);
+    document.getElementById('progoisMultipleIcmsPorMedia').addEventListener('input', handleProgoisMultipleConfigChange);
+    document.getElementById('progoisMultipleSaldoCredor').addEventListener('input', handleProgoisMultipleConfigChange);
+    document.getElementById('progoisMultipleAjustePeriodoAnterior').addEventListener('input', handleProgoisMultipleConfigChange);
+    
+    // ProGoiás Single Period - adicionar novo campo  
+    document.getElementById('progoisAjustePeriodoAnterior').addEventListener('input', handleProgoisConfigChange);
     
     // Multi-period listeners
     document.querySelectorAll('input[name="importMode"]').forEach(radio => {
@@ -1681,8 +1694,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             const cfop = campos[cfopIndex] || '';
-            const valorOperacao = parseFloat(campos[valorOprIndex] || '0');
-            const valorIcms = parseFloat(campos[valorIcmsIndex] || '0');
+            const valorOperacao = parseFloat((campos[valorOprIndex] || '0').replace(',', '.'));
+            const valorIcms = parseFloat((campos[valorIcmsIndex] || '0').replace(',', '.'));
             
             // Determinar tipo de operação pelo CFOP
             const tipoOperacao = cfop.startsWith('1') || cfop.startsWith('2') || cfop.startsWith('3') ? 'ENTRADA' : 'SAIDA';
@@ -1751,8 +1764,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             const cfop = campos[cfopIndex] || '';
-            const valorOperacao = parseFloat(campos[valorOprIndex] || '0');
-            const valorIcms = parseFloat(campos[valorIcmsIndex] || '0');
+            const valorOperacao = parseFloat((campos[valorOprIndex] || '0').replace(',', '.'));
+            const valorIcms = parseFloat((campos[valorIcmsIndex] || '0').replace(',', '.'));
             
             // Determinar tipo de operação pelo CFOP
             const tipoOperacao = cfop.startsWith('1') || cfop.startsWith('2') || cfop.startsWith('3') ? 'ENTRADA' : 'SAIDA';
@@ -1809,7 +1822,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const campos = registro.slice(1, -1);
                 const layout = obterLayoutRegistro('E111');
                 const codAjuste = campos[layout.indexOf('COD_AJ_APUR')] || '';
-                const valorAjuste = parseFloat(campos[layout.indexOf('VL_AJ_APUR')] || '0');
+                const valorAjuste = parseFloat((campos[layout.indexOf('VL_AJ_APUR')] || '0').replace(',', '.'));
                 
                 // EXCLUIR os créditos do próprio FOMENTAR/PRODUZIR/MICROPRODUZIR da base de cálculo
                 const isCreditoFomentar = CODIGOS_CREDITO_FOMENTAR.some(cod => codAjuste.includes(cod));
@@ -1864,6 +1877,15 @@ document.addEventListener('DOMContentLoaded', () => {
                             operations.outrosCreditosNaoIncentivados += valorAjuste;
                         }
                         
+                        operations.memoriaCalculo.detalhesOutrosCreditos = operations.memoriaCalculo.detalhesOutrosCreditos || [];
+                        operations.memoriaCalculo.detalhesOutrosCreditos.push({
+                            origem: 'E111 - Ajustes da Apuração do ICMS',
+                            codigo: codAjuste,
+                            valor: valorAjuste,
+                            incentivado: isIncentivado,
+                            descricao: `Crédito E111: ${codAjuste}`,
+                            tipo: 'CREDITO'
+                        });
                         addLog(`E111 Crédito: ${codAjuste} = R$ ${formatCurrency(valorAjuste)} ${isIncentivado ? '(Incentivado)' : '(Não Incentivado)'}`, 'info');
                     } else { // Débito
                         operations.outrosDebitos += Math.abs(valorAjuste);
@@ -1876,6 +1898,15 @@ document.addEventListener('DOMContentLoaded', () => {
                             operations.outrosDebitosNaoIncentivados += Math.abs(valorAjuste);
                         }
                         
+                        operations.memoriaCalculo.detalhesOutrosDebitos = operations.memoriaCalculo.detalhesOutrosDebitos || [];
+                        operations.memoriaCalculo.detalhesOutrosDebitos.push({
+                            origem: 'E111 - Ajustes da Apuração do ICMS',
+                            codigo: codAjuste,
+                            valor: Math.abs(valorAjuste),
+                            incentivado: isIncentivado,
+                            descricao: `Débito E111: ${codAjuste}`,
+                            tipo: 'DEBITO'
+                        });
                         addLog(`E111 Débito: ${codAjuste} = R$ ${formatCurrency(Math.abs(valorAjuste))} ${isIncentivado ? '(Incentivado)' : '(Não Incentivado)'}`, 'info');
                     }
                 }
@@ -1904,7 +1935,7 @@ document.addEventListener('DOMContentLoaded', () => {
             registros.C197.forEach(registro => {
                 const campos = registro.slice(1, -1);
                 const codAjuste = campos[1] || ''; // COD_AJ
-                const valorIcms = parseFloat(campos[6] || '0'); // VL_ICMS
+                const valorIcms = parseFloat((campos[6] || '0').replace(',', '.')); // VL_ICMS
                 
                 if (valorIcms !== 0 && codAjuste) {
                     // Verificar tipo de código de ajuste
@@ -1947,6 +1978,16 @@ document.addEventListener('DOMContentLoaded', () => {
                             operations.outrosDebitosNaoIncentivados += Math.abs(valorIcms);
                         }
                         
+                        operations.memoriaCalculo.detalhesOutrosDebitos = operations.memoriaCalculo.detalhesOutrosDebitos || [];
+                        operations.memoriaCalculo.detalhesOutrosDebitos.push({
+                            origem: 'C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal',
+                            codigo: codAjuste,
+                            valor: Math.abs(valorIcms),
+                            incentivado: ehIncentivadoProgoias,
+                            descricao: `Débito C197: ${codAjuste}`,
+                            tipo: 'DEBITO'
+                        });
+                        
                         const tipoLog = ehDebitoGO4 ? 
                             (ehIncentivadoProgoias ? 'GO4 Incentivado ProGoiás' : 'GO4 Não Incentivado') : 
                             'Débito Comum';
@@ -1963,7 +2004,7 @@ document.addEventListener('DOMContentLoaded', () => {
             registros.D197.forEach(registro => {
                 const campos = registro.slice(1, -1);
                 const codAjuste = campos[1] || ''; // COD_AJ
-                const valorIcms = parseFloat(campos[6] || '0'); // VL_ICMS
+                const valorIcms = parseFloat((campos[6] || '0').replace(',', '.')); // VL_ICMS
                 
                 if (valorIcms !== 0 && codAjuste) {
                     // Verificar tipo de código de ajuste
@@ -2032,6 +2073,21 @@ document.addEventListener('DOMContentLoaded', () => {
         addLog(`Créditos Entradas TOTAL: R$ ${formatCurrency(operations.creditosEntradas)}`, 'info');
         addLog(`  - Incentivados: R$ ${formatCurrency(operations.creditosEntradasIncentivadas)} (${operations.creditosEntradas > 0 ? ((operations.creditosEntradasIncentivadas / operations.creditosEntradas) * 100).toFixed(1) : 0}%)`, 'info');
         addLog(`  - Não Incentivados: R$ ${formatCurrency(operations.creditosEntradasNaoIncentivadas)}`, 'info');
+        
+        // MEMÓRIA DE CÁLCULO DETALHADA
+        addLog('=== MEMÓRIA DE CÁLCULO DETALHADA ===', 'warn');
+        if (operations.memoriaCalculo.detalhesOutrosCreditos?.length > 0) {
+            addLog(`OUTROS CRÉDITOS (${operations.memoriaCalculo.detalhesOutrosCreditos.length} registros):`, 'info');
+            operations.memoriaCalculo.detalhesOutrosCreditos.forEach(item => {
+                addLog(`  ${item.origem} | ${item.codigo}: R$ ${formatCurrency(item.valor)} ${item.incentivado ? '(Incentivado)' : '(Não Incentivado)'}`, 'info');
+            });
+        }
+        if (operations.memoriaCalculo.detalhesOutrosDebitos?.length > 0) {
+            addLog(`OUTROS DÉBITOS (${operations.memoriaCalculo.detalhesOutrosDebitos.length} registros):`, 'info');
+            operations.memoriaCalculo.detalhesOutrosDebitos.forEach(item => {
+                addLog(`  ${item.origem} | ${item.codigo}: R$ ${formatCurrency(item.valor)} ${item.incentivado ? '(Incentivado)' : '(Não Incentivado)'}`, 'info');
+            });
+        }
         
         return operations;
     }
@@ -3526,20 +3582,37 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Erro ao processar apuração ProGoiás:', error);
             addLog(`Erro ao processar apuração ProGoiás: ${error.message}`, 'error');
+            document.getElementById('progoisResults').style.display = 'block';
         }
     }
     
     function calculateProgoias(registros) {
-        const ano = parseInt(document.getElementById('progoisAno').value) || 1;
+        // Obter percentual calculado ou usar default
+        let percentualIncentivo = 64; // Default
+        
+        const opcaoCalculo = document.getElementById('progoisOpcaoCalculo').value;
+        switch(opcaoCalculo) {
+            case 'ano':
+                const anoFruicao = parseInt(document.getElementById('progoisAnoFruicao').value);
+                if (anoFruicao) {
+                    percentualIncentivo = PROGOIAS_CONFIG.PERCENTUAIS_POR_ANO[anoFruicao] || 64;
+                }
+                break;
+            case 'manual':
+                const percentualManual = parseFloat(document.getElementById('progoisPercentualManual').value);
+                if (percentualManual && percentualManual > 0) {
+                    percentualIncentivo = percentualManual;
+                }
+                break;
+        }
         
         const config = {
             tipoEmpresa: document.getElementById('progoisTipoEmpresa').value,
-            ano: ano,
-            percentualIncentivo: PROGOIAS_CONFIG.PERCENTUAIS_POR_ANO[ano] || 64,
-            percentualProtege: ano === 0 ? 0 : PROGOIAS_CONFIG.PROTEGE_POR_ANO[ano] || 0,
+            opcaoCalculo: opcaoCalculo,
+            percentualIncentivo: percentualIncentivo,
             icmsPorMedia: parseFloat(document.getElementById('progoisIcmsPorMedia').value) || 0,
             saldoCredorAnterior: parseFloat(document.getElementById('progoisSaldoCredorAnterior').value) || 0,
-            ajustePeridoAnterior: 0  // GO100007 - Ajuste da base de cálculo ProGoiás período anterior
+            ajustePeridoAnterior: parseFloat(document.getElementById('progoisAjustePeriodoAnterior').value) || 0
         };
         
         // Usar as mesmas funções de classificação do FOMENTAR
@@ -3563,6 +3636,7 @@ document.addEventListener('DOMContentLoaded', () => {
             quadroA: quadroA,
             quadroB: quadroB,
             quadroC: quadroC,
+            operacoes: operacoesClassificadas,
             totalOperacoes: (operacoesClassificadas.entradasIncentivadas?.length || 0) + 
                            (operacoesClassificadas.saidasIncentivadas?.length || 0) + 
                            (operacoesClassificadas.entradasNaoIncentivadas?.length || 0) + 
@@ -3608,26 +3682,36 @@ document.addEventListener('DOMContentLoaded', () => {
         // GO100001 = Percentual do Crédito Outorgado ProGoiás
         const GO100001 = config.percentualIncentivo;
         
-        // CÁLCULO CONFORME PLANILHA:
-        // Base = GO100002 - GO100003 - GO100004 + GO100005 - GO100007 - GO100006
-        const baseCalculo = GO100002 - GO100003 - GO100004 + GO100005 - GO100007 - GO100006;
+        // CÁLCULO CONFORME ESPECIFICAÇÃO CORRETA:
+        // Base = ICMS Saídas Incentivadas + Outros Débitos (Anexo II) - ICMS Entradas Incentivadas - Outros Créditos (Anexo II) - Ajuste Período Anterior - Média ICMS
+        // Base = GO100002 + GO100005 - GO100003 - GO100004 - GO100007 - GO100006
+        const baseCalculoFormula = GO100002 + GO100005 - GO100003 - GO100004 - GO100007 - GO100006;
+        
+        // Se o resultado for positivo, essa é a base de cálculo. Se negativo, base = 0 e valor absoluto vai para próximo período
+        let baseCalculo, ajusteProximoPeriodo;
+        if (baseCalculoFormula > 0) {
+            baseCalculo = baseCalculoFormula;
+            ajusteProximoPeriodo = 0;
+        } else {
+            baseCalculo = 0;
+            ajusteProximoPeriodo = Math.abs(baseCalculoFormula);
+        }
         
         // GO100009 = Valor do Crédito Outorgado ProGoiás
-        let GO100009 = 0;
-        let GO100008 = 0; // Ajuste para transportar
+        const GO100009 = baseCalculo > 0 ? baseCalculo * (GO100001 / 100) : 0;
+        
+        // GO100008 = Ajuste para Próximo Período (valor absoluto quando resultado for negativo)
+        const GO100008 = ajusteProximoPeriodo;
         
         if (baseCalculo > 0) {
-            GO100009 = baseCalculo * (GO100001 / 100);
             addLog(`Base positiva: R$ ${formatCurrency(baseCalculo)} x ${GO100001}% = R$ ${formatCurrency(GO100009)}`, 'info');
         } else {
-            GO100009 = 0;
-            GO100008 = Math.abs(baseCalculo); // Transportar saldo negativo
-            addLog(`Base negativa: R$ ${formatCurrency(baseCalculo)} - Transportar para próximo período`, 'warn');
+            addLog(`Resultado negativo: R$ ${formatCurrency(baseCalculoFormula)} - Base = 0, Ajuste Próximo Período = R$ ${formatCurrency(GO100008)}`, 'warn');
         }
         
         // Logs finais da ABA 1
         addLog(`=== RESULTADO ABA 1 ===`, 'info');
-        addLog(`Fórmula: ${formatCurrency(GO100002)} - ${formatCurrency(GO100003)} - ${formatCurrency(GO100004)} + ${formatCurrency(GO100005)} - ${formatCurrency(GO100007)} - ${formatCurrency(GO100006)}`, 'info');
+        addLog(`Fórmula CORRIGIDA: ${formatCurrency(GO100002)} + ${formatCurrency(GO100005)} - ${formatCurrency(GO100003)} - ${formatCurrency(GO100004)} - ${formatCurrency(GO100007)} - ${formatCurrency(GO100006)} = ${formatCurrency(baseCalculoFormula)}`, 'info');
         addLog(`Base de Cálculo: R$ ${formatCurrency(baseCalculo)}`, 'info');
         addLog(`Percentual (GO100001): ${GO100001}%`, 'info');
         addLog(`GO100009 (CRÉDITO OUTORGADO PROGOIÁS): R$ ${formatCurrency(GO100009)}`, 'success');
@@ -3916,9 +4000,72 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function handleProgoisConfigChange() {
+        // Calcular percentual automaticamente baseado no período de fruição
+        calculateProgoisPercentual();
+        
         // Apenas indicar que as configurações mudaram
         if (progoisRegistrosCompletos) {
             addLog('Configurações alteradas. Clique em "Processar Apuração" para recalcular.', 'info');
+        }
+    }
+    
+    function handleProgoisOpcaoCalculoChange() {
+        const opcao = document.getElementById('progoisOpcaoCalculo').value;
+        
+        // Ocultar todos os grupos primeiro
+        document.getElementById('progoisGrupoAno').style.display = 'none';
+        document.getElementById('progoisGrupoManual').style.display = 'none';
+        
+        // Limpar campos
+        document.getElementById('progoisAnoFruicao').value = '';
+        document.getElementById('progoisPercentualManual').value = '';
+        document.getElementById('progoisPercentualCalculado').value = '';
+        
+        // Mostrar grupo relevante
+        switch(opcao) {
+            case 'ano':
+                document.getElementById('progoisGrupoAno').style.display = 'block';
+                break;
+            case 'manual':
+                document.getElementById('progoisGrupoManual').style.display = 'block';
+                break;
+        }
+        
+        calculateProgoisPercentual();
+    }
+    
+    function calculateProgoisPercentual() {
+        const opcaoCalculo = document.getElementById('progoisOpcaoCalculo').value;
+        const percentualCalculadoField = document.getElementById('progoisPercentualCalculado');
+        
+        let percentualFinal = null;
+        let textoExplicativo = '';
+        
+        switch(opcaoCalculo) {
+            case 'ano':
+                const anoFruicao = parseInt(document.getElementById('progoisAnoFruicao').value);
+                if (anoFruicao) {
+                    percentualFinal = PROGOIAS_CONFIG.PERCENTUAIS_POR_ANO[anoFruicao] || 64;
+                    textoExplicativo = `${percentualFinal}% (${anoFruicao}º ano de fruição)`;
+                    addLog(`Selecionado: ${percentualFinal}% para ${anoFruicao}º ano de fruição`, 'info');
+                }
+                break;
+                
+            case 'manual':
+                const percentualManual = parseFloat(document.getElementById('progoisPercentualManual').value);
+                if (percentualManual && percentualManual > 0) {
+                    percentualFinal = percentualManual;
+                    textoExplicativo = `${percentualFinal}% (informado manualmente)`;
+                    addLog(`Percentual manual: ${percentualFinal}%`, 'info');
+                }
+                break;
+        }
+        
+        // Atualizar campo de resultado
+        if (percentualFinal) {
+            percentualCalculadoField.value = textoExplicativo;
+        } else {
+            percentualCalculadoField.value = '';
         }
     }
     
@@ -4028,6 +4175,50 @@ document.addEventListener('DOMContentLoaded', () => {
             row++;
         });
         
+        // Adicionar aba de Memória de Cálculo
+        const memoriaWorksheet = workbook.addSheet("Memória de Cálculo");
+        let memoriaRow = 1;
+        
+        memoriaWorksheet.cell(`A${memoriaRow}`).value("MEMÓRIA DE CÁLCULO DETALHADA");
+        memoriaWorksheet.cell(`A${memoriaRow + 1}`).value(`Empresa: ${dados.empresa}`);
+        memoriaWorksheet.cell(`A${memoriaRow + 2}`).value(`Período: ${dados.periodo}`);
+        memoriaRow += 4;
+        
+        // Cabeçalho da tabela
+        memoriaWorksheet.cell(`A${memoriaRow}`).value("ORIGEM");
+        memoriaWorksheet.cell(`B${memoriaRow}`).value("CÓDIGO");
+        memoriaWorksheet.cell(`C${memoriaRow}`).value("DESCRIÇÃO");
+        memoriaWorksheet.cell(`D${memoriaRow}`).value("TIPO");
+        memoriaWorksheet.cell(`E${memoriaRow}`).value("VALOR");
+        memoriaWorksheet.cell(`F${memoriaRow}`).value("INCENTIVADO");
+        memoriaRow++;
+        
+        // Adicionar outros créditos
+        if (dados.operacoes?.memoriaCalculo?.detalhesOutrosCreditos?.length > 0) {
+            dados.operacoes.memoriaCalculo.detalhesOutrosCreditos.forEach(item => {
+                memoriaWorksheet.cell(`A${memoriaRow}`).value(item.origem);
+                memoriaWorksheet.cell(`B${memoriaRow}`).value(item.codigo);
+                memoriaWorksheet.cell(`C${memoriaRow}`).value(item.descricao);
+                memoriaWorksheet.cell(`D${memoriaRow}`).value(item.tipo);
+                memoriaWorksheet.cell(`E${memoriaRow}`).value(item.valor);
+                memoriaWorksheet.cell(`F${memoriaRow}`).value(item.incentivado ? "SIM" : "NÃO");
+                memoriaRow++;
+            });
+        }
+        
+        // Adicionar outros débitos
+        if (dados.operacoes?.memoriaCalculo?.detalhesOutrosDebitos?.length > 0) {
+            dados.operacoes.memoriaCalculo.detalhesOutrosDebitos.forEach(item => {
+                memoriaWorksheet.cell(`A${memoriaRow}`).value(item.origem);
+                memoriaWorksheet.cell(`B${memoriaRow}`).value(item.codigo);
+                memoriaWorksheet.cell(`C${memoriaRow}`).value(item.descricao);
+                memoriaWorksheet.cell(`D${memoriaRow}`).value(item.tipo);
+                memoriaWorksheet.cell(`E${memoriaRow}`).value(item.valor);
+                memoriaWorksheet.cell(`F${memoriaRow}`).value(item.incentivado ? "SIM" : "NÃO");
+                memoriaRow++;
+            });
+        }
+        
         // Salvar arquivo
         const filename = `ProGoias_${dados.empresa}_${dados.periodo}.xlsx`;
         const blob = await workbook.outputAsync();
@@ -4121,18 +4312,27 @@ document.addEventListener('DOMContentLoaded', () => {
             // Recalcular base de cálculo considerando ajustes
             if (currentPeriod.calculo?.quadroA) {
                 const quadroA = currentPeriod.calculo.quadroA;
-                const novaBaseCalculo = (quadroA.GO100002 || 0) + 
-                                      (quadroA.GO100003 || 0) + 
-                                      (quadroA.GO100004 || 0) - 
-                                      (quadroA.GO100005 || 0) + 
-                                      (quadroA.GO100007 || 0); // Incluir ajuste período anterior
+                // FÓRMULA CORRIGIDA IGUAL AO PERÍODO ÚNICO:
+                // Base = ICMS Saídas Incentivadas + Outros Débitos (Anexo II) - ICMS Entradas Incentivadas - Outros Créditos (Anexo II) - Ajuste Período Anterior - Média ICMS
+                const baseCalculoFormula = (quadroA.GO100002 || 0) + 
+                                         (quadroA.GO100005 || 0) - 
+                                         (quadroA.GO100003 || 0) - 
+                                         (quadroA.GO100004 || 0) - 
+                                         (quadroA.GO100007 || 0) - 
+                                         (quadroA.GO100006 || 0);
                 
-                quadroA.baseCalculo = Math.max(0, novaBaseCalculo);
+                // Se o resultado for positivo, essa é a base de cálculo. Se negativo, base = 0 e valor absoluto vai para próximo período
+                if (baseCalculoFormula > 0) {
+                    quadroA.baseCalculo = baseCalculoFormula;
+                    quadroA.GO100008 = 0; // Sem ajuste para próximo período
+                } else {
+                    quadroA.baseCalculo = 0;
+                    quadroA.GO100008 = Math.abs(baseCalculoFormula); // Valor absoluto para próximo período
+                }
                 
-                // Recalcular crédito outorgado
+                // Recalcular crédito outorgado (igual ao período único)
                 const percentualPrograma = quadroA.GO100001 || 0;
-                quadroA.GO100009 = (quadroA.baseCalculo * percentualPrograma / 100) - (quadroA.GO100008 || 0);
-                quadroA.GO100009 = Math.max(0, quadroA.GO100009);
+                quadroA.GO100009 = quadroA.baseCalculo > 0 ? quadroA.baseCalculo * (percentualPrograma / 100) : 0;
             }
         }
         
@@ -4145,12 +4345,29 @@ document.addEventListener('DOMContentLoaded', () => {
         if (progoisCurrentImportMode === 'single') {
             document.getElementById('singleImportSectionProgoias').style.display = 'block';
             document.getElementById('multipleImportSectionProgoias').style.display = 'none';
-            // Ocultar botão de processamento se estava visível
+            document.getElementById('progoisSingleConfig').style.display = 'block';
+            document.getElementById('progoisMultipleConfig').style.display = 'none';
             document.getElementById('processProgoisData').style.display = 'none';
         } else {
             document.getElementById('singleImportSectionProgoias').style.display = 'none';
             document.getElementById('multipleImportSectionProgoias').style.display = 'block';
-            // Botão de processamento será mostrado quando arquivos forem selecionados
+            document.getElementById('progoisSingleConfig').style.display = 'none';
+            document.getElementById('progoisMultipleConfig').style.display = 'block';
+        }
+        
+        addLog(`ProGoiás - Modo alterado para: ${progoisCurrentImportMode === 'single' ? 'Período Único' : 'Múltiplos Períodos'}`, 'info');
+    }
+    
+    function handleProgoisMultipleConfigChange() {
+        // Validar se início de fruição está preenchido para mostrar preview dos percentuais
+        const mesInicio = document.getElementById('progoisMultipleMesInicio').value;
+        const anoInicio = parseInt(document.getElementById('progoisMultipleAnoInicio').value);
+        
+        if (mesInicio && anoInicio) {
+            addLog(`Configuração de múltiplos períodos: início da fruição definido para ${mesInicio}/${anoInicio}`, 'info');
+            addLog('✓ Percentuais serão calculados automaticamente para cada período baseado no tempo de fruição', 'success');
+        } else if (progoisMultiPeriodData && progoisMultiPeriodData.length > 0) {
+            addLog('⚠️ Início de fruição não informado - será usado percentual padrão (1º ano - 64%)', 'warning');
         }
     }
     
@@ -4310,10 +4527,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 addLog(`DEBUG: Registros carregados para ${filename} - empresa: ${registros.empresa}, período: ${registros.periodo}`, 'info');
                 
-                // Calcular ano de fruição baseado no período do SPED
+                // Calcular ano de fruição baseado no período do SPED e configuração
                 addLog(`DEBUG: Calculando ano de fruição para período ${registros.periodo}`, 'info');
-                const anoFruicao = calculateProgoisFruitionYear(registros.periodo);
-                addLog(`DEBUG: Ano de fruição calculado: ${anoFruicao}`, 'info');
+                const config = getProgoisMultipleConfig();
+                const calculoPercentual = calculateProgoisPercentualForPeriod(
+                    registros.periodo, 
+                    config.mesInicioFruicao, 
+                    config.anoInicioFruicao
+                );
+                const anoFruicao = calculoPercentual.anoFruicao;
+                addLog(`DEBUG: Ano de fruição calculado: ${anoFruicao} (${calculoPercentual.percentual}%)`, 'info');
                 
                 addLog(`DEBUG: Iniciando cálculo ProGoiás para ${filename}`, 'info');
                 const calculoProgoias = calculateProgoisWithFruitionYear(registros, anoFruicao);
@@ -4429,32 +4652,88 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             addLog(`DEBUG: calculateProgoisWithFruitionYear chamada com ano ${anoFruicao}`, 'info');
             
-            // Temporariamente atualizar o campo do ano de fruição para o cálculo
-            const progoisAnoElement = document.getElementById('progoisAno');
-            if (!progoisAnoElement) {
-                throw new Error('Elemento progoisAno não encontrado na página');
-            }
+            // Criar configuração específica para este cálculo
+            const config = getProgoisMultipleConfig();
             
-            const originalAno = progoisAnoElement.value;
-            progoisAnoElement.value = anoFruicao.toString();
+            // Calcular percentual baseado no ano de fruição informado
+            const percentualIncentivo = PROGOIAS_CONFIG.PERCENTUAIS_POR_ANO[anoFruicao] || 64;
+            config.percentualIncentivo = percentualIncentivo;
             
-            addLog(`DEBUG: Ano temporariamente alterado de ${originalAno} para ${anoFruicao}`, 'info');
+            addLog(`DEBUG: Usando percentual ${percentualIncentivo}% para ano ${anoFruicao}`, 'info');
             
-            try {
-                addLog(`DEBUG: Chamando calculateProgoias`, 'info');
-                const resultado = calculateProgoias(registros);
-                resultado.anoFruicaoCalculado = anoFruicao;
-                addLog(`DEBUG: calculateProgoias concluído com sucesso`, 'info');
-                return resultado;
-            } finally {
-                // Restaurar valor original
-                progoisAnoElement.value = originalAno;
-                addLog(`DEBUG: Ano restaurado para ${originalAno}`, 'info');
-            }
+            // Classificar operações
+            const operacoesClassificadas = classifyOperations(registros);
+            
+            // Calcular ProGoiás
+            const quadroA = calculateProgoisApuracao(operacoesClassificadas, config);
+            const quadroB = calculateIcmsComProgoias(quadroA, operacoesClassificadas, config);
+            
+            const resultado = {
+                quadroA: quadroA,
+                quadroB: quadroB,
+                operacoes: operacoesClassificadas,
+                empresa: registros.empresa || 'Empresa',
+                periodo: registros.periodo,
+                anoFruicaoCalculado: anoFruicao,
+                percentualUtilizado: percentualIncentivo
+            };
+            
+            addLog(`DEBUG: calculateProgoias concluído com sucesso`, 'info');
+            return resultado;
         } catch (error) {
             addLog(`DEBUG: Erro em calculateProgoisWithFruitionYear: ${error.message}`, 'error');
             console.error('Erro em calculateProgoisWithFruitionYear:', error);
             throw error;
+        }
+    }
+    
+    function getProgoisMultipleConfig() {
+        return {
+            tipoEmpresa: document.getElementById('progoisMultipleTipoEmpresa').value,
+            mesInicioFruicao: document.getElementById('progoisMultipleMesInicio').value,
+            anoInicioFruicao: parseInt(document.getElementById('progoisMultipleAnoInicio').value) || null,
+            icmsPorMedia: parseFloat(document.getElementById('progoisMultipleIcmsPorMedia').value) || 0,
+            saldoCredorAnterior: parseFloat(document.getElementById('progoisMultipleSaldoCredor').value) || 0,
+            ajustePeridoAnterior: parseFloat(document.getElementById('progoisMultipleAjustePeriodoAnterior').value) || 0
+        };
+    }
+    
+    function calculateProgoisPercentualForPeriod(periodoSped, inicioFruicaoMes, inicioFruicaoAno) {
+        try {
+            if (!inicioFruicaoMes || !inicioFruicaoAno || !periodoSped) {
+                // Se não há início de fruição, usar 1º ano como padrão
+                return { anoFruicao: 1, percentual: 64 };
+            }
+            
+            // Extrair ano e mês do período SPED (formato: "MM/AAAA")
+            const [mesSped, anoSped] = periodoSped.split('/').map(Number);
+            
+            if (!mesSped || !anoSped) {
+                return { anoFruicao: 1, percentual: 64 };
+            }
+            
+            // Calcular diferença em meses
+            const inicioFruicao = new Date(inicioFruicaoAno, inicioFruicaoMes - 1, 1);
+            const periodoCalculo = new Date(anoSped, mesSped - 1, 1);
+            
+            const diffTime = periodoCalculo.getTime() - inicioFruicao.getTime();
+            const diffMonths = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 30.44));
+            
+            let anoFruicao;
+            if (diffMonths <= 12) {
+                anoFruicao = 1;
+            } else if (diffMonths <= 24) {
+                anoFruicao = 2;
+            } else {
+                anoFruicao = 3;
+            }
+            
+            const percentual = PROGOIAS_CONFIG.PERCENTUAIS_POR_ANO[anoFruicao] || 64;
+            
+            return { anoFruicao, percentual };
+        } catch (error) {
+            console.error('Erro ao calcular percentual para período:', error);
+            return { anoFruicao: 1, percentual: 64 };
         }
     }
     
@@ -5084,6 +5363,61 @@ document.addEventListener('DOMContentLoaded', () => {
                 worksheet.column(colLetter).width(18);
             }
             
+            // Adicionar aba de Memória de Cálculo
+            const memoriaWorksheet = workbook.addSheet("Memória de Cálculo");
+            let memoriaRow = 1;
+            
+            memoriaWorksheet.cell(`A${memoriaRow}`).value("MEMÓRIA DE CÁLCULO DETALHADA - MÚLTIPLOS PERÍODOS");
+            memoriaWorksheet.cell(`A${memoriaRow + 1}`).value(`Total de Períodos: ${progoisMultiPeriodData.length}`);
+            memoriaRow += 3;
+            
+            // Cabeçalho da tabela
+            memoriaWorksheet.cell(`A${memoriaRow}`).value("PERÍODO");
+            memoriaWorksheet.cell(`B${memoriaRow}`).value("ORIGEM");
+            memoriaWorksheet.cell(`C${memoriaRow}`).value("CÓDIGO");
+            memoriaWorksheet.cell(`D${memoriaRow}`).value("DESCRIÇÃO");
+            memoriaWorksheet.cell(`E${memoriaRow}`).value("TIPO");
+            memoriaWorksheet.cell(`F${memoriaRow}`).value("VALOR");
+            memoriaWorksheet.cell(`G${memoriaRow}`).value("INCENTIVADO");
+            memoriaRow++;
+            
+            // Adicionar dados de cada período
+            progoisMultiPeriodData.forEach(periodo => {
+                if (periodo.calculo?.operacoes?.memoriaCalculo?.detalhesOutrosCreditos?.length > 0) {
+                    periodo.calculo.operacoes.memoriaCalculo.detalhesOutrosCreditos.forEach(item => {
+                        memoriaWorksheet.cell(`A${memoriaRow}`).value(periodo.periodo);
+                        memoriaWorksheet.cell(`B${memoriaRow}`).value(item.origem);
+                        memoriaWorksheet.cell(`C${memoriaRow}`).value(item.codigo);
+                        memoriaWorksheet.cell(`D${memoriaRow}`).value(item.descricao);
+                        memoriaWorksheet.cell(`E${memoriaRow}`).value(item.tipo);
+                        memoriaWorksheet.cell(`F${memoriaRow}`).value(item.valor);
+                        memoriaWorksheet.cell(`G${memoriaRow}`).value(item.incentivado ? "SIM" : "NÃO");
+                        memoriaRow++;
+                    });
+                }
+                if (periodo.calculo?.operacoes?.memoriaCalculo?.detalhesOutrosDebitos?.length > 0) {
+                    periodo.calculo.operacoes.memoriaCalculo.detalhesOutrosDebitos.forEach(item => {
+                        memoriaWorksheet.cell(`A${memoriaRow}`).value(periodo.periodo);
+                        memoriaWorksheet.cell(`B${memoriaRow}`).value(item.origem);
+                        memoriaWorksheet.cell(`C${memoriaRow}`).value(item.codigo);
+                        memoriaWorksheet.cell(`D${memoriaRow}`).value(item.descricao);
+                        memoriaWorksheet.cell(`E${memoriaRow}`).value(item.tipo);
+                        memoriaWorksheet.cell(`F${memoriaRow}`).value(item.valor);
+                        memoriaWorksheet.cell(`G${memoriaRow}`).value(item.incentivado ? "SIM" : "NÃO");
+                        memoriaRow++;
+                    });
+                }
+            });
+            
+            // Ajustar largura das colunas da memória de cálculo
+            memoriaWorksheet.column("A").width(12);
+            memoriaWorksheet.column("B").width(50);
+            memoriaWorksheet.column("C").width(15);
+            memoriaWorksheet.column("D").width(25);
+            memoriaWorksheet.column("E").width(10);
+            memoriaWorksheet.column("F").width(15);
+            memoriaWorksheet.column("G").width(12);
+            
             // Salvar arquivo
             const filename = `Comparativo_ProGoias_${progoisMultiPeriodData.length}_periodos.xlsx`;
             const blob = await workbook.outputAsync();
@@ -5405,8 +5739,60 @@ document.addEventListener('DOMContentLoaded', () => {
             
             currentRow += 2;
             
-            // 6. RESUMO DOS TOTAIS
-            mainSheet.cell(`A${currentRow}`).value('6. RESUMO DOS TOTAIS');
+            // 6. OUTROS CRÉDITOS DETALHADOS
+            if (memoriaCalculo.detalhesOutrosCreditos && memoriaCalculo.detalhesOutrosCreditos.length > 0) {
+                mainSheet.cell(`A${currentRow}`).value('6. OUTROS CRÉDITOS - DETALHAMENTO COMPLETO');
+                mainSheet.cell(`A${currentRow}`).style('bold', true).style('fontSize', 12);
+                currentRow += 1;
+                
+                const creditosHeaders = ['Origem SPED', 'Código Ajuste', 'Descrição', 'Tipo', 'Valor', 'Incentivado'];
+                creditosHeaders.forEach((header, index) => {
+                    const col = String.fromCharCode(65 + index);
+                    mainSheet.cell(`${col}${currentRow}`).value(header).style('bold', true);
+                });
+                currentRow++;
+                
+                memoriaCalculo.detalhesOutrosCreditos.forEach(item => {
+                    mainSheet.cell(`A${currentRow}`).value(item.origem);
+                    mainSheet.cell(`B${currentRow}`).value(item.codigo);
+                    mainSheet.cell(`C${currentRow}`).value(item.descricao);
+                    mainSheet.cell(`D${currentRow}`).value(item.tipo);
+                    mainSheet.cell(`E${currentRow}`).value(item.valor);
+                    mainSheet.cell(`F${currentRow}`).value(item.incentivado ? 'SIM' : 'NÃO');
+                    currentRow++;
+                });
+                
+                currentRow += 2;
+            }
+            
+            // 7. OUTROS DÉBITOS DETALHADOS
+            if (memoriaCalculo.detalhesOutrosDebitos && memoriaCalculo.detalhesOutrosDebitos.length > 0) {
+                mainSheet.cell(`A${currentRow}`).value('7. OUTROS DÉBITOS - DETALHAMENTO COMPLETO');
+                mainSheet.cell(`A${currentRow}`).style('bold', true).style('fontSize', 12);
+                currentRow += 1;
+                
+                const debitosHeaders = ['Origem SPED', 'Código Ajuste', 'Descrição', 'Tipo', 'Valor', 'Incentivado'];
+                debitosHeaders.forEach((header, index) => {
+                    const col = String.fromCharCode(65 + index);
+                    mainSheet.cell(`${col}${currentRow}`).value(header).style('bold', true);
+                });
+                currentRow++;
+                
+                memoriaCalculo.detalhesOutrosDebitos.forEach(item => {
+                    mainSheet.cell(`A${currentRow}`).value(item.origem);
+                    mainSheet.cell(`B${currentRow}`).value(item.codigo);
+                    mainSheet.cell(`C${currentRow}`).value(item.descricao);
+                    mainSheet.cell(`D${currentRow}`).value(item.tipo);
+                    mainSheet.cell(`E${currentRow}`).value(item.valor);
+                    mainSheet.cell(`F${currentRow}`).value(item.incentivado ? 'SIM' : 'NÃO');
+                    currentRow++;
+                });
+                
+                currentRow += 2;
+            }
+            
+            // 8. RESUMO DOS TOTAIS
+            mainSheet.cell(`A${currentRow}`).value('8. RESUMO DOS TOTAIS');
             mainSheet.cell(`A${currentRow}`).style('bold', true).style('fontSize', 12);
             currentRow += 1;
             
