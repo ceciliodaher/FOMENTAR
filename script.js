@@ -2100,22 +2100,28 @@ document.addEventListener('DOMContentLoaded', () => {
         const icmsPorMedia = parseFloat(document.getElementById('icmsPorMedia').value) || 0;
         const saldoCredorAnterior = parseFloat(document.getElementById('saldoCredorAnterior').value) || 0;
         
-        // QUADRO A - Proporção dos Créditos
+        // QUADRO A - Conforme IN 885/07-GSF, Art. 2º (sem cálculo proporcional)
         const saidasIncentivadas = fomentarData.saidasIncentivadas.reduce((total, op) => total + op.valorOperacao, 0);
         const totalSaidas = saidasIncentivadas + fomentarData.saidasNaoIncentivadas.reduce((total, op) => total + op.valorOperacao, 0);
         const percentualSaidasIncentivadas = totalSaidas > 0 ? (saidasIncentivadas / totalSaidas) * 100 : 0;
         
-        const creditosEntradas = fomentarData.creditosEntradas;
-        const outrosCreditos = fomentarData.outrosCreditos;
+        // Créditos conforme Anexos I, II e III da IN 885/07-GSF
+        const creditosEntradasIncentivadas = fomentarData.creditosEntradasIncentivadas || 0;
+        const creditosEntradasNaoIncentivadas = fomentarData.creditosEntradasNaoIncentivadas || 0;
+        const outrosCreditosIncentivados = fomentarData.outrosCreditosIncentivados || 0;
+        const outrosCreditosNaoIncentivados = fomentarData.outrosCreditosNaoIncentivados || 0;
+        
         const estornoDebitos = 0; // Configurável
-        const totalCreditos = creditosEntradas + outrosCreditos + estornoDebitos + saldoCredorAnterior;
         
-        const creditoIncentivadas = (percentualSaidasIncentivadas / 100) * totalCreditos;
-        const creditoNaoIncentivadas = totalCreditos - creditoIncentivadas;
+        // Total de créditos por categoria conforme IN 885
+        const creditoIncentivadas = creditosEntradasIncentivadas + outrosCreditosIncentivados + saldoCredorAnterior + estornoDebitos;
+        const creditoNaoIncentivadas = creditosEntradasNaoIncentivadas + outrosCreditosNaoIncentivados;
         
-        // QUADRO B - Operações Incentivadas
+        const totalCreditos = creditoIncentivadas + creditoNaoIncentivadas;
+        
+        // QUADRO B - Operações Incentivadas (conforme IN 885)
         const debitoIncentivadas = fomentarData.saidasIncentivadas.reduce((total, op) => total + op.valorIcms, 0);
-        const outrosDebitosIncentivadas = fomentarData.outrosDebitos * (percentualSaidasIncentivadas / 100);
+        const outrosDebitosIncentivadas = fomentarData.outrosDebitosIncentivados || 0;
         const estornoCreditosIncentivadas = 0;
         const deducoesIncentivadas = 0;
         const creditoSaldoCredorNaoIncentivadas = 0;
@@ -2129,9 +2135,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const parcelaNaoFinanciada = icmsBaseFomentar - icmsSujeitoFinanciamento;
         const saldoPagarParcelaNaoFinanciada = Math.max(0, parcelaNaoFinanciada);
         
-        // QUADRO C - Operações Não Incentivadas
+        // QUADRO C - Operações Não Incentivadas (conforme IN 885)
         const debitoNaoIncentivadas = fomentarData.saidasNaoIncentivadas.reduce((total, op) => total + op.valorIcms, 0);
-        const outrosDebitosNaoIncentivadas = fomentarData.outrosDebitos * ((100 - percentualSaidasIncentivadas) / 100);
+        const outrosDebitosNaoIncentivadas = fomentarData.outrosDebitosNaoIncentivados || 0;
         const estornoCreditosNaoIncentivadas = 0;
         const deducoesNaoIncentivadas = 0;
         const creditoSaldoCredorIncentivadas = 0;
@@ -2146,8 +2152,8 @@ document.addEventListener('DOMContentLoaded', () => {
             item1: saidasIncentivadas,
             item2: totalSaidas,
             item3: percentualSaidasIncentivadas,
-            item4: creditosEntradas,
-            item5: outrosCreditos,
+            item4: creditosEntradasIncentivadas + creditosEntradasNaoIncentivadas,
+            item5: outrosCreditosIncentivados + outrosCreditosNaoIncentivados,
             item6: estornoDebitos,
             item7: saldoCredorAnterior,
             item8: totalCreditos,
@@ -2745,23 +2751,31 @@ document.addEventListener('DOMContentLoaded', () => {
         const percentualFinanciamento = configOverrides.percentualFinanciamento || 0.70;
         const icmsPorMedia = configOverrides.icmsPorMedia || 0;
         
-        // QUADRO A - Proporção dos Créditos
+        // QUADRO A - Conforme IN 885/07-GSF, Art. 2º (sem cálculo proporcional)
         const saidasIncentivadas = fomentarData.saidasIncentivadas.reduce((total, op) => total + op.valorOperacao, 0);
         const saidasNaoIncentivadas = fomentarData.saidasNaoIncentivadas.reduce((total, op) => total + op.valorOperacao, 0);
         const totalSaidas = saidasIncentivadas + saidasNaoIncentivadas;
         const percentualSaidas = totalSaidas > 0 ? (saidasIncentivadas / totalSaidas) * 100 : 0;
         
-        const creditosEntradas = fomentarData.creditosEntradas || 0;
-        const outrosCreditos = fomentarData.outrosCreditos || 0;
+        // Créditos conforme Anexos I, II e III da IN 885/07-GSF
+        const creditosEntradasIncentivadas = fomentarData.creditosEntradasIncentivadas || 0;
+        const creditosEntradasNaoIncentivadas = fomentarData.creditosEntradasNaoIncentivadas || 0;
+        const outrosCreditosIncentivados = fomentarData.outrosCreditosIncentivados || 0;
+        const outrosCreditosNaoIncentivados = fomentarData.outrosCreditosNaoIncentivados || 0;
+        
         const estornoDebitos = 0; // Default
-        const totalCreditos = creditosEntradas + outrosCreditos + estornoDebitos + saldoCredorAnterior;
         
-        const creditoIncentivadas = (percentualSaidas / 100) * totalCreditos;
-        const creditoNaoIncentivadas = totalCreditos - creditoIncentivadas;
+        // Total de créditos por categoria conforme IN 885
+        const creditoIncentivadas = creditosEntradasIncentivadas + outrosCreditosIncentivados + saldoCredorAnterior + estornoDebitos;
+        const creditoNaoIncentivadas = creditosEntradasNaoIncentivadas + outrosCreditosNaoIncentivados;
         
-        // QUADRO B - Operações Incentivadas
+        const totalCreditos = creditoIncentivadas + creditoNaoIncentivadas;
+        const creditosEntradas = creditosEntradasIncentivadas + creditosEntradasNaoIncentivadas;
+        const outrosCreditos = outrosCreditosIncentivados + outrosCreditosNaoIncentivados;
+        
+        // QUADRO B - Operações Incentivadas (conforme IN 885)
         const debitoIncentivadas = fomentarData.saidasIncentivadas.reduce((total, op) => total + op.valorIcms, 0);
-        const outrosDebitosIncentivadas = (fomentarData.outrosDebitos || 0) * (percentualSaidas / 100);
+        const outrosDebitosIncentivadas = fomentarData.outrosDebitosIncentivados || 0;
         const estornoCreditosIncentivadas = 0;
         const deducoesIncentivadas = 0;
         
@@ -2776,9 +2790,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const parcelaNaoFinanciada = icmsBaseFomentar - icmsSujeitoFinanciamento;
         const saldoPagarParcelaNaoFinanciada = Math.max(0, parcelaNaoFinanciada);
         
-        // QUADRO C - Operações Não Incentivadas
+        // QUADRO C - Operações Não Incentivadas (conforme IN 885)
         const debitoNaoIncentivadas = fomentarData.saidasNaoIncentivadas.reduce((total, op) => total + op.valorIcms, 0);
-        const outrosDebitosNaoIncentivadas = (fomentarData.outrosDebitos || 0) * ((100 - percentualSaidas) / 100);
+        const outrosDebitosNaoIncentivadas = fomentarData.outrosDebitosNaoIncentivados || 0;
         const estornoCreditosNaoIncentivadas = 0;
         const deducoesNaoIncentivadas = 0;
         
