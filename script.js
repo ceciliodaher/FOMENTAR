@@ -30,6 +30,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let progoisMultiPeriodData = []; // Array of ProGoiás period data objects
     let progoisSelectedPeriodIndex = 0; // Currently selected period for ProGoiás display
     let progoisCurrentImportMode = 'single'; // 'single' or 'multiple' for ProGoiás
+    
+    // Correção de códigos E111 variables
+    let codigosCorrecao = {}; // Mapeamento de códigos originais para códigos corrigidos
+    let codigosEncontrados = []; // Lista de códigos E111 encontrados
+    let isMultiplePeriods = false; // Flag para múltiplos períodos
 
     // --- Event Listeners ---
     // spedFileButtonLabel.addEventListener('click', () => { // This is handled by <label for="spedFile">
@@ -81,6 +86,10 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // ProGoiás Single Period - adicionar novo campo  
     document.getElementById('progoisAjustePeriodoAnterior').addEventListener('input', handleProgoisConfigChange);
+    
+    // Correção de códigos E111 listeners
+    document.getElementById('btnAplicarCorrecoes').addEventListener('click', aplicarCorrecoesECalcular);
+    document.getElementById('btnPularCorrecoes').addEventListener('click', pularCorrecoesECalcular);
     
     // Multi-period listeners
     document.querySelectorAll('input[name="importMode"]').forEach(radio => {
@@ -1603,25 +1612,35 @@ document.addEventListener('DOMContentLoaded', () => {
             addLog('Processando dados SPED para apuração FOMENTAR...', 'info');
             
             registrosCompletos = lerArquivoSpedCompleto(spedFileContent);
-            fomentarData = classifyOperations(registrosCompletos);
             
-            // Validar se há dados suficientes
-            const totalOperacoes = fomentarData.saidasIncentivadas.length + fomentarData.saidasNaoIncentivadas.length + 
-                                  fomentarData.entradasIncentivadas.length + fomentarData.entradasNaoIncentivadas.length;
+            // Validar se há dados suficientes para operações
+            const temOperacoes = (registrosCompletos.C190 && registrosCompletos.C190.length > 0) ||
+                               (registrosCompletos.C590 && registrosCompletos.C590.length > 0) ||
+                               (registrosCompletos.D190 && registrosCompletos.D190.length > 0) ||
+                               (registrosCompletos.D590 && registrosCompletos.D590.length > 0);
             
-            if (totalOperacoes === 0) {
+            if (!temOperacoes) {
                 throw new Error('SPED não contém operações suficientes para apuração FOMENTAR');
             }
             
-            document.getElementById('fomentarSpedStatus').textContent = 
-                `Arquivo SPED importado: ${totalOperacoes} operações processadas (${fomentarData.saidasIncentivadas.length} saídas incentivadas, ${fomentarData.saidasNaoIncentivadas.length} saídas não incentivadas)`;
-            document.getElementById('fomentarSpedStatus').style.color = '#20e3b2';
+            // Analisar códigos E111 para possível correção
+            const temCodigosParaCorrigir = analisarCodigosE111(registrosCompletos, false);
             
-            calculateFomentar();
-            document.getElementById('fomentarResults').style.display = 'block';
-            
-            addLog(`Apuração FOMENTAR calculada: ${totalOperacoes} operações analisadas`, 'success');
-            addLog('Revise os valores calculados e ajuste os campos editáveis conforme necessário', 'info');
+            if (temCodigosParaCorrigir) {
+                // Mostrar interface de correção e parar aqui
+                addLog('Códigos de ajuste E111 encontrados. Verifique se há necessidade de correção antes de prosseguir.', 'warn');
+                
+                // Atualizar status
+                document.getElementById('fomentarSpedStatus').textContent = 
+                    `Arquivo SPED importado. Códigos E111 encontrados para possível correção.`;
+                document.getElementById('fomentarSpedStatus').style.color = '#FF6B35';
+                
+                return; // Parar aqui até o usuário decidir sobre as correções
+            } else {
+                // Não há códigos para corrigir, prosseguir diretamente
+                addLog('Nenhum código de ajuste E111 encontrado. Prosseguindo com cálculo...', 'info');
+                continuarCalculoFomentar();
+            }
             
         } catch (error) {
             addLog(`Erro ao processar dados FOMENTAR: ${error.message}`, 'error');
@@ -2090,6 +2109,347 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         return operations;
+    }
+    
+    // === FUNÇÕES DE CORREÇÃO DE CÓDIGOS E111 ===
+    
+    function analisarCodigosE111(registros, isMultiple = false) {
+        codigosEncontrados = [];
+        isMultiplePeriods = isMultiple;
+        
+        if (isMultiple && Array.isArray(registros)) {
+            // Múltiplos períodos
+            registros.forEach((periodoData, index) => {
+                if (periodoData.registros && periodoData.registros.E111) {
+                    periodoData.registros.E111.forEach(registro => {
+                        processarRegistroE111(registro, index, periodoData.periodo);
+                    });
+                }
+            });
+        } else {
+            // Período único
+            if (registros.E111) {
+                registros.E111.forEach(registro => {
+                    processarRegistroE111(registro, 0, 'Período único');
+                });
+            }
+        }
+        
+        // Remover duplicatas baseadas no código
+        const codigosUnicos = [];
+        const codigosVistos = new Set();
+        
+        codigosEncontrados.forEach(codigo => {
+            const key = isMultiple ? `${codigo.codigo}` : codigo.codigo;
+            if (!codigosVistos.has(key)) {
+                codigosVistos.add(key);
+                codigosUnicos.push(codigo);
+            }
+        });
+        
+        codigosEncontrados = codigosUnicos;
+        
+        if (codigosEncontrados.length > 0) {
+            exibirCodigosParaCorrecao();
+            return true; // Tem códigos para corrigir
+        }
+        
+        return false; // Não tem códigos para corrigir
+    }
+    
+    function processarRegistroE111(registro, periodoIndex, periodoNome) {
+        const campos = registro.slice(1, -1);
+        const layout = obterLayoutRegistro('E111');
+        const codAjuste = campos[layout.indexOf('COD_AJ_APUR')] || '';
+        const valorAjuste = parseFloat((campos[layout.indexOf('VL_AJ_APUR')] || '0').replace(',', '.'));
+        const descricao = campos[layout.indexOf('DESCR_COMPL_AJ')] || 'Sem descrição';
+        
+        if (codAjuste && valorAjuste !== 0) {
+            const codigoExistente = codigosEncontrados.find(c => c.codigo === codAjuste);
+            
+            if (codigoExistente) {
+                if (isMultiplePeriods) {
+                    codigoExistente.periodos.push({
+                        index: periodoIndex,
+                        nome: periodoNome,
+                        valor: valorAjuste
+                    });
+                } else {
+                    codigoExistente.valor += valorAjuste;
+                }
+            } else {
+                const novoCodigo = {
+                    codigo: codAjuste,
+                    descricao: descricao,
+                    valor: valorAjuste,
+                    tipo: valorAjuste > 0 ? 'CREDITO' : 'DEBITO',
+                    isIncentivado: CODIGOS_AJUSTE_INCENTIVADOS.some(cod => codAjuste.includes(cod)),
+                    novocodigo: '', // Campo para correção
+                    aplicarTodos: true // Para múltiplos períodos
+                };
+                
+                if (isMultiplePeriods) {
+                    novoCodigo.periodos = [{
+                        index: periodoIndex,
+                        nome: periodoNome,
+                        valor: valorAjuste
+                    }];
+                }
+                
+                codigosEncontrados.push(novoCodigo);
+            }
+        }
+    }
+    
+    function exibirCodigosParaCorrecao() {
+        const container = document.getElementById('codigosEncontrados');
+        const section = document.getElementById('codigoCorrecaoSection');
+        
+        container.innerHTML = '';
+        
+        if (codigosEncontrados.length === 0) {
+            container.innerHTML = '<p class="no-codes-message">Nenhum código de ajuste E111 encontrado.</p>';
+            section.style.display = 'none';
+            return;
+        }
+        
+        const header = document.createElement('h4');
+        header.textContent = `Códigos de Ajuste E111 Encontrados (${codigosEncontrados.length})`;
+        header.style.marginBottom = '15px';
+        container.appendChild(header);
+        
+        codigosEncontrados.forEach((codigo, index) => {
+            const codigoDiv = criarElementoCodigoCorrecao(codigo, index);
+            container.appendChild(codigoDiv);
+        });
+        
+        section.style.display = 'block';
+        addLog(`Encontrados ${codigosEncontrados.length} códigos de ajuste E111 para possível correção`, 'info');
+    }
+    
+    function criarElementoCodigoCorrecao(codigo, index) {
+        const div = document.createElement('div');
+        div.className = `codigo-item ${isMultiplePeriods ? 'multiplo-periodo' : ''}`;
+        
+        // Informações do código
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'codigo-info';
+        infoDiv.innerHTML = `
+            <h4>${codigo.codigo}</h4>
+            <p><strong>Tipo:</strong> ${codigo.tipo}</p>
+            <p><strong>Incentivado:</strong> ${codigo.isIncentivado ? 'Sim' : 'Não'}</p>
+            <p><strong>Descrição:</strong> ${codigo.descricao}</p>
+        `;
+        
+        // Valor
+        const valorDiv = document.createElement('div');
+        valorDiv.className = `codigo-valor ${codigo.valor < 0 ? 'negativo' : ''}`;
+        
+        if (isMultiplePeriods && codigo.periodos) {
+            const valorTotal = codigo.periodos.reduce((sum, p) => sum + p.valor, 0);
+            valorDiv.innerHTML = `
+                <strong>Total: R$ ${formatCurrency(Math.abs(valorTotal))}</strong><br>
+                <small>${codigo.periodos.length} período(s)</small>
+            `;
+        } else {
+            valorDiv.innerHTML = `<strong>R$ ${formatCurrency(Math.abs(codigo.valor))}</strong>`;
+        }
+        
+        // Campo de correção
+        const correcaoDiv = document.createElement('div');
+        correcaoDiv.className = 'codigo-correcao';
+        correcaoDiv.innerHTML = `
+            <label for="novoCodigo_${index}">Novo Código (se incorreto):</label>
+            <input type="text" id="novoCodigo_${index}" 
+                   placeholder="Ex: GO020001" 
+                   value="${codigo.novocodigo}"
+                   onchange="atualizarCodigoCorrecao(${index}, this.value)">
+        `;
+        
+        // Opções para múltiplos períodos
+        let periodosDiv = null;
+        if (isMultiplePeriods && codigo.periodos) {
+            periodosDiv = document.createElement('div');
+            periodosDiv.className = 'periodo-options';
+            periodosDiv.innerHTML = `
+                <label>
+                    <input type="radio" name="aplicar_${index}" value="todos" 
+                           ${codigo.aplicarTodos ? 'checked' : ''}
+                           onchange="atualizarAplicacaoCorrecao(${index}, 'todos')">
+                    Aplicar em todos os períodos
+                </label>
+                <label>
+                    <input type="radio" name="aplicar_${index}" value="especifico"
+                           ${!codigo.aplicarTodos ? 'checked' : ''}
+                           onchange="atualizarAplicacaoCorrecao(${index}, 'especifico')">
+                    Período específico
+                </label>
+            `;
+        }
+        
+        // Ações
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'codigo-actions';
+        actionsDiv.innerHTML = `
+            <button class="btn-remover-codigo" onclick="removerCodigoCorrecao(${index})">
+                🗑️ Remover
+            </button>
+        `;
+        
+        div.appendChild(infoDiv);
+        div.appendChild(valorDiv);
+        div.appendChild(correcaoDiv);
+        if (periodosDiv) div.appendChild(periodosDiv);
+        div.appendChild(actionsDiv);
+        
+        return div;
+    }
+    
+    // Funções globais para manipulação de códigos (chamadas pelos eventos inline)
+    window.atualizarCodigoCorrecao = function(index, novoCodigo) {
+        if (codigosEncontrados[index]) {
+            codigosEncontrados[index].novocodigo = novoCodigo.trim();
+            addLog(`Código ${codigosEncontrados[index].codigo} será substituído por: ${novoCodigo}`, 'info');
+        }
+    };
+    
+    window.atualizarAplicacaoCorrecao = function(index, tipo) {
+        if (codigosEncontrados[index]) {
+            codigosEncontrados[index].aplicarTodos = (tipo === 'todos');
+            const acao = tipo === 'todos' ? 'todos os períodos' : 'período específico';
+            addLog(`Correção do código ${codigosEncontrados[index].codigo} será aplicada em: ${acao}`, 'info');
+        }
+    };
+    
+    window.removerCodigoCorrecao = function(index) {
+        if (codigosEncontrados[index]) {
+            const codigoRemovido = codigosEncontrados[index].codigo;
+            codigosEncontrados.splice(index, 1);
+            exibirCodigosParaCorrecao(); // Recriar a lista
+            addLog(`Código ${codigoRemovido} removido da lista de correções`, 'warn');
+        }
+    };
+    
+    function aplicarCorrecoesECalcular() {
+        // Construir mapeamento de correções
+        codigosCorrecao = {};
+        let correcoesAplicadas = 0;
+        
+        codigosEncontrados.forEach(codigo => {
+            if (codigo.novocodigo && codigo.novocodigo.trim() !== '') {
+                codigosCorrecao[codigo.codigo] = {
+                    novoCodigo: codigo.novocodigo.trim(),
+                    aplicarTodos: codigo.aplicarTodos,
+                    periodos: codigo.periodos || []
+                };
+                correcoesAplicadas++;
+                addLog(`Correção configurada: ${codigo.codigo} → ${codigo.novocodigo.trim()}`, 'success');
+            }
+        });
+        
+        // Esconder seção de correção
+        document.getElementById('codigoCorrecaoSection').style.display = 'none';
+        
+        if (correcoesAplicadas > 0) {
+            addLog(`${correcoesAplicadas} correção(ões) de código aplicada(s). Recalculando...`, 'success');
+        } else {
+            addLog('Nenhuma correção de código aplicada. Prosseguindo com cálculo normal...', 'info');
+        }
+        
+        // Proceder com o cálculo
+        continuarCalculoFomentar();
+    }
+    
+    function pularCorrecoesECalcular() {
+        // Limpar correções
+        codigosCorrecao = {};
+        
+        // Esconder seção de correção
+        document.getElementById('codigoCorrecaoSection').style.display = 'none';
+        
+        addLog('Correções de código puladas. Prosseguindo com códigos originais...', 'info');
+        
+        // Proceder com o cálculo
+        continuarCalculoFomentar();
+    }
+    
+    function continuarCalculoFomentar() {
+        // Aplicar correções aos dados se existirem
+        if (Object.keys(codigosCorrecao).length > 0) {
+            aplicarCorrecoesAosRegistros();
+        }
+        
+        // Prosseguir com classificação e cálculo
+        if (currentImportMode === 'multiple' && multiPeriodData.length > 0) {
+            // Múltiplos períodos
+            multiPeriodData.forEach((periodo, index) => {
+                periodo.fomentarData = classifyOperations(periodo.registros);
+            });
+            calculateMultiPeriodFomentar();
+            showMultiPeriodResults();
+            addLog(`Cálculo FOMENTAR concluído para ${multiPeriodData.length} períodos!`, 'success');
+        } else {
+            // Período único
+            fomentarData = classifyOperations(registrosCompletos);
+            
+            // Validar se há dados suficientes
+            const totalOperacoes = fomentarData.saidasIncentivadas.length + fomentarData.saidasNaoIncentivadas.length + 
+                                  fomentarData.entradasIncentivadas.length + fomentarData.entradasNaoIncentivadas.length;
+            
+            if (totalOperacoes === 0) {
+                throw new Error('SPED não contém operações suficientes para apuração FOMENTAR');
+            }
+            
+            calculateFomentar();
+            
+            // Atualizar status
+            document.getElementById('fomentarSpedStatus').textContent = 
+                `Arquivo SPED processado: ${totalOperacoes} operações analisadas (${fomentarData.saidasIncentivadas.length} saídas incentivadas, ${fomentarData.saidasNaoIncentivadas.length} saídas não incentivadas)`;
+            document.getElementById('fomentarSpedStatus').style.color = '#20e3b2';
+            
+            addLog(`Apuração FOMENTAR calculada: ${totalOperacoes} operações analisadas`, 'success');
+            addLog('Revise os valores calculados e ajuste os campos editáveis conforme necessário', 'info');
+        }
+        
+        // Mostrar resultados
+        document.getElementById('fomentarResults').style.display = 'block';
+    }
+    
+    function aplicarCorrecoesAosRegistros() {
+        const registrosParaCorrigir = currentImportMode === 'multiple' ? multiPeriodData : [{ registros: registrosCompletos }];
+        
+        registrosParaCorrigir.forEach((periodoData, periodoIndex) => {
+            const registros = periodoData.registros;
+            
+            if (registros && registros.E111) {
+                registros.E111.forEach(registro => {
+                    const campos = registro.slice(1, -1);
+                    const layout = obterLayoutRegistro('E111');
+                    const codAjusteIndex = layout.indexOf('COD_AJ_APUR');
+                    const codAjusteOriginal = campos[codAjusteIndex];
+                    
+                    const correcao = codigosCorrecao[codAjusteOriginal];
+                    if (correcao) {
+                        // Verificar se deve aplicar correção neste período
+                        let aplicarCorrecao = false;
+                        
+                        if (currentImportMode === 'multiple') {
+                            aplicarCorrecao = correcao.aplicarTodos || 
+                                           correcao.periodos.some(p => p.index === periodoIndex);
+                        } else {
+                            aplicarCorrecao = true;
+                        }
+                        
+                        if (aplicarCorrecao) {
+                            campos[codAjusteIndex] = correcao.novoCodigo;
+                            registro[codAjusteIndex + 1] = correcao.novoCodigo; // +1 porque o primeiro elemento é o tipo do registro
+                            
+                            addLog(`Código corrigido no período ${periodoIndex + 1}: ${codAjusteOriginal} → ${correcao.novoCodigo}`, 'success');
+                        }
+                    }
+                });
+            }
+        });
     }
 
     function calculateFomentar() {
@@ -2631,10 +2991,22 @@ document.addEventListener('DOMContentLoaded', () => {
         // Apply automatic saldo credor carryover
         applyAutomaticSaldoCredorCarryover();
         
-        // Show results
-        showMultiPeriodResults();
+        // Analisar códigos E111 para possível correção em múltiplos períodos
+        const temCodigosParaCorrigir = analisarCodigosE111(multiPeriodData, true);
         
-        addLog(`Processamento concluído. ${multiPeriodData.length} períodos processados em ordem cronológica.`, 'success');
+        if (temCodigosParaCorrigir) {
+            // Mostrar interface de correção e parar aqui
+            addLog('Códigos de ajuste E111 encontrados em múltiplos períodos. Verifique se há necessidade de correção antes de prosseguir.', 'warn');
+            return; // Parar aqui até o usuário decidir sobre as correções
+        } else {
+            // Não há códigos para corrigir, prosseguir diretamente
+            addLog('Nenhum código de ajuste E111 encontrado. Prosseguindo com cálculo...', 'info');
+            
+            // Show results
+            showMultiPeriodResults();
+            
+            addLog(`Processamento concluído. ${multiPeriodData.length} períodos processados em ordem cronológica.`, 'success');
+        }
     }
     
     function readFileContent(file) {
