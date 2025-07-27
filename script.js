@@ -1878,55 +1878,71 @@ document.addEventListener('DOMContentLoaded', () => {
                         origem: 'E111',
                         codigo: codAjuste,
                         valor: Math.abs(valorAjuste),
-                        tipo: valorAjuste > 0 ? 'CREDITO' : 'DEBITO',
+                        tipo: determinarTipoAjustePorCodigo(codAjuste),
                         incentivado: isIncentivado,
                         observacao: isIncentivado ? 'Incentivado conforme Anexo III IN 885' : 'Não incentivado'
                     };
                     
                     operations.memoriaCalculo.ajustesE111.push(ajusteDetalhado);
                     
-                    if (valorAjuste > 0) { // Crédito
-                        operations.outrosCreditos += valorAjuste;
-                        operations.memoriaCalculo.totalCreditos.porAjustesE111 += valorAjuste;
+                    const tipoAjuste = determinarTipoAjustePorCodigo(codAjuste);
+                    const valorAbsoluto = Math.abs(valorAjuste);
+                    
+                    // Classificar baseado no código, não no sinal do valor
+                    if (tipoAjuste === 'CRÉDITO') {
+                        operations.outrosCreditos += valorAbsoluto;
+                        operations.memoriaCalculo.totalCreditos.porAjustesE111 += valorAbsoluto;
                         
                         // Separar créditos incentivados/não incentivados para ProGoiás
                         if (isIncentivado) {
-                            operations.outrosCreditosIncentivados += valorAjuste;
+                            operations.outrosCreditosIncentivados += valorAbsoluto;
                         } else {
-                            operations.outrosCreditosNaoIncentivados += valorAjuste;
+                            operations.outrosCreditosNaoIncentivados += valorAbsoluto;
                         }
                         
                         operations.memoriaCalculo.detalhesOutrosCreditos = operations.memoriaCalculo.detalhesOutrosCreditos || [];
                         operations.memoriaCalculo.detalhesOutrosCreditos.push({
                             origem: 'E111 - Ajustes da Apuração do ICMS',
                             codigo: codAjuste,
-                            valor: valorAjuste,
+                            valor: valorAbsoluto,
                             incentivado: isIncentivado,
                             descricao: `Crédito E111: ${codAjuste}`,
-                            tipo: 'CREDITO'
+                            tipo: 'CRÉDITO'
                         });
-                        addLog(`E111 Crédito: ${codAjuste} = R$ ${formatCurrency(valorAjuste)} ${isIncentivado ? '(Incentivado)' : '(Não Incentivado)'}`, 'info');
-                    } else { // Débito
-                        operations.outrosDebitos += Math.abs(valorAjuste);
-                        operations.memoriaCalculo.totalDebitos.porAjustesE111 += Math.abs(valorAjuste);
+                        addLog(`E111 Crédito: ${codAjuste} = R$ ${formatCurrency(valorAbsoluto)} ${isIncentivado ? '(Incentivado)' : '(Não Incentivado)'}`, 'info');
+                    } else if (tipoAjuste === 'DÉBITO') {
+                        operations.outrosDebitos += valorAbsoluto;
+                        operations.memoriaCalculo.totalDebitos.porAjustesE111 += valorAbsoluto;
                         
                         // Separar débitos incentivados/não incentivados para ProGoiás
                         if (isIncentivado) {
-                            operations.outrosDebitosIncentivados += Math.abs(valorAjuste);
+                            operations.outrosDebitosIncentivados += valorAbsoluto;
                         } else {
-                            operations.outrosDebitosNaoIncentivados += Math.abs(valorAjuste);
+                            operations.outrosDebitosNaoIncentivados += valorAbsoluto;
                         }
                         
                         operations.memoriaCalculo.detalhesOutrosDebitos = operations.memoriaCalculo.detalhesOutrosDebitos || [];
                         operations.memoriaCalculo.detalhesOutrosDebitos.push({
                             origem: 'E111 - Ajustes da Apuração do ICMS',
                             codigo: codAjuste,
-                            valor: Math.abs(valorAjuste),
+                            valor: valorAbsoluto,
                             incentivado: isIncentivado,
                             descricao: `Débito E111: ${codAjuste}`,
-                            tipo: 'DEBITO'
+                            tipo: 'DÉBITO'
                         });
-                        addLog(`E111 Débito: ${codAjuste} = R$ ${formatCurrency(Math.abs(valorAjuste))} ${isIncentivado ? '(Incentivado)' : '(Não Incentivado)'}`, 'info');
+                        addLog(`E111 Débito: ${codAjuste} = R$ ${formatCurrency(valorAbsoluto)} ${isIncentivado ? '(Incentivado)' : '(Não Incentivado)'}`, 'info');
+                    } else if (tipoAjuste === 'DEDUÇÃO') {
+                        // Deduções são tratadas separadamente no cálculo
+                        operations.memoriaCalculo.deducoes = operations.memoriaCalculo.deducoes || [];
+                        operations.memoriaCalculo.deducoes.push({
+                            origem: 'E111 - Ajustes da Apuração do ICMS',
+                            codigo: codAjuste,
+                            valor: valorAbsoluto,
+                            tipo: 'DEDUÇÃO'
+                        });
+                        addLog(`E111 Dedução: ${codAjuste} = R$ ${formatCurrency(valorAbsoluto)}`, 'info');
+                    } else {
+                        addLog(`E111 Tipo indeterminado: ${codAjuste} (${tipoAjuste}) = R$ ${formatCurrency(valorAbsoluto)}`, 'warn');
                     }
                 }
             });
@@ -2120,8 +2136,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isMultiple && Array.isArray(registros)) {
             // Múltiplos períodos
             registros.forEach((periodoData, index) => {
-                if (periodoData.registros && periodoData.registros.E111) {
-                    periodoData.registros.E111.forEach(registro => {
+                if (periodoData.registrosCompletos && periodoData.registrosCompletos.E111) {
+                    periodoData.registrosCompletos.E111.forEach(registro => {
                         processarRegistroE111(registro, index, periodoData.periodo);
                     });
                 }
@@ -2135,19 +2151,39 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // Remover duplicatas baseadas no código
-        const codigosUnicos = [];
-        const codigosVistos = new Set();
-        
-        codigosEncontrados.forEach(codigo => {
-            const key = isMultiple ? `${codigo.codigo}` : codigo.codigo;
-            if (!codigosVistos.has(key)) {
-                codigosVistos.add(key);
-                codigosUnicos.push(codigo);
-            }
-        });
-        
-        codigosEncontrados = codigosUnicos;
+        // Consolidar códigos para múltiplos períodos
+        if (isMultiple) {
+            const codigosConsolidados = new Map();
+            
+            codigosEncontrados.forEach(codigo => {
+                if (codigosConsolidados.has(codigo.codigo)) {
+                    // Adicionar período ao código existente
+                    const codigoExistente = codigosConsolidados.get(codigo.codigo);
+                    if (codigo.periodos && codigo.periodos.length > 0) {
+                        codigoExistente.periodos.push(...codigo.periodos);
+                        codigoExistente.valor += codigo.valor;
+                    }
+                } else {
+                    // Novo código
+                    codigosConsolidados.set(codigo.codigo, { ...codigo });
+                }
+            });
+            
+            codigosEncontrados = Array.from(codigosConsolidados.values());
+        } else {
+            // Para período único, apenas remover duplicatas simples
+            const codigosUnicos = [];
+            const codigosVistos = new Set();
+            
+            codigosEncontrados.forEach(codigo => {
+                if (!codigosVistos.has(codigo.codigo)) {
+                    codigosVistos.add(codigo.codigo);
+                    codigosUnicos.push(codigo);
+                }
+            });
+            
+            codigosEncontrados = codigosUnicos;
+        }
         
         if (codigosEncontrados.length > 0) {
             exibirCodigosParaCorrecao();
@@ -2182,7 +2218,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     codigo: codAjuste,
                     descricao: descricao,
                     valor: valorAjuste,
-                    tipo: valorAjuste > 0 ? 'CREDITO' : 'DEBITO',
+                    tipo: determinarTipoAjustePorCodigo(codAjuste),
                     isIncentivado: CODIGOS_AJUSTE_INCENTIVADOS.some(cod => codAjuste.includes(cod)),
                     novocodigo: '', // Campo para correção
                     aplicarTodos: true // Para múltiplos períodos
@@ -2194,10 +2230,42 @@ document.addEventListener('DOMContentLoaded', () => {
                         nome: periodoNome,
                         valor: valorAjuste
                     }];
+                    novoCodigo.aplicarTodos = false; // Padrão para períodos específicos
+                    novoCodigo.periodosEscolhidos = []; // Inicializar vazio
                 }
                 
                 codigosEncontrados.push(novoCodigo);
             }
+        }
+    }
+    
+    function determinarTipoAjustePorCodigo(codigoAjuste) {
+        // Baseado na normativa: Distinção de Débito e Crédito nos Códigos de Ajuste
+        // Estrutura: AABCDDDD onde C (4º dígito) determina o tipo
+        
+        if (!codigoAjuste || codigoAjuste.length !== 8) {
+            return 'INDEFINIDO';
+        }
+        
+        const quartoDigito = codigoAjuste.charAt(3);
+        
+        switch (quartoDigito) {
+            case '0': // Outros débitos
+                return 'DÉBITO';
+            case '1': // Estorno de créditos (reduz créditos, logo aumenta débito líquido)
+                return 'DÉBITO';
+            case '2': // Outros créditos
+                return 'CRÉDITO';
+            case '3': // Estorno de débitos (reduz débitos, logo aumenta crédito líquido)
+                return 'CRÉDITO';
+            case '4': // Deduções do imposto apurado
+                return 'DEDUÇÃO';
+            case '5': // Débitos especiais
+                return 'DÉBITO';
+            case '9': // Controle extra-apuração
+                return 'CONTROLE';
+            default:
+                return 'INDEFINIDO';
         }
     }
     
@@ -2271,20 +2339,52 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isMultiplePeriods && codigo.periodos) {
             periodosDiv = document.createElement('div');
             periodosDiv.className = 'periodo-options';
-            periodosDiv.innerHTML = `
-                <label>
-                    <input type="radio" name="aplicar_${index}" value="todos" 
-                           ${codigo.aplicarTodos ? 'checked' : ''}
-                           onchange="atualizarAplicacaoCorrecao(${index}, 'todos')">
-                    Aplicar em todos os períodos
-                </label>
-                <label>
-                    <input type="radio" name="aplicar_${index}" value="especifico"
-                           ${!codigo.aplicarTodos ? 'checked' : ''}
-                           onchange="atualizarAplicacaoCorrecao(${index}, 'especifico')">
-                    Período específico
-                </label>
+            
+            let periodosHTML = `
+                <div class="aplicacao-options">
+                    <label>
+                        <input type="radio" name="aplicar_${index}" value="todos" 
+                               ${codigo.aplicarTodos ? 'checked' : ''}
+                               onchange="atualizarAplicacaoCorrecao(${index}, 'todos')">
+                        Aplicar em todos os períodos
+                    </label>
+                    <label>
+                        <input type="radio" name="aplicar_${index}" value="especifico"
+                               ${!codigo.aplicarTodos ? 'checked' : ''}
+                               onchange="atualizarAplicacaoCorrecao(${index}, 'especifico')">
+                        Períodos específicos
+                    </label>
+                </div>
+                <div id="periodosEspecificos_${index}" class="periodos-especificos" style="display: ${codigo.aplicarTodos ? 'none' : 'block'};">
+                    <h5>Selecione os períodos para aplicar a correção:</h5>
+                    <div class="periodos-grid">
             `;
+            
+            // Adicionar checkbox para cada período
+            codigo.periodos.forEach((periodo, periodoIndex) => {
+                const isSelected = codigo.periodosEscolhidos && codigo.periodosEscolhidos.includes(periodoIndex);
+                periodosHTML += `
+                    <label class="periodo-checkbox">
+                        <input type="checkbox" 
+                               name="periodo_${index}_${periodoIndex}" 
+                               value="${periodoIndex}"
+                               ${isSelected ? 'checked' : ''}
+                               onchange="atualizarPeriodoEspecifico(${index}, ${periodoIndex}, this.checked)">
+                        <span class="periodo-info">
+                            <strong>Período ${periodoIndex + 1}</strong><br>
+                            <small>${periodo.nome || `${periodoIndex + 1}º período`}</small><br>
+                            <small>R$ ${formatCurrency(Math.abs(periodo.valor))}</small>
+                        </span>
+                    </label>
+                `;
+            });
+            
+            periodosHTML += `
+                    </div>
+                </div>
+            `;
+            
+            periodosDiv.innerHTML = periodosHTML;
         }
         
         // Ações
@@ -2316,11 +2416,42 @@ document.addEventListener('DOMContentLoaded', () => {
     window.atualizarAplicacaoCorrecao = function(index, tipo) {
         if (codigosEncontrados[index]) {
             codigosEncontrados[index].aplicarTodos = (tipo === 'todos');
-            const acao = tipo === 'todos' ? 'todos os períodos' : 'período específico';
+            
+            // Mostrar/ocultar seção de períodos específicos
+            const periodosEspecificosDiv = document.getElementById(`periodosEspecificos_${index}`);
+            if (periodosEspecificosDiv) {
+                periodosEspecificosDiv.style.display = tipo === 'todos' ? 'none' : 'block';
+            }
+            
+            const acao = tipo === 'todos' ? 'todos os períodos' : 'períodos específicos';
             addLog(`Correção do código ${codigosEncontrados[index].codigo} será aplicada em: ${acao}`, 'info');
         }
     };
     
+    window.atualizarPeriodoEspecifico = function(index, periodoIndex, checked) {
+        if (codigosEncontrados[index]) {
+            // Inicializar array de períodos escolhidos se não existir
+            if (!codigosEncontrados[index].periodosEscolhidos) {
+                codigosEncontrados[index].periodosEscolhidos = [];
+            }
+            
+            if (checked) {
+                // Adicionar período se não estiver na lista
+                if (!codigosEncontrados[index].periodosEscolhidos.includes(periodoIndex)) {
+                    codigosEncontrados[index].periodosEscolhidos.push(periodoIndex);
+                }
+            } else {
+                // Remover período da lista
+                codigosEncontrados[index].periodosEscolhidos = 
+                    codigosEncontrados[index].periodosEscolhidos.filter(p => p !== periodoIndex);
+            }
+            
+            const totalSelecionados = codigosEncontrados[index].periodosEscolhidos.length;
+            const acao = checked ? 'adicionado' : 'removido';
+            addLog(`Período ${periodoIndex + 1} ${acao} para correção do código ${codigosEncontrados[index].codigo} (${totalSelecionados} período(s) selecionado(s))`, 'info');
+        }
+    };
+
     window.removerCodigoCorrecao = function(index) {
         if (codigosEncontrados[index]) {
             const codigoRemovido = codigosEncontrados[index].codigo;
@@ -2340,10 +2471,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 codigosCorrecao[codigo.codigo] = {
                     novoCodigo: codigo.novocodigo.trim(),
                     aplicarTodos: codigo.aplicarTodos,
-                    periodos: codigo.periodos || []
+                    periodos: codigo.periodos || [],
+                    periodosEscolhidos: codigo.periodosEscolhidos || []
                 };
                 correcoesAplicadas++;
-                addLog(`Correção configurada: ${codigo.codigo} → ${codigo.novocodigo.trim()}`, 'success');
+                
+                // Log detalhado sobre onde será aplicada a correção
+                if (codigo.aplicarTodos) {
+                    addLog(`Correção configurada: ${codigo.codigo} → ${codigo.novocodigo.trim()} (todos os períodos)`, 'success');
+                } else if (codigo.periodosEscolhidos && codigo.periodosEscolhidos.length > 0) {
+                    const periodosTexto = codigo.periodosEscolhidos.map(p => p + 1).join(', ');
+                    addLog(`Correção configurada: ${codigo.codigo} → ${codigo.novocodigo.trim()} (períodos: ${periodosTexto})`, 'success');
+                } else {
+                    addLog(`Correção configurada: ${codigo.codigo} → ${codigo.novocodigo.trim()} (nenhum período específico selecionado)`, 'warn');
+                }
             }
         });
         
@@ -2381,13 +2522,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Prosseguir com classificação e cálculo
         if (currentImportMode === 'multiple' && multiPeriodData.length > 0) {
-            // Múltiplos períodos
-            multiPeriodData.forEach((periodo, index) => {
-                periodo.fomentarData = classifyOperations(periodo.registros);
-            });
-            calculateMultiPeriodFomentar();
-            showMultiPeriodResults();
-            addLog(`Cálculo FOMENTAR concluído para ${multiPeriodData.length} períodos!`, 'success');
+            // Múltiplos períodos - usar função específica
+            continuarCalculoMultiplosPeriodos();
         } else {
             // Período único
             fomentarData = classifyOperations(registrosCompletos);
@@ -2416,10 +2552,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function aplicarCorrecoesAosRegistros() {
-        const registrosParaCorrigir = currentImportMode === 'multiple' ? multiPeriodData : [{ registros: registrosCompletos }];
+        const registrosParaCorrigir = currentImportMode === 'multiple' ? multiPeriodData : [{ registrosCompletos: registrosCompletos }];
         
         registrosParaCorrigir.forEach((periodoData, periodoIndex) => {
-            const registros = periodoData.registros;
+            const registros = periodoData.registrosCompletos;
             
             if (registros && registros.E111) {
                 registros.E111.forEach(registro => {
@@ -2434,8 +2570,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         let aplicarCorrecao = false;
                         
                         if (currentImportMode === 'multiple') {
-                            aplicarCorrecao = correcao.aplicarTodos || 
-                                           correcao.periodos.some(p => p.index === periodoIndex);
+                            if (correcao.aplicarTodos) {
+                                aplicarCorrecao = true;
+                            } else {
+                                // Verificar se este período foi selecionado especificamente
+                                aplicarCorrecao = correcao.periodosEscolhidos && 
+                                               correcao.periodosEscolhidos.includes(periodoIndex);
+                            }
                         } else {
                             aplicarCorrecao = true;
                         }
@@ -3001,12 +3142,76 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             // Não há códigos para corrigir, prosseguir diretamente
             addLog('Nenhum código de ajuste E111 encontrado. Prosseguindo com cálculo...', 'info');
-            
-            // Show results
-            showMultiPeriodResults();
-            
-            addLog(`Processamento concluído. ${multiPeriodData.length} períodos processados em ordem cronológica.`, 'success');
+            continuarCalculoMultiplosPeriodos();
         }
+    }
+    
+    function continuarCalculoMultiplosPeriodos() {
+        addLog('Iniciando cálculo para múltiplos períodos...', 'info');
+        
+        // Aplicar correções aos dados se existirem
+        if (Object.keys(codigosCorrecao).length > 0) {
+            addLog('Aplicando correções aos registros...', 'info');
+            aplicarCorrecoesAosRegistros();
+        }
+        
+        // Classificar operações para cada período
+        addLog('Classificando operações para cada período...', 'info');
+        multiPeriodData.forEach((periodo, index) => {
+            periodo.fomentarData = classifyOperations(periodo.registrosCompletos);
+            addLog(`Período ${index + 1}: ${periodo.fomentarData.saidasIncentivadas.length} saídas incentivadas classificadas`, 'info');
+        });
+        
+        // Calcular FOMENTAR para múltiplos períodos
+        addLog('Calculando FOMENTAR para múltiplos períodos...', 'info');
+        calculateMultiPeriodFomentar();
+        
+        addLog('Exibindo resultados...', 'info');
+        showMultiPeriodResults();
+        
+        addLog(`Cálculo FOMENTAR concluído para ${multiPeriodData.length} períodos!`, 'success');
+    }
+    
+    function calculateMultiPeriodFomentar() {
+        if (!multiPeriodData || multiPeriodData.length === 0) {
+            addLog('Nenhum dado de múltiplos períodos encontrado para calcular', 'error');
+            return;
+        }
+        
+        // Configurações gerais
+        const percentualFinanciamento = parseFloat(document.getElementById('percentualFinanciamento').value) / 100 || 0.70;
+        const icmsPorMedia = parseFloat(document.getElementById('icmsPorMedia').value) || 0;
+        const saldoCredorInicial = parseFloat(document.getElementById('saldoCredorAnterior').value) || 0;
+        
+        let saldoCredorCarryOver = saldoCredorInicial;
+        
+        // Calcular FOMENTAR para cada período
+        multiPeriodData.forEach((periodo, index) => {
+            if (!periodo.fomentarData) {
+                addLog(`Erro: dados FOMENTAR não encontrados para período ${index + 1}`, 'error');
+                return;
+            }
+            
+            // Configurações específicas do período
+            const configPeriodo = {
+                percentualFinanciamento: percentualFinanciamento,
+                icmsPorMedia: icmsPorMedia
+            };
+            
+            // Calcular FOMENTAR para este período
+            periodo.calculatedValues = calculateFomentarForPeriod(
+                periodo.fomentarData, 
+                saldoCredorCarryOver, 
+                configPeriodo
+            );
+            
+            // Atualizar saldo credor para o próximo período
+            saldoCredorCarryOver = periodo.calculatedValues.saldoCredorFinal || 0;
+            
+            addLog(`Período ${index + 1} (${periodo.periodo}): ICMS Financiado = R$ ${formatCurrency(periodo.calculatedValues.icmsFinanciado)}`, 'success');
+        });
+        
+        addLog(`Cálculo FOMENTAR concluído para ${multiPeriodData.length} períodos`, 'success');
     }
     
     function readFileContent(file) {

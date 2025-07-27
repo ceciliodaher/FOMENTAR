@@ -1133,19 +1133,101 @@ body {
 .periodo-options {
     display: flex;
     flex-direction: column;
+    gap: 12px;
+    padding: 15px;
+    background-color: #F8F9FA;
+    border-radius: 8px;
+    border: 1px solid #E9ECEF;
+}
+
+.aplicacao-options {
+    display: flex;
+    flex-direction: column;
     gap: 8px;
 }
 
-.periodo-options label {
+.aplicacao-options label {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 0.85em;
+    font-size: 0.9em;
     color: #555;
+    font-weight: 500;
 }
 
-.periodo-options input[type="radio"] {
+.aplicacao-options input[type="radio"] {
     margin: 0;
+}
+
+.periodos-especificos {
+    margin-top: 15px;
+    padding: 15px;
+    background-color: white;
+    border-radius: 6px;
+    border: 1px solid #DEE2E6;
+}
+
+.periodos-especificos h5 {
+    margin-bottom: 15px;
+    color: #495057;
+    font-size: 0.9em;
+    font-weight: 600;
+}
+
+.periodos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 12px;
+}
+
+.periodo-checkbox {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px;
+    background-color: #F8F9FA;
+    border: 2px solid #E9ECEF;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.periodo-checkbox:hover {
+    background-color: #E9ECEF;
+    border-color: #DEE2E6;
+}
+
+.periodo-checkbox input[type="checkbox"] {
+    margin: 0;
+    width: 18px;
+    height: 18px;
+    accent-color: #FF6B35;
+}
+
+.periodo-checkbox input[type="checkbox"]:checked {
+    background-color: #FF6B35;
+}
+
+.periodo-checkbox:has(input:checked) {
+    background-color: rgba(255, 107, 53, 0.1);
+    border-color: #FF6B35;
+}
+
+.periodo-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+}
+
+.periodo-info strong {
+    color: #495057;
+    font-size: 0.9em;
+}
+
+.periodo-info small {
+    color: #6C757D;
+    font-size: 0.8em;
 }
 
 .codigo-actions {
