@@ -228,9 +228,9 @@ let selectedPeriodIndex = 0; // Período selecionado para visualização
 let currentImportMode = 'single'; // 'single' ou 'multiple'
 
 // ProGoiás
-let progoisMultiPeriodData = []; // Array de dados ProGoiás por período
-let progoisSelectedPeriodIndex = 0;
-let progoisCurrentImportMode = 'single';
+let progoiasMultiPeriodData = []; // Array de dados ProGoiás por período
+let progoiasSelectedPeriodIndex = 0;
+let progoiasCurrentImportMode = 'single';
 ```
 
 #### Fluxo de Processamento
@@ -299,6 +299,101 @@ open index.html # Aba Apuração ProGoiás
 [14:30:18] Múltiplos períodos: Processando 3/5 arquivos...
 ```
 
+### Code Markers
+
+O código utiliza marcadores específicos para orientar o Claude:
+
+- **CLAUDE-CONTEXT**: Explica seções complexas ou críticas
+- **CLAUDE-TODO**: Indica tarefas pendentes rápidas
+- **CLAUDE-CAREFUL**: Marca código sensível que requer atenção especial
+- **CLAUDE-FISCAL**: Indica cálculos fiscais que seguem normativas específicas
+
+```javascript
+// CLAUDE-CONTEXT: Processamento de registros consolidados SPED
+// CLAUDE-FISCAL: Cálculo conforme IN 885/07-GSF - não alterar sem validação
+// CLAUDE-CAREFUL: Exclusão de créditos circulares - crítico para conformidade
+```
+
+### Decisões Arquiteturais
+
+#### 2025-07-02: Migração para Registros Consolidados
+- **Decisão**: Usar C190, C590, D190, D590 em vez de C100/C170, D100/D190
+- **Razão**: Dados já consolidados reduzem processamento e melhoram performance
+- **Impacto**: Cálculos mais precisos, menos memória utilizada
+- **Trade-off**: Menor granularidade de dados individuais
+
+#### 2025-07-15: Implementação ProGoiás Completo
+- **Decisão**: Sistema unificado FOMENTAR + ProGoiás em 3 abas
+- **Razão**: Demanda de usuários por apuração ProGoiás automatizada
+- **Impacto**: Interface mais complexa, mas cobertura fiscal completa
+- **Validação**: Decreto nº 9.724/2020 implementado rigorosamente
+
+#### 2025-07-20: Correção de Percentuais FOMENTAR
+- **Decisão**: FOMENTAR até 70% (corrigido de 73%)
+- **Razão**: Conformidade com legislação vigente
+- **Impacto**: Recálculo de apurações existentes necessário
+- **Documentação**: Atualizado em `CORRECOES_IMPLEMENTADAS.md`
+
+#### 2025-07-25: Múltiplos Períodos
+- **Decisão**: Suporte a processamento sequencial de vários SPEDs
+- **Razão**: Facilitar apuração anual e comparativos
+- **Implementação**: Arrays separados para cada programa fiscal
+- **Performance**: Processamento assíncrono para não travar interface
+
+### Marcos do Projeto
+
+#### Fase 1: Sistema Base (Concluída)
+- [x] Conversor SPED básico
+- [x] Interface drag-and-drop
+- [x] Exportação Excel
+- [x] Parsing de registros principais
+
+#### Fase 2: FOMENTAR (Concluída)
+- [x] Classificação CFOP automática
+- [x] Quadros A, B, C da apuração
+- [x] Configuração de programas
+- [x] Correção de créditos circulares
+
+#### Fase 3: ProGoiás (Concluída)
+- [x] Implementação Decreto 9.724/2020
+- [x] Fórmula completa de cálculo
+- [x] Configuração por tipo de empresa
+- [x] Geração registro E115
+
+#### Fase 4: Múltiplos Períodos (Concluída)
+- [x] Interface para vários SPEDs
+- [x] Acumulação automática
+- [x] Navegação entre períodos
+- [x] Exportação consolidada
+
+#### Fase 5: Correção E111 (Concluída)
+- [x] Detecção de códigos inconsistentes
+- [x] Interface de correção manual
+- [x] Validação contra Anexo III
+- [x] Recálculo automático
+
+**Status Atual**: Manutenção e melhorias (100% funcional)
+
+### Contexto Importante
+
+#### Requisitos Críticos
+- **Conformidade Fiscal**: Seguir rigorosamente IN 885/07-GSF e Decreto 9.724/2020
+- **Precisão de Cálculos**: Validar sempre contra planilhas oficiais
+- **Performance**: Processar SPEDs grandes (>100MB) sem travar
+- **Usabilidade**: Interface intuitiva para contadores
+
+#### Limitações Técnicas
+- **Client-side only**: Não requer servidor, mas limitado pela memória do navegador
+- **Dependência Excel**: XlsxPopulate para exportações
+- **Browser Support**: Chrome, Firefox, Safari (IE não suportado)
+- **Offline**: Funciona sem conexão após carregamento inicial
+
+#### Dados Sensíveis
+- **SPED**: Contém informações fiscais confidenciais
+- **Não armazenar**: Dados permanecem apenas na sessão
+- **Logs**: Evitar exposição de valores específicos nos logs públicos
+- **Exportação**: Sempre nomear arquivos com empresa/período
+
 ### Manutenção
 
 Ao modificar o sistema:
@@ -311,4 +406,32 @@ Ao modificar o sistema:
 4. Documentar mudanças nos códigos CFOP se necessário
 5. Verificar impacto nas exportações Excel e memórias de cálculo
 6. Atualizar `CORRECOES_IMPLEMENTADAS.md` com novas correções
+7. Adicionar marcadores CLAUDE-* em código novo
+8. Validar exclusão de créditos circulares em novos cenários
+
+## 🔄 Próxima Sessão
+
+### Setup Inicial
+1. Abrir `index.html` no navegador para testar interface
+2. Verificar console para erros JavaScript
+3. Testar com arquivo SPED real (se disponível)
+4. Validar cálculos contra planilhas de referência
+
+### Tarefas Pendentes
+- [ ] Otimização de performance para SPEDs muito grandes (>200MB)
+- [ ] Implementação de mais códigos E111 conforme demanda
+- [ ] Melhorias na interface de múltiplos períodos
+- [ ] Validação adicional de consistência entre períodos
+
+### Cuidados Especiais
+- **Créditos Circulares**: Sempre verificar exclusão automática de GO040007, GO040008, etc.
+- **Registros Consolidados**: Não reverter para C100/C170 sem justificativa técnica
+- **Percentuais**: FOMENTAR = 70%, não 73%
+- **ProGoiás**: Fórmula exata conforme Decreto 9.724/2020
+
+### Em Caso de Problemas
+1. Verificar logs detalhados no console
+2. Comparar com `CORRECOES_IMPLEMENTADAS.md`
+3. Testar com SPED menor para isolamento
+4. Validar estrutura do arquivo SPED
 7. Validar exclusão de créditos circulares em novos cénarios

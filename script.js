@@ -25,16 +25,21 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentImportMode = 'single'; // 'single' or 'multiple'
     
     // ProGoiás variables
-    let progoisData = null; // ProGoiás specific data
-    let progoisRegistrosCompletos = null; // Complete SPED records for ProGoiás
-    let progoisMultiPeriodData = []; // Array of ProGoiás period data objects
-    let progoisSelectedPeriodIndex = 0; // Currently selected period for ProGoiás display
-    let progoisCurrentImportMode = 'single'; // 'single' or 'multiple' for ProGoiás
+    let progoiasData = null; // ProGoiás specific data
+    let progoiasRegistrosCompletos = null; // Complete SPED records for ProGoiás
+    let progoiasMultiPeriodData = []; // Array of ProGoiás period data objects
+    let progoiasSelectedPeriodIndex = 0; // Currently selected period for ProGoiás display
+    let progoiasCurrentImportMode = 'single'; // 'single' or 'multiple' for ProGoiás
     
-    // Correção de códigos E111 variables
+    // Correção de códigos E111 variables - FOMENTAR
     let codigosCorrecao = {}; // Mapeamento de códigos originais para códigos corrigidos
     let codigosEncontrados = []; // Lista de códigos E111 encontrados
     let isMultiplePeriods = false; // Flag para múltiplos períodos
+    
+    // Correção de códigos E111 variables - ProGoiás
+    let progoiasCodigosCorrecao = {}; // Mapeamento de códigos originais para códigos corrigidos (ProGoiás)
+    let progoiasCodigosEncontrados = []; // Lista de códigos E111 encontrados (ProGoiás)
+    let progoiasIsMultiplePeriods = false; // Flag para múltiplos períodos (ProGoiás)
 
     // --- Event Listeners ---
     // spedFileButtonLabel.addEventListener('click', () => { // This is handled by <label for="spedFile">
@@ -68,28 +73,32 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('saldoCredorAnterior').addEventListener('input', handleConfigChange);
     
     // ProGoiás Configuration listeners
-    document.getElementById('progoisTipoEmpresa').addEventListener('change', handleProgoisConfigChange);
-    document.getElementById('progoisOpcaoCalculo').addEventListener('change', handleProgoisOpcaoCalculoChange);
-    document.getElementById('progoisAnoFruicao').addEventListener('change', handleProgoisConfigChange);
-    document.getElementById('progoisPercentualManual').addEventListener('input', handleProgoisConfigChange);
-    document.getElementById('progoisIcmsPorMedia').addEventListener('input', handleProgoisConfigChange);
-    document.getElementById('progoisSaldoCredorAnterior').addEventListener('input', handleProgoisConfigChange);
+    document.getElementById('progoiasTipoEmpresa').addEventListener('change', handleProgoisConfigChange);
+    document.getElementById('progoiasOpcaoCalculo').addEventListener('change', handleProgoisOpcaoCalculoChange);
+    document.getElementById('progoiasAnoFruicao').addEventListener('change', handleProgoisConfigChange);
+    document.getElementById('progoiasPercentualManual').addEventListener('input', handleProgoisConfigChange);
+    document.getElementById('progoiasIcmsPorMedia').addEventListener('input', handleProgoisConfigChange);
+    document.getElementById('progoiasSaldoCredorAnterior').addEventListener('input', handleProgoisConfigChange);
     document.getElementById('processProgoisData').addEventListener('click', processProgoisData);
     
     // ProGoiás Multiple Period Configuration listeners  
-    document.getElementById('progoisMultipleTipoEmpresa').addEventListener('change', handleProgoisMultipleConfigChange);
-    document.getElementById('progoisMultipleMesInicio').addEventListener('change', handleProgoisMultipleConfigChange);
-    document.getElementById('progoisMultipleAnoInicio').addEventListener('input', handleProgoisMultipleConfigChange);
-    document.getElementById('progoisMultipleIcmsPorMedia').addEventListener('input', handleProgoisMultipleConfigChange);
-    document.getElementById('progoisMultipleSaldoCredor').addEventListener('input', handleProgoisMultipleConfigChange);
-    document.getElementById('progoisMultipleAjustePeriodoAnterior').addEventListener('input', handleProgoisMultipleConfigChange);
+    document.getElementById('progoiasMultipleTipoEmpresa').addEventListener('change', handleProgoisMultipleConfigChange);
+    document.getElementById('progoiasMultipleMesInicio').addEventListener('change', handleProgoisMultipleConfigChange);
+    document.getElementById('progoiasMultipleAnoInicio').addEventListener('input', handleProgoisMultipleConfigChange);
+    document.getElementById('progoiasMultipleIcmsPorMedia').addEventListener('input', handleProgoisMultipleConfigChange);
+    document.getElementById('progoiasMultipleSaldoCredor').addEventListener('input', handleProgoisMultipleConfigChange);
+    document.getElementById('progoiasMultipleAjustePeriodoAnterior').addEventListener('input', handleProgoisMultipleConfigChange);
     
     // ProGoiás Single Period - adicionar novo campo  
-    document.getElementById('progoisAjustePeriodoAnterior').addEventListener('input', handleProgoisConfigChange);
+    document.getElementById('progoiasAjustePeriodoAnterior').addEventListener('input', handleProgoisConfigChange);
     
-    // Correção de códigos E111 listeners
+    // Correção de códigos E111 listeners - FOMENTAR
     document.getElementById('btnAplicarCorrecoes').addEventListener('click', aplicarCorrecoesECalcular);
     document.getElementById('btnPularCorrecoes').addEventListener('click', pularCorrecoesECalcular);
+    
+    // Correção de códigos E111 listeners - ProGoiás
+    document.getElementById('btnAplicarCorrecoesProgoias').addEventListener('click', aplicarCorrecoesECalcularProgoias);
+    document.getElementById('btnPularCorrecoesProgoias').addEventListener('click', pularCorrecoesECalcularProgoias);
     
     // Multi-period listeners
     document.querySelectorAll('input[name="importMode"]').forEach(radio => {
@@ -113,8 +122,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('multipleSpedFilesProgoias').click();
     });
     document.getElementById('multipleSpedFilesProgoias').addEventListener('change', handleProgoisMultipleSpedSelection);
-    document.getElementById('progoisViewSinglePeriod').addEventListener('click', () => switchProgoisView('single'));
-    document.getElementById('progoisViewComparative').addEventListener('click', () => switchProgoisView('comparative'));
+    document.getElementById('progoiasViewSinglePeriod').addEventListener('click', () => switchProgoisView('single'));
+    document.getElementById('progoiasViewComparative').addEventListener('click', () => switchProgoisView('comparative'));
     document.getElementById('exportProgoisComparative').addEventListener('click', exportProgoisComparativeReport);
     document.getElementById('exportProgoisPDF').addEventListener('click', exportProgoisComparativePDF);
 
@@ -156,12 +165,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Drag and Drop Event Listeners for ProGoiás single dropZone
-    const progoisDropZone = document.getElementById('progoisDropZone');
-    if (progoisDropZone) {
-        progoisDropZone.addEventListener('dragenter', handleProgoisDragEnter, false);
-        progoisDropZone.addEventListener('dragover', handleProgoisDragOver, false);
-        progoisDropZone.addEventListener('dragleave', handleProgoisDragLeave, false);
-        progoisDropZone.addEventListener('drop', handleProgoisFileDrop, false);
+    const progoiasDropZone = document.getElementById('progoiasDropZone');
+    if (progoiasDropZone) {
+        progoiasDropZone.addEventListener('dragenter', handleProgoisDragEnter, false);
+        progoiasDropZone.addEventListener('dragover', handleProgoisDragOver, false);
+        progoiasDropZone.addEventListener('dragleave', handleProgoisDragLeave, false);
+        progoiasDropZone.addEventListener('drop', handleProgoisFileDrop, false);
     }
 
     // Drag and Drop Event Listeners for ProGoiás multipleDropZone
@@ -1581,7 +1590,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('fomentarPanel').classList.add('active');
         } else if (tab === 'progoias') {
             document.getElementById('tabProgoias').classList.add('active');
-            document.getElementById('progoisPanel').classList.add('active');
+            document.getElementById('progoiasPanel').classList.add('active');
         }
     }
 
@@ -2548,7 +2557,310 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Mostrar resultados
-        document.getElementById('fomentarResults').style.display = 'block';
+    }
+    
+    // CLAUDE-CONTEXT: Funções específicas para correção de códigos E111 no ProGoiás
+    // CLAUDE-CAREFUL: Mantém a mesma lógica do FOMENTAR mas com variáveis específicas do ProGoiás
+    
+    
+    function mostrarInterfaceCorrecaoProgoias() {
+        // Verificar se existe a seção de correção para ProGoiás
+        const section = document.getElementById('progoiasCodigoCorrecaoSection');
+        if (!section) {
+            addLog('Seção de correção ProGoiás não encontrada na interface', 'error');
+            // Prosseguir sem correção
+            continuarCalculoProgoias();
+            return;
+        }
+        
+        section.style.display = 'block';
+        exibirCodigosParaCorrecaoProgoias();
+        
+        // Scroll para a seção
+        section.scrollIntoView({ behavior: 'smooth' });
+        
+        addLog('Interface de correção de códigos E111 (ProGoiás) exibida. Revise e ajuste conforme necessário.', 'info');
+    }
+    
+    function exibirCodigosParaCorrecaoProgoias() {
+        const container = document.getElementById('progoiasCodigosEncontrados');
+        if (!container) {
+            addLog('Container de códigos ProGoiás não encontrado', 'error');
+            return;
+        }
+        
+        container.innerHTML = '';
+        
+        if (progoiasCodigosEncontrados.length === 0) {
+            container.innerHTML = '<p style="color: #666;">Nenhum código E111 encontrado para correção.</p>';
+            return;
+        }
+        
+        // Cabeçalho
+        const header = document.createElement('h4');
+        header.textContent = `Códigos de Ajuste E111 Encontrados - ProGoiás (${progoiasCodigosEncontrados.length})`;
+        header.style.marginBottom = '15px';
+        container.appendChild(header);
+        
+        // Lista de códigos
+        progoiasCodigosEncontrados.forEach((codigo, index) => {
+            const codigoDiv = criarElementoCorrecaoProgoias(codigo, index);
+            container.appendChild(codigoDiv);
+        });
+        
+        addLog(`ProGoiás: Encontrados ${progoiasCodigosEncontrados.length} códigos de ajuste E111 para possível correção`, 'info');
+    }
+    
+    function criarElementoCorrecaoProgoias(codigo, index) {
+        const div = document.createElement('div');
+        div.className = 'codigo-correcao-item';
+        div.style.cssText = `
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            background: #f9f9f9;
+        `;
+        
+        const isMultiple = progoiasIsMultiplePeriods || (codigo.periodos && codigo.periodos.length > 1);
+        
+        div.innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <div>
+                    <strong style="color: #2c3e50;">${codigo.codigo}</strong>
+                    <span style="color: #666; margin-left: 10px;">${codigo.descricao}</span>
+                    <span style="color: #27ae60; font-weight: bold; margin-left: 10px;">R$ ${codigo.valor.toFixed(2)}</span>
+                </div>
+                <button onclick="removerCodigoCorrecaoProgoias(${index})" 
+                        style="background: #e74c3c; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;">
+                    Remover
+                </button>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; align-items: center;">
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Novo Código:</label>
+                    <input type="text" 
+                           id="novoCodigo_progoias_${index}" 
+                           placeholder="Digite o código correto..."
+                           style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
+                           onchange="atualizarNovoCodigoProgoias(${index}, this.value)">
+                </div>
+                
+                ${isMultiple ? `
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Aplicar em:</label>
+                    <div style="margin-bottom: 10px;">
+                        <label style="display: block; margin-bottom: 5px;">
+                            <input type="radio" name="aplicacao_progoias_${index}" value="todos" checked
+                                   onchange="alterarAplicacaoProgoias(${index}, 'todos')">
+                            Todos os períodos
+                        </label>
+                        <label style="display: block;">
+                            <input type="radio" name="aplicacao_progoias_${index}" value="especificos"
+                                   onchange="alterarAplicacaoProgoias(${index}, 'especificos')">
+                            Períodos específicos
+                        </label>
+                    </div>
+                    <div id="periodosEspecificos_progoias_${index}" style="display: none;">
+                        ${codigo.periodos.map(p => `
+                            <label style="display: inline-block; margin-right: 15px; margin-bottom: 5px;">
+                                <input type="checkbox" value="${p}" 
+                                       onchange="togglePeriodoProgoias(${index}, ${p}, this.checked)">
+                                Período ${p + 1}
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+                ` : `
+                <div style="color: #666; font-style: italic;">
+                    Período único
+                </div>
+                `}
+            </div>
+        `;
+        
+        return div;
+    }
+    
+    // Funções auxiliares para ProGoiás (equivalentes às do FOMENTAR)
+    window.atualizarNovoCodigoProgoias = function(index, novoCodigo) {
+        if (progoiasCodigosEncontrados[index]) {
+            progoiasCodigosEncontrados[index].novocodigo = novoCodigo.trim();
+            addLog(`ProGoiás: Código ${progoiasCodigosEncontrados[index].codigo} será substituído por: ${novoCodigo}`, 'info');
+        }
+    };
+    
+    window.alterarAplicacaoProgoias = function(index, tipo) {
+        if (progoiasCodigosEncontrados[index]) {
+            progoiasCodigosEncontrados[index].aplicarTodos = (tipo === 'todos');
+            
+            const container = document.getElementById(`periodosEspecificos_progoias_${index}`);
+            if (container) {
+                container.style.display = tipo === 'especificos' ? 'block' : 'none';
+            }
+            
+            const acao = tipo === 'todos' ? 'todos os períodos' : 'períodos específicos';
+            addLog(`ProGoiás: Correção do código ${progoiasCodigosEncontrados[index].codigo} será aplicada em: ${acao}`, 'info');
+        }
+    };
+    
+    window.togglePeriodoProgoias = function(index, periodoIndex, incluir) {
+        if (progoiasCodigosEncontrados[index]) {
+            if (!progoiasCodigosEncontrados[index].periodosEscolhidos) {
+                progoiasCodigosEncontrados[index].periodosEscolhidos = [];
+            }
+            
+            if (incluir) {
+                if (!progoiasCodigosEncontrados[index].periodosEscolhidos.includes(periodoIndex)) {
+                    progoiasCodigosEncontrados[index].periodosEscolhidos.push(periodoIndex);
+                }
+            } else {
+                progoiasCodigosEncontrados[index].periodosEscolhidos = 
+                    progoiasCodigosEncontrados[index].periodosEscolhidos.filter(p => p !== periodoIndex);
+            }
+            
+            const totalSelecionados = progoiasCodigosEncontrados[index].periodosEscolhidos.length;
+            const acao = incluir ? 'selecionado' : 'desmarcado';
+            addLog(`ProGoiás: Período ${periodoIndex + 1} ${acao} para correção do código ${progoiasCodigosEncontrados[index].codigo} (${totalSelecionados} período(s) selecionado(s))`, 'info');
+        }
+    };
+
+    window.removerCodigoCorrecaoProgoias = function(index) {
+        if (progoiasCodigosEncontrados[index]) {
+            const codigoRemovido = progoiasCodigosEncontrados[index].codigo;
+            progoiasCodigosEncontrados.splice(index, 1);
+            exibirCodigosParaCorrecaoProgoias(); // Recriar a lista
+            addLog(`ProGoiás: Código ${codigoRemovido} removido da lista de correções`, 'warn');
+        }
+    };
+    
+    function aplicarCorrecoesECalcularProgoias() {
+        // Construir mapeamento de correções
+        progoiasCodigosCorrecao = {};
+        let correcoesAplicadas = 0;
+        
+        progoiasCodigosEncontrados.forEach(codigo => {
+            if (codigo.novocodigo && codigo.novocodigo.trim() !== '') {
+                progoiasCodigosCorrecao[codigo.codigo] = {
+                    novoCodigo: codigo.novocodigo.trim(),
+                    aplicarTodos: codigo.aplicarTodos,
+                    periodos: codigo.periodos || [],
+                    periodosEscolhidos: codigo.periodosEscolhidos || []
+                };
+                correcoesAplicadas++;
+                
+                // Log detalhado sobre onde será aplicada a correção
+                if (codigo.aplicarTodos) {
+                    addLog(`ProGoiás: Correção configurada: ${codigo.codigo} → ${codigo.novocodigo.trim()} (todos os períodos)`, 'success');
+                } else if (codigo.periodosEscolhidos && codigo.periodosEscolhidos.length > 0) {
+                    const periodosTexto = codigo.periodosEscolhidos.map(p => p + 1).join(', ');
+                    addLog(`ProGoiás: Correção configurada: ${codigo.codigo} → ${codigo.novocodigo.trim()} (períodos: ${periodosTexto})`, 'success');
+                } else {
+                    addLog(`ProGoiás: Correção configurada: ${codigo.codigo} → ${codigo.novocodigo.trim()} (nenhum período específico selecionado)`, 'warn');
+                }
+            }
+        });
+        
+        // Esconder seção de correção
+        document.getElementById('progoiasCodigoCorrecaoSection').style.display = 'none';
+        
+        if (correcoesAplicadas > 0) {
+            addLog(`ProGoiás: ${correcoesAplicadas} correção(ões) de código aplicada(s). Recalculando...`, 'success');
+        } else {
+            addLog('ProGoiás: Nenhuma correção de código aplicada. Prosseguindo com cálculo normal...', 'info');
+        }
+        
+        // CLAUDE-CONTEXT: Para período único, mostrar botão de processamento após correções
+        if (progoiasCurrentImportMode === 'single') {
+            // Atualizar status e mostrar botão de processamento
+            document.getElementById('progoiasSpedStatus').textContent = 
+                `Arquivo SPED processado - Correções aplicadas (${correcoesAplicadas})`;
+            document.getElementById('progoiasSpedStatus').style.color = '#20e3b2';
+            document.getElementById('processProgoisData').style.display = 'block';
+            addLog('Correções aplicadas. Configure os parâmetros e clique em "Processar Apuração".', 'success');
+        } else {
+            // Para múltiplos períodos, prosseguir diretamente
+            continuarCalculoProgoisMultiplos();
+        }
+    }
+    
+    function pularCorrecoesECalcularProgoias() {
+        // Limpar correções
+        progoiasCodigosCorrecao = {};
+        
+        // Esconder seção de correção
+        document.getElementById('progoiasCodigoCorrecaoSection').style.display = 'none';
+        
+        addLog('ProGoiás: Correções de código puladas. Prosseguindo com códigos originais...', 'info');
+        
+        // CLAUDE-CONTEXT: Para período único, mostrar botão de processamento após pular correções
+        if (progoiasCurrentImportMode === 'single') {
+            // Atualizar status e mostrar botão de processamento
+            document.getElementById('progoiasSpedStatus').textContent = 
+                `Arquivo SPED carregado - Correções puladas`;
+            document.getElementById('progoiasSpedStatus').style.color = '#20e3b2';
+            document.getElementById('processProgoisData').style.display = 'block';
+            addLog('Correções puladas. Configure os parâmetros e clique em "Processar Apuração".', 'success');
+        } else {
+            // Para múltiplos períodos, prosseguir diretamente
+            continuarCalculoProgoisMultiplos();
+        }
+    }
+    
+    function aplicarCorrecoesAosRegistrosProgoias() {
+        if (!progoiasCodigosCorrecao || Object.keys(progoiasCodigosCorrecao).length === 0) {
+            return;
+        }
+        
+        addLog('ProGoiás: Aplicando correções aos registros E111...', 'info');
+        
+        if (progoiasCurrentImportMode === 'multiple' && progoiasMultiPeriodData.length > 0) {
+            // Múltiplos períodos
+            progoiasMultiPeriodData.forEach((periodo, periodoIndex) => {
+                if (periodo.registros && periodo.registros.E111) {
+                    periodo.registros.E111.forEach(registro => {
+                        const codAjusteOriginal = registro.COD_AJ;
+                        const correcao = progoiasCodigosCorrecao[codAjusteOriginal];
+                        
+                        if (correcao) {
+                            const deveAplicar = correcao.aplicarTodos || 
+                                              (correcao.periodosEscolhidos && correcao.periodosEscolhidos.includes(periodoIndex));
+                            
+                            if (deveAplicar) {
+                                registro.COD_AJ = correcao.novoCodigo;
+                                addLog(`ProGoiás P${periodoIndex + 1}: E111 ${codAjusteOriginal} → ${correcao.novoCodigo} (R$ ${parseFloat(registro.VL_AJ || 0).toFixed(2)})`, 'success');
+                            }
+                        }
+                    });
+                }
+            });
+        } else if (progoiasRegistrosCompletos && progoiasRegistrosCompletos.E111) {
+            // Período único
+            progoiasRegistrosCompletos.E111.forEach(registro => {
+                const codAjusteOriginal = registro.COD_AJ;
+                const correcao = progoiasCodigosCorrecao[codAjusteOriginal];
+                
+                if (correcao) {
+                    registro.COD_AJ = correcao.novoCodigo;
+                    addLog(`ProGoiás: E111 ${codAjusteOriginal} → ${correcao.novoCodigo} (R$ ${parseFloat(registro.VL_AJ || 0).toFixed(2)})`, 'success');
+                }
+            });
+        }
+        
+        const totalCorrecoes = Object.keys(progoiasCodigosCorrecao).length;
+        addLog(`ProGoiás: ${totalCorrecoes} tipo(s) de código E111 corrigido(s) com sucesso`, 'success');
+    }
+    
+    function continuarCalculoProgoisMultiplos() {
+        // Aplicar correções se existirem
+        if (Object.keys(progoiasCodigosCorrecao).length > 0) {
+            aplicarCorrecoesAosRegistrosProgoias();
+        }
+        
+        // Prosseguir com o cálculo e exibição dos múltiplos períodos
+        updateProgoisMultiplePeriodUI();
+        addLog(`🎉 Processamento concluído: ${progoiasMultiPeriodData.length} períodos ProGoiás processados com sucesso!`, 'success');
     }
     
     function aplicarCorrecoesAosRegistros() {
@@ -4114,16 +4426,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     throw new Error('SPED não contém operações válidas');
                 }
                 
-                // Armazenar dados para processamento posterior
-                progoisRegistrosCompletos = registros;
-                
-                // Atualizar status e mostrar botão de processamento
-                document.getElementById('progoisSpedStatus').textContent = 
-                    `${registros.empresa || 'Empresa'} - ${registros.periodo || 'Período'} (Arquivo carregado)`;
-                
-                document.getElementById('processProgoisData').style.display = 'block';
-                
-                addLog('Arquivo SPED carregado com sucesso. Configure os parâmetros e clique em "Processar Apuração".', 'success');
+                // Processar dados imediatamente (igual ao FOMENTAR)
+                processProgoisData_Internal(registros);
                 
             } catch (error) {
                 console.error('Erro ao carregar arquivo SPED para ProGoiás:', error);
@@ -4139,33 +4443,185 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.readAsText(file);
     }
     
+    function processProgoisData_Internal(registros) {
+        try {
+            addLog('Processando dados SPED para apuração ProGoiás...', 'info');
+            
+            // Armazenar dados para processamento posterior
+            progoiasRegistrosCompletos = registros;
+            
+            // Validar se há dados suficientes para operações
+            const temOperacoes = (registros.C190 && registros.C190.length > 0) ||
+                               (registros.C590 && registros.C590.length > 0) ||
+                               (registros.D190 && registros.D190.length > 0) ||
+                               (registros.D590 && registros.D590.length > 0);
+            
+            if (!temOperacoes) {
+                throw new Error('SPED não contém operações suficientes para apuração ProGoiás');
+            }
+            
+            // CLAUDE-CONTEXT: Analisar códigos E111 imediatamente (igual ao FOMENTAR)
+            const temCodigosParaCorrigir = analisarCodigosE111Progoias(registros, false);
+            
+            if (temCodigosParaCorrigir) {
+                // Mostrar interface de correção e parar aqui
+                addLog('Códigos de ajuste E111 encontrados. Verifique se há necessidade de correção antes de prosseguir.', 'warn');
+                
+                // Atualizar status
+                document.getElementById('progoiasSpedStatus').textContent = 
+                    `${registros.empresa || 'Empresa'} - ${registros.periodo || 'Período'} - Códigos E111 encontrados para correção`;
+                document.getElementById('progoiasSpedStatus').style.color = '#FF6B35';
+                
+                return; // Parar aqui até o usuário decidir sobre as correções
+            } else {
+                // Não há códigos para corrigir, mostrar botão de processamento
+                addLog('Nenhum código de ajuste E111 encontrado. Arquivo pronto para processamento.', 'info');
+                
+                // Atualizar status e mostrar botão de processamento
+                document.getElementById('progoiasSpedStatus').textContent = 
+                    `${registros.empresa || 'Empresa'} - ${registros.periodo || 'Período'} (Arquivo carregado)`;
+                document.getElementById('progoiasSpedStatus').style.color = '#20e3b2';
+                
+                document.getElementById('processProgoisData').style.display = 'block';
+                
+                addLog('Arquivo SPED carregado com sucesso. Configure os parâmetros e clique em "Processar Apuração".', 'success');
+            }
+            
+        } catch (error) {
+            addLog(`Erro ao processar dados ProGoiás: ${error.message}`, 'error');
+            document.getElementById('progoiasSpedStatus').textContent = `Erro: ${error.message}`;
+            document.getElementById('progoiasSpedStatus').style.color = '#f857a6';
+        }
+    }
+    
+    function analisarCodigosE111Progoias(registros, isMultiple = false) {
+        progoiasCodigosEncontrados = [];
+        progoiasIsMultiplePeriods = isMultiple;
+        
+        if (isMultiple && Array.isArray(registros)) {
+            // Múltiplos períodos
+            registros.forEach((periodoData, index) => {
+                if (periodoData.registros && periodoData.registros.E111) {
+                    periodoData.registros.E111.forEach(registro => {
+                        processarRegistroE111Progoias(registro, index, periodoData.periodo);
+                    });
+                }
+            });
+        } else {
+            // Período único
+            if (registros.E111) {
+                registros.E111.forEach(registro => {
+                    processarRegistroE111Progoias(registro, 0, 'Período único');
+                });
+            }
+        }
+        
+        // Consolidar códigos para múltiplos períodos
+        if (isMultiple) {
+            const codigosConsolidados = new Map();
+            
+            progoiasCodigosEncontrados.forEach(codigo => {
+                if (codigosConsolidados.has(codigo.codigo)) {
+                    // Adicionar período ao código existente
+                    const codigoExistente = codigosConsolidados.get(codigo.codigo);
+                    if (codigo.periodos && codigo.periodos.length > 0) {
+                        codigoExistente.periodos.push(...codigo.periodos);
+                        codigoExistente.valor += codigo.valor;
+                    }
+                } else {
+                    // Novo código
+                    codigosConsolidados.set(codigo.codigo, { ...codigo });
+                }
+            });
+            
+            progoiasCodigosEncontrados = Array.from(codigosConsolidados.values());
+        } else {
+            // Para período único, apenas remover duplicatas simples
+            const codigosUnicos = [];
+            const codigosVistos = new Set();
+            
+            progoiasCodigosEncontrados.forEach(codigo => {
+                if (!codigosVistos.has(codigo.codigo)) {
+                    codigosVistos.add(codigo.codigo);
+                    codigosUnicos.push(codigo);
+                }
+            });
+            
+            progoiasCodigosEncontrados = codigosUnicos;
+        }
+        
+        // Exibir interface se houver códigos
+        if (progoiasCodigosEncontrados.length > 0) {
+            exibirCodigosParaCorrecaoProgoias();
+        }
+        
+        return progoiasCodigosEncontrados.length > 0;
+    }
+    
+    function processarRegistroE111Progoias(registro, periodoIndex, periodoNome) {
+        const codAjuste = registro.COD_AJ || '';
+        if (codAjuste) {
+            // Verificar se já existe um código para este período
+            const codigoExistente = progoiasCodigosEncontrados.find(c => c.codigo === codAjuste);
+            
+            if (codigoExistente) {
+                // Adicionar período se não existir
+                if (!codigoExistente.periodos.includes(periodoIndex)) {
+                    codigoExistente.periodos.push(periodoIndex);
+                    codigoExistente.valor += parseFloat(registro.VL_AJ) || 0;
+                }
+            } else {
+                // Novo código
+                const novoCodigo = {
+                    codigo: codAjuste,
+                    descricao: registro.DESCR_COMPL_AJ || 'Sem descrição',
+                    valor: parseFloat(registro.VL_AJ) || 0,
+                    periodos: [periodoIndex],
+                    periodo: periodoNome,
+                    aplicarTodos: true
+                };
+                progoiasCodigosEncontrados.push(novoCodigo);
+            }
+        }
+    }
+    
     function processProgoisData() {
         // Verificar se estamos no modo múltiplos períodos
-        if (progoisCurrentImportMode === 'multiple') {
+        if (progoiasCurrentImportMode === 'multiple') {
             // Processar múltiplos SPEDs
             processProgoisMultipleSpeds();
             return;
         }
         
         // Para modo único, verificar se o arquivo foi carregado
-        if (!progoisRegistrosCompletos) {
+        if (!progoiasRegistrosCompletos) {
             addLog('Nenhum arquivo SPED carregado para processar', 'error');
             return;
         }
         
+        // CLAUDE-CONTEXT: Prosseguir direto com o cálculo (códigos E111 já foram verificados na importação)
+        continuarCalculoProgoias();
+    }
+    
+    function continuarCalculoProgoias() {
         // Processar período único
         try {
             addLog('Iniciando processamento da apuração ProGoiás...', 'info');
             
-            const calculoProgoias = calculateProgoias(progoisRegistrosCompletos);
-            progoisData = calculoProgoias;
+            // Aplicar correções se existirem
+            if (Object.keys(progoiasCodigosCorrecao).length > 0) {
+                aplicarCorrecoesAosRegistrosProgoias();
+            }
+            
+            const calculoProgoias = calculateProgoias(progoiasRegistrosCompletos);
+            progoiasData = calculoProgoias;
             
             // Atualizar interface
             updateProgoisUI(calculoProgoias);
-            document.getElementById('progoisResults').style.display = 'block';
+            document.getElementById('progoiasResults').style.display = 'block';
             
             // Atualizar status
-            document.getElementById('progoisSpedStatus').textContent = 
+            document.getElementById('progoiasSpedStatus').textContent = 
                 `${calculoProgoias.empresa} - ${calculoProgoias.periodo} (${calculoProgoias.totalOperacoes} operações processadas)`;
             
             addLog(`Apuração ProGoiás concluída com sucesso!`, 'success');
@@ -4173,7 +4629,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Erro ao processar apuração ProGoiás:', error);
             addLog(`Erro ao processar apuração ProGoiás: ${error.message}`, 'error');
-            document.getElementById('progoisResults').style.display = 'block';
+            document.getElementById('progoiasResults').style.display = 'block';
         }
     }
     
@@ -4181,16 +4637,16 @@ document.addEventListener('DOMContentLoaded', () => {
         // Obter percentual calculado ou usar default
         let percentualIncentivo = 64; // Default
         
-        const opcaoCalculo = document.getElementById('progoisOpcaoCalculo').value;
+        const opcaoCalculo = document.getElementById('progoiasOpcaoCalculo').value;
         switch(opcaoCalculo) {
             case 'ano':
-                const anoFruicao = parseInt(document.getElementById('progoisAnoFruicao').value);
+                const anoFruicao = parseInt(document.getElementById('progoiasAnoFruicao').value);
                 if (anoFruicao) {
                     percentualIncentivo = PROGOIAS_CONFIG.PERCENTUAIS_POR_ANO[anoFruicao] || 64;
                 }
                 break;
             case 'manual':
-                const percentualManual = parseFloat(document.getElementById('progoisPercentualManual').value);
+                const percentualManual = parseFloat(document.getElementById('progoiasPercentualManual').value);
                 if (percentualManual && percentualManual > 0) {
                     percentualIncentivo = percentualManual;
                 }
@@ -4198,12 +4654,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         const config = {
-            tipoEmpresa: document.getElementById('progoisTipoEmpresa').value,
+            tipoEmpresa: document.getElementById('progoiasTipoEmpresa').value,
             opcaoCalculo: opcaoCalculo,
             percentualIncentivo: percentualIncentivo,
-            icmsPorMedia: parseFloat(document.getElementById('progoisIcmsPorMedia').value) || 0,
-            saldoCredorAnterior: parseFloat(document.getElementById('progoisSaldoCredorAnterior').value) || 0,
-            ajustePeridoAnterior: parseFloat(document.getElementById('progoisAjustePeriodoAnterior').value) || 0
+            icmsPorMedia: parseFloat(document.getElementById('progoiasIcmsPorMedia').value) || 0,
+            saldoCredorAnterior: parseFloat(document.getElementById('progoiasSaldoCredorAnterior').value) || 0,
+            ajustePeridoAnterior: parseFloat(document.getElementById('progoiasAjustePeriodoAnterior').value) || 0
         };
         
         // Usar as mesmas funções de classificação do FOMENTAR
@@ -4507,43 +4963,43 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // ABA 1 - CÁLCULO DO PROGOIÁS (conforme Progoias.xlsx)
         // Itens conforme estrutura da planilha oficial
-        document.getElementById('progoisItemA01').textContent = formatCurrency(quadroA.GO100002);   // ICMS Saídas Incentivadas
-        document.getElementById('progoisItemA02').textContent = formatCurrency(quadroA.GO100003);   // ICMS Entradas Incentivadas
-        document.getElementById('progoisItemA03').textContent = formatCurrency(quadroA.GO100004);   // Outros Créditos
-        document.getElementById('progoisItemA04').textContent = formatCurrency(quadroA.GO100005);   // Outros Débitos
-        document.getElementById('progoisItemA05').textContent = formatCurrency(quadroA.GO100007);   // Ajuste Período Anterior
-        document.getElementById('progoisItemA06').textContent = formatCurrency(quadroA.GO100006);   // Média
-        document.getElementById('progoisItemA07').textContent = formatCurrency(quadroA.baseCalculo); // Base de Cálculo
-        document.getElementById('progoisItemA08').textContent = quadroA.GO100001.toFixed(2) + '%';  // Percentual ProGoiás
-        document.getElementById('progoisItemA09').textContent = formatCurrency(quadroA.GO100009);   // Crédito Outorgado
-        document.getElementById('progoisItemA10').textContent = formatCurrency(quadroA.GO100008);   // Ajuste Próximo Período
+        document.getElementById('progoiasItemA01').textContent = formatCurrency(quadroA.GO100002);   // ICMS Saídas Incentivadas
+        document.getElementById('progoiasItemA02').textContent = formatCurrency(quadroA.GO100003);   // ICMS Entradas Incentivadas
+        document.getElementById('progoiasItemA03').textContent = formatCurrency(quadroA.GO100004);   // Outros Créditos
+        document.getElementById('progoiasItemA04').textContent = formatCurrency(quadroA.GO100005);   // Outros Débitos
+        document.getElementById('progoiasItemA05').textContent = formatCurrency(quadroA.GO100007);   // Ajuste Período Anterior
+        document.getElementById('progoiasItemA06').textContent = formatCurrency(quadroA.GO100006);   // Média
+        document.getElementById('progoiasItemA07').textContent = formatCurrency(quadroA.baseCalculo); // Base de Cálculo
+        document.getElementById('progoiasItemA08').textContent = quadroA.GO100001.toFixed(2) + '%';  // Percentual ProGoiás
+        document.getElementById('progoiasItemA09').textContent = formatCurrency(quadroA.GO100009);   // Crédito Outorgado
+        document.getElementById('progoiasItemA10').textContent = formatCurrency(quadroA.GO100008);   // Ajuste Próximo Período
         
         // ABA 2 - APURAÇÃO DO ICMS (conforme Progoias.xlsx)
         // Itens numerados conforme planilha de apuração
-        document.getElementById('progoisItemB13').textContent = formatCurrency(quadroB.item01_debitoIcms);        // 01. Débito ICMS
-        document.getElementById('progoisItemB14').textContent = formatCurrency(quadroB.item02_outrosDebitos);     // 02. Outros Débitos
-        document.getElementById('progoisItemB15').textContent = formatCurrency(quadroB.item03_estornoCreditos);   // 03. Estorno Créditos
-        document.getElementById('progoisItemB16').textContent = formatCurrency(quadroB.item04_totalDebitos);      // 04. Total Débitos
-        document.getElementById('progoisItemB17').textContent = formatCurrency(quadroB.item05_creditosEntradas);  // 05. Créditos Entradas
-        document.getElementById('progoisItemB18').textContent = formatCurrency(quadroB.item06_outrosCreditos);    // 06. Outros Créditos
-        document.getElementById('progoisItemB19').textContent = formatCurrency(quadroB.item09_creditoProgoias);   // 09. Crédito ProGoiás
+        document.getElementById('progoiasItemB13').textContent = formatCurrency(quadroB.item01_debitoIcms);        // 01. Débito ICMS
+        document.getElementById('progoiasItemB14').textContent = formatCurrency(quadroB.item02_outrosDebitos);     // 02. Outros Débitos
+        document.getElementById('progoiasItemB15').textContent = formatCurrency(quadroB.item03_estornoCreditos);   // 03. Estorno Créditos
+        document.getElementById('progoiasItemB16').textContent = formatCurrency(quadroB.item04_totalDebitos);      // 04. Total Débitos
+        document.getElementById('progoiasItemB17').textContent = formatCurrency(quadroB.item05_creditosEntradas);  // 05. Créditos Entradas
+        document.getElementById('progoiasItemB18').textContent = formatCurrency(quadroB.item06_outrosCreditos);    // 06. Outros Créditos
+        document.getElementById('progoiasItemB19').textContent = formatCurrency(quadroB.item09_creditoProgoias);   // 09. Crédito ProGoiás
         
         // DEMONSTRATIVO DETALHADO - VALORES E ICMS
-        document.getElementById('progoisItemC18').textContent = formatCurrency(quadroC.valorSaidasIncentivadas);    // Saídas Incentivadas - Valor
-        document.getElementById('progoisItemC19').textContent = formatCurrency(quadroC.valorSaidasNaoIncentivadas); // Saídas Não Incentivadas - Valor
-        document.getElementById('progoisItemC20').textContent = formatCurrency(quadroC.totalValorSaidas);           // Total Saídas - Valor
-        document.getElementById('progoisItemC21').textContent = formatCurrency(quadroC.valorEntradasIncentivadas);  // Entradas Incentivadas - Valor
-        document.getElementById('progoisItemC22').textContent = formatCurrency(quadroC.valorEntradasNaoIncentivadas); // Entradas Não Incentivadas - Valor
-        document.getElementById('progoisItemC23').textContent = formatCurrency(quadroC.totalValorEntradas);         // Total Entradas - Valor
+        document.getElementById('progoiasItemC18').textContent = formatCurrency(quadroC.valorSaidasIncentivadas);    // Saídas Incentivadas - Valor
+        document.getElementById('progoiasItemC19').textContent = formatCurrency(quadroC.valorSaidasNaoIncentivadas); // Saídas Não Incentivadas - Valor
+        document.getElementById('progoiasItemC20').textContent = formatCurrency(quadroC.totalValorSaidas);           // Total Saídas - Valor
+        document.getElementById('progoiasItemC21').textContent = formatCurrency(quadroC.valorEntradasIncentivadas);  // Entradas Incentivadas - Valor
+        document.getElementById('progoiasItemC22').textContent = formatCurrency(quadroC.valorEntradasNaoIncentivadas); // Entradas Não Incentivadas - Valor
+        document.getElementById('progoiasItemC23').textContent = formatCurrency(quadroC.totalValorEntradas);         // Total Entradas - Valor
         
         // ICMS das operações (se elementos existirem)
         const icmsElements = {
-            'progoisItemC18Icms': quadroC.icmsSaidasIncentivadas,
-            'progoisItemC19Icms': quadroC.icmsSaidasNaoIncentivadas,
-            'progoisItemC20Icms': quadroC.totalIcmsSaidas,
-            'progoisItemC21Icms': quadroC.icmsEntradasIncentivadas,
-            'progoisItemC22Icms': quadroC.icmsEntradasNaoIncentivadas,
-            'progoisItemC23Icms': quadroC.totalIcmsEntradas
+            'progoiasItemC18Icms': quadroC.icmsSaidasIncentivadas,
+            'progoiasItemC19Icms': quadroC.icmsSaidasNaoIncentivadas,
+            'progoiasItemC20Icms': quadroC.totalIcmsSaidas,
+            'progoiasItemC21Icms': quadroC.icmsEntradasIncentivadas,
+            'progoiasItemC22Icms': quadroC.icmsEntradasNaoIncentivadas,
+            'progoiasItemC23Icms': quadroC.totalIcmsEntradas
         };
         
         Object.keys(icmsElements).forEach(id => {
@@ -4555,10 +5011,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // RESUMO PRINCIPAL - conforme planilha
         const elementos = {
-            'progoisIcmsDevido': quadroB.item13_icmsARecolher,   // ICMS a Recolher
-            'progoisValorProtege': quadroB.item14_valorProtege,  // PROTEGE
-            'progoisIcmsRecolher': quadroB.item15_icmsFinal,     // ICMS Final
-            'progoisEconomiaTotal': quadroB.economiaTotal        // Economia Total
+            'progoiasIcmsDevido': quadroB.item13_icmsARecolher,   // ICMS a Recolher
+            'progoiasValorProtege': quadroB.item14_valorProtege,  // PROTEGE
+            'progoiasIcmsRecolher': quadroB.item15_icmsFinal,     // ICMS Final
+            'progoiasEconomiaTotal': quadroB.economiaTotal        // Economia Total
         };
         
         // Atualizar elementos do resumo
@@ -4570,7 +5026,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         // Status
-        const statusElement = document.getElementById('progoisSpedStatus');
+        const statusElement = document.getElementById('progoiasSpedStatus');
         if (statusElement) {
             statusElement.textContent = `${dados.empresa} - ${dados.periodo} (${dados.totalOperacoes} operações)`;
         }
@@ -4595,30 +5051,30 @@ document.addEventListener('DOMContentLoaded', () => {
         calculateProgoisPercentual();
         
         // Apenas indicar que as configurações mudaram
-        if (progoisRegistrosCompletos) {
+        if (progoiasRegistrosCompletos) {
             addLog('Configurações alteradas. Clique em "Processar Apuração" para recalcular.', 'info');
         }
     }
     
     function handleProgoisOpcaoCalculoChange() {
-        const opcao = document.getElementById('progoisOpcaoCalculo').value;
+        const opcao = document.getElementById('progoiasOpcaoCalculo').value;
         
         // Ocultar todos os grupos primeiro
-        document.getElementById('progoisGrupoAno').style.display = 'none';
-        document.getElementById('progoisGrupoManual').style.display = 'none';
+        document.getElementById('progoiasGrupoAno').style.display = 'none';
+        document.getElementById('progoiasGrupoManual').style.display = 'none';
         
         // Limpar campos
-        document.getElementById('progoisAnoFruicao').value = '';
-        document.getElementById('progoisPercentualManual').value = '';
-        document.getElementById('progoisPercentualCalculado').value = '';
+        document.getElementById('progoiasAnoFruicao').value = '';
+        document.getElementById('progoiasPercentualManual').value = '';
+        document.getElementById('progoiasPercentualCalculado').value = '';
         
         // Mostrar grupo relevante
         switch(opcao) {
             case 'ano':
-                document.getElementById('progoisGrupoAno').style.display = 'block';
+                document.getElementById('progoiasGrupoAno').style.display = 'block';
                 break;
             case 'manual':
-                document.getElementById('progoisGrupoManual').style.display = 'block';
+                document.getElementById('progoiasGrupoManual').style.display = 'block';
                 break;
         }
         
@@ -4626,15 +5082,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function calculateProgoisPercentual() {
-        const opcaoCalculo = document.getElementById('progoisOpcaoCalculo').value;
-        const percentualCalculadoField = document.getElementById('progoisPercentualCalculado');
+        const opcaoCalculo = document.getElementById('progoiasOpcaoCalculo').value;
+        const percentualCalculadoField = document.getElementById('progoiasPercentualCalculado');
         
         let percentualFinal = null;
         let textoExplicativo = '';
         
         switch(opcaoCalculo) {
             case 'ano':
-                const anoFruicao = parseInt(document.getElementById('progoisAnoFruicao').value);
+                const anoFruicao = parseInt(document.getElementById('progoiasAnoFruicao').value);
                 if (anoFruicao) {
                     percentualFinal = PROGOIAS_CONFIG.PERCENTUAIS_POR_ANO[anoFruicao] || 64;
                     textoExplicativo = `${percentualFinal}% (${anoFruicao}º ano de fruição)`;
@@ -4643,7 +5099,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
                 
             case 'manual':
-                const percentualManual = parseFloat(document.getElementById('progoisPercentualManual').value);
+                const percentualManual = parseFloat(document.getElementById('progoiasPercentualManual').value);
                 if (percentualManual && percentualManual > 0) {
                     percentualFinal = percentualManual;
                     textoExplicativo = `${percentualFinal}% (informado manualmente)`;
@@ -4661,13 +5117,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     async function exportProgoisReport() {
-        if (!progoisData) {
+        if (!progoiasData) {
             alert('Nenhum dado ProGoiás para exportar. Importe um arquivo SPED primeiro.');
             return;
         }
         
         try {
-            await generateProgoisExcel(progoisData);
+            await generateProgoisExcel(progoiasData);
             addLog('Relatório ProGoiás exportado com sucesso!', 'success');
         } catch (error) {
             console.error('Erro ao exportar relatório ProGoiás:', error);
@@ -4677,7 +5133,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function printProgoisReport() {
         // Verificar se há dados (período único ou múltiplos períodos)
-        const hasData = progoisData || (progoisMultiPeriodData && progoisMultiPeriodData.length > 0);
+        const hasData = progoiasData || (progoiasMultiPeriodData && progoiasMultiPeriodData.length > 0);
         
         if (!hasData) {
             alert('Nenhum dado ProGoiás para imprimir. Importe um arquivo SPED primeiro.');
@@ -4860,12 +5316,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function calculateAutomaticAdjustments() {
         addLog('Calculando ajustes automáticos entre períodos...', 'info');
         
-        for (let i = 0; i < progoisMultiPeriodData.length; i++) {
-            const currentPeriod = progoisMultiPeriodData[i];
+        for (let i = 0; i < progoiasMultiPeriodData.length; i++) {
+            const currentPeriod = progoiasMultiPeriodData[i];
             
             // Ajuste Período Anterior (GO100007)
             if (i > 0) {
-                const previousPeriod = progoisMultiPeriodData[i - 1];
+                const previousPeriod = progoiasMultiPeriodData[i - 1];
                 const ajustePeriodoAnterior = previousPeriod.calculo?.quadroA?.GO100008 || 0;
                 
                 if (currentPeriod.calculo?.quadroA) {
@@ -4880,7 +5336,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             // Ajuste Próximo Período (GO100008)
-            if (i < progoisMultiPeriodData.length - 1) {
+            if (i < progoiasMultiPeriodData.length - 1) {
                 // Calcular ajuste baseado no crédito outorgado atual
                 const creditoOutorgado = currentPeriod.calculo?.quadroA?.GO100009 || 0;
                 const baseCalculo = currentPeriod.calculo?.quadroA?.baseCalculo || 0;
@@ -4927,37 +5383,37 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        addLog(`Ajustes automáticos calculados para ${progoisMultiPeriodData.length} períodos`, 'success');
+        addLog(`Ajustes automáticos calculados para ${progoiasMultiPeriodData.length} períodos`, 'success');
     }
     
     function handleProgoisImportModeChange(event) {
-        progoisCurrentImportMode = event.target.value;
+        progoiasCurrentImportMode = event.target.value;
         
-        if (progoisCurrentImportMode === 'single') {
+        if (progoiasCurrentImportMode === 'single') {
             document.getElementById('singleImportSectionProgoias').style.display = 'block';
             document.getElementById('multipleImportSectionProgoias').style.display = 'none';
-            document.getElementById('progoisSingleConfig').style.display = 'block';
-            document.getElementById('progoisMultipleConfig').style.display = 'none';
+            document.getElementById('progoiasSingleConfig').style.display = 'block';
+            document.getElementById('progoiasMultipleConfig').style.display = 'none';
             document.getElementById('processProgoisData').style.display = 'none';
         } else {
             document.getElementById('singleImportSectionProgoias').style.display = 'none';
             document.getElementById('multipleImportSectionProgoias').style.display = 'block';
-            document.getElementById('progoisSingleConfig').style.display = 'none';
-            document.getElementById('progoisMultipleConfig').style.display = 'block';
+            document.getElementById('progoiasSingleConfig').style.display = 'none';
+            document.getElementById('progoiasMultipleConfig').style.display = 'block';
         }
         
-        addLog(`ProGoiás - Modo alterado para: ${progoisCurrentImportMode === 'single' ? 'Período Único' : 'Múltiplos Períodos'}`, 'info');
+        addLog(`ProGoiás - Modo alterado para: ${progoiasCurrentImportMode === 'single' ? 'Período Único' : 'Múltiplos Períodos'}`, 'info');
     }
     
     function handleProgoisMultipleConfigChange() {
         // Validar se início de fruição está preenchido para mostrar preview dos percentuais
-        const mesInicio = document.getElementById('progoisMultipleMesInicio').value;
-        const anoInicio = parseInt(document.getElementById('progoisMultipleAnoInicio').value);
+        const mesInicio = document.getElementById('progoiasMultipleMesInicio').value;
+        const anoInicio = parseInt(document.getElementById('progoiasMultipleAnoInicio').value);
         
         if (mesInicio && anoInicio) {
             addLog(`Configuração de múltiplos períodos: início da fruição definido para ${mesInicio}/${anoInicio}`, 'info');
             addLog('✓ Percentuais serão calculados automaticamente para cada período baseado no tempo de fruição', 'success');
-        } else if (progoisMultiPeriodData && progoisMultiPeriodData.length > 0) {
+        } else if (progoiasMultiPeriodData && progoiasMultiPeriodData.length > 0) {
             addLog('⚠️ Início de fruição não informado - será usado percentual padrão (1º ano - 64%)', 'warning');
         }
     }
@@ -4991,9 +5447,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Configurar interface durante processamento
         const processButton = document.getElementById('processProgoisData');
-        const progressSection = document.getElementById('progoisProgressSection');
-        const progressBar = document.getElementById('progoisProgressBar');
-        const progressMessage = document.getElementById('progoisProgressMessage');
+        const progressSection = document.getElementById('progoiasProgressSection');
+        const progressBar = document.getElementById('progoiasProgressBar');
+        const progressMessage = document.getElementById('progoiasProgressMessage');
         
         const originalButtonText = processButton.innerHTML;
         processButton.disabled = true;
@@ -5006,7 +5462,7 @@ document.addEventListener('DOMContentLoaded', () => {
         progressMessage.textContent = 'Iniciando processamento...';
         
         addLog('Iniciando processamento de múltiplos SPEDs para ProGoiás...', 'info');
-        progoisMultiPeriodData = [];
+        progoiasMultiPeriodData = [];
         
         // Process each file with delay to prevent UI blocking
         for (let i = 0; i < files.length; i++) {
@@ -5027,7 +5483,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 await new Promise(resolve => setTimeout(resolve, 50));
                 
                 const periodData = await processProgoisSingleSpedForPeriod(fileContent, file.name);
-                progoisMultiPeriodData.push(periodData);
+                progoiasMultiPeriodData.push(periodData);
                 
                 // Update file item with period info
                 const fileItems = document.querySelectorAll('#multipleSpedListProgoias .file-item');
@@ -5061,7 +5517,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Sort by period chronologically
-        progoisMultiPeriodData.sort((a, b) => {
+        progoiasMultiPeriodData.sort((a, b) => {
             // Converter período para formato comparable (YYYY-MM)
             const periodA = convertPeriodToSortable(a.periodo);
             const periodB = convertPeriodToSortable(b.periodo);
@@ -5086,10 +5542,19 @@ document.addEventListener('DOMContentLoaded', () => {
             progressSection.style.display = 'none';
         }, 2000);
         
-        if (progoisMultiPeriodData.length > 0) {
-            // Update UI for multiple periods
-            updateProgoisMultiplePeriodUI();
-            addLog(`🎉 Processamento concluído: ${progoisMultiPeriodData.length} períodos ProGoiás processados com sucesso!`, 'success');
+        if (progoiasMultiPeriodData.length > 0) {
+            // CLAUDE-CONTEXT: Analisar códigos E111 para múltiplos períodos (igual ao FOMENTAR)
+            const temCodigosParaCorrigir = analisarCodigosE111Progoias(progoiasMultiPeriodData, true);
+            
+            if (temCodigosParaCorrigir) {
+                // Mostrar interface de correção e parar aqui
+                addLog('Códigos de ajuste E111 encontrados em múltiplos períodos. Verifique se há necessidade de correção antes de prosseguir.', 'warn');
+                return; // Parar aqui até o usuário decidir sobre as correções
+            } else {
+                // Não há códigos para corrigir, prosseguir diretamente
+                addLog('Nenhum código de ajuste E111 encontrado. Prosseguindo com cálculo...', 'info');
+                continuarCalculoProgoisMultiplos();
+            }
         } else {
             addLog('❌ Nenhum período foi processado com sucesso', 'error');
         }
@@ -5161,8 +5626,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             // Obter configurações do período inicial
-            const mesInicialElement = document.getElementById('progoisPeriodoInicialMes');
-            const anoInicialElement = document.getElementById('progoisPeriodoInicialAno');
+            const mesInicialElement = document.getElementById('progoiasPeriodoInicialMes');
+            const anoInicialElement = document.getElementById('progoiasPeriodoInicialAno');
             
             if (!mesInicialElement || !anoInicialElement) {
                 throw new Error('Elementos de configuração de período inicial não encontrados na página');
@@ -5280,12 +5745,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function getProgoisMultipleConfig() {
         return {
-            tipoEmpresa: document.getElementById('progoisMultipleTipoEmpresa').value,
-            mesInicioFruicao: document.getElementById('progoisMultipleMesInicio').value,
-            anoInicioFruicao: parseInt(document.getElementById('progoisMultipleAnoInicio').value) || null,
-            icmsPorMedia: parseFloat(document.getElementById('progoisMultipleIcmsPorMedia').value) || 0,
-            saldoCredorAnterior: parseFloat(document.getElementById('progoisMultipleSaldoCredor').value) || 0,
-            ajustePeridoAnterior: parseFloat(document.getElementById('progoisMultipleAjustePeriodoAnterior').value) || 0
+            tipoEmpresa: document.getElementById('progoiasMultipleTipoEmpresa').value,
+            mesInicioFruicao: document.getElementById('progoiasMultipleMesInicio').value,
+            anoInicioFruicao: parseInt(document.getElementById('progoiasMultipleAnoInicio').value) || null,
+            icmsPorMedia: parseFloat(document.getElementById('progoiasMultipleIcmsPorMedia').value) || 0,
+            saldoCredorAnterior: parseFloat(document.getElementById('progoiasMultipleSaldoCredor').value) || 0,
+            ajustePeridoAnterior: parseFloat(document.getElementById('progoiasMultipleAjustePeriodoAnterior').value) || 0
         };
     }
     
@@ -5329,30 +5794,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function updateProgoisMultiplePeriodUI() {
-        addLog(`DEBUG: updateProgoisMultiplePeriodUI chamada com ${progoisMultiPeriodData.length} períodos`, 'info');
+        addLog(`DEBUG: updateProgoisMultiplePeriodUI chamada com ${progoiasMultiPeriodData.length} períodos`, 'info');
         
         // Show results section first
-        document.getElementById('progoisResults').style.display = 'block';
-        addLog(`DEBUG: progoisResults section mostrada`, 'info');
+        document.getElementById('progoiasResults').style.display = 'block';
+        addLog(`DEBUG: progoiasResults section mostrada`, 'info');
         
         // Show periods selector
-        document.getElementById('progoisPeriodsSelector').style.display = 'block';
-        addLog(`DEBUG: progoisPeriodsSelector mostrado`, 'info');
+        document.getElementById('progoiasPeriodsSelector').style.display = 'block';
+        addLog(`DEBUG: progoiasPeriodsSelector mostrado`, 'info');
         
         // Create period buttons
-        const periodsButtonsContainer = document.getElementById('progoisPeriodsButtons');
+        const periodsButtonsContainer = document.getElementById('progoiasPeriodsButtons');
         periodsButtonsContainer.innerHTML = '';
         
-        progoisMultiPeriodData.forEach((periodData, index) => {
+        progoiasMultiPeriodData.forEach((periodData, index) => {
             const button = document.createElement('button');
             button.className = 'btn-style btn-small period-button';
             button.innerHTML = `${periodData.periodo}<br><small>${periodData.anoFruicao}º ano</small>`;
             button.onclick = () => {
-                progoisSelectedPeriodIndex = index;
+                progoiasSelectedPeriodIndex = index;
                 updateProgoisSinglePeriodView();
                 
                 // Update active button
-                document.querySelectorAll('#progoisPeriodsButtons .period-button').forEach(btn => {
+                document.querySelectorAll('#progoiasPeriodsButtons .period-button').forEach(btn => {
                     btn.classList.remove('active');
                 });
                 button.classList.add('active');
@@ -5366,7 +5831,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         // Show first period by default
-        progoisSelectedPeriodIndex = 0;
+        progoiasSelectedPeriodIndex = 0;
         updateProgoisSinglePeriodView();
         
         // Show export buttons for multiple periods
@@ -5377,14 +5842,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateProgoisSinglePeriodView() {
         addLog(`DEBUG: updateProgoisSinglePeriodView chamada`, 'info');
         
-        if (progoisMultiPeriodData.length === 0) {
+        if (progoiasMultiPeriodData.length === 0) {
             addLog(`DEBUG: Nenhum dado de período disponível`, 'warning');
             return;
         }
         
-        const periodData = progoisMultiPeriodData[progoisSelectedPeriodIndex];
+        const periodData = progoiasMultiPeriodData[progoiasSelectedPeriodIndex];
         if (!periodData) {
-            addLog(`DEBUG: Dados do período ${progoisSelectedPeriodIndex} não encontrados`, 'warning');
+            addLog(`DEBUG: Dados do período ${progoiasSelectedPeriodIndex} não encontrados`, 'warning');
             return;
         }
         
@@ -5408,23 +5873,23 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function switchProgoisView(view) {
         // Update active button
-        document.querySelectorAll('#progoisPeriodsSelector .view-options .btn-style').forEach(btn => {
+        document.querySelectorAll('#progoiasPeriodsSelector .view-options .btn-style').forEach(btn => {
             btn.classList.remove('active');
         });
         
         if (view === 'single') {
-            document.getElementById('progoisViewSinglePeriod').classList.add('active');
+            document.getElementById('progoiasViewSinglePeriod').classList.add('active');
             updateProgoisSinglePeriodView();
             addLog('Visualização individual ativada para ProGoiás', 'info');
         } else if (view === 'comparative') {
-            document.getElementById('progoisViewComparative').classList.add('active');
+            document.getElementById('progoiasViewComparative').classList.add('active');
             updateProgoisComparativeView();
             addLog('Visualização comparativa ativada para ProGoiás', 'info');
         }
     }
     
     function updateProgoisComparativeView() {
-        if (progoisMultiPeriodData.length < 2) {
+        if (progoiasMultiPeriodData.length < 2) {
             addLog('Necessários pelo menos 2 períodos para visualização comparativa', 'warning');
             return;
         }
@@ -5432,46 +5897,46 @@ document.addEventListener('DOMContentLoaded', () => {
         addLog('Gerando visualização comparativa ProGoiás...', 'info');
         
         // Criar estrutura baseada na visão única mas com períodos em colunas
-        const periodsSelector = document.getElementById('progoisPeriodsSelector');
+        const periodsSelector = document.getElementById('progoiasPeriodsSelector');
         
         // Criar cabeçalho da tabela comparativa com períodos como colunas
-        const headerCols = progoisMultiPeriodData.map(period => 
+        const headerCols = progoiasMultiPeriodData.map(period => 
             `<th>${period.periodo}<br><small>${period.anoFruicao}º ano</small></th>`
         ).join('');
         
         // Rubricas da ABA 1 - CÁLCULO DO PROGOIÁS
         const quadroARows = [
-            { id: 'progoisItemA01', desc: 'ICMS Saídas Incentivadas', field: 'GO100002' },
-            { id: 'progoisItemA02', desc: 'ICMS Entradas Incentivadas', field: 'GO100003' },
-            { id: 'progoisItemA03', desc: 'Outros Créditos (Anexo II)', field: 'GO100004' },
-            { id: 'progoisItemA04', desc: 'Outros Débitos (Anexo II)', field: 'GO100005' },
-            { id: 'progoisItemA05', desc: 'Ajuste Período Anterior', field: 'GO100007' },
-            { id: 'progoisItemA06', desc: 'Média ICMS', field: 'GO100006' },
-            { id: 'progoisItemA07', desc: 'Base de Cálculo', field: 'baseCalculo' },
-            { id: 'progoisItemA08', desc: 'Percentual ProGoiás (%)', field: 'GO100001' },
-            { id: 'progoisItemA09', desc: 'Crédito Outorgado ProGoiás', field: 'GO100009' },
-            { id: 'progoisItemA10', desc: 'Ajuste Próximo Período', field: 'GO100008' }
+            { id: 'progoiasItemA01', desc: 'ICMS Saídas Incentivadas', field: 'GO100002' },
+            { id: 'progoiasItemA02', desc: 'ICMS Entradas Incentivadas', field: 'GO100003' },
+            { id: 'progoiasItemA03', desc: 'Outros Créditos (Anexo II)', field: 'GO100004' },
+            { id: 'progoiasItemA04', desc: 'Outros Débitos (Anexo II)', field: 'GO100005' },
+            { id: 'progoiasItemA05', desc: 'Ajuste Período Anterior', field: 'GO100007' },
+            { id: 'progoiasItemA06', desc: 'Média ICMS', field: 'GO100006' },
+            { id: 'progoiasItemA07', desc: 'Base de Cálculo', field: 'baseCalculo' },
+            { id: 'progoiasItemA08', desc: 'Percentual ProGoiás (%)', field: 'GO100001' },
+            { id: 'progoiasItemA09', desc: 'Crédito Outorgado ProGoiás', field: 'GO100009' },
+            { id: 'progoiasItemA10', desc: 'Ajuste Próximo Período', field: 'GO100008' }
         ];
         
         // Rubricas da ABA 2 - APURAÇÃO DO ICMS
         const quadroBRows = [
-            { id: 'progoisItemB13', desc: 'Débito do ICMS', field: 'item01_debitoIcms' },
-            { id: 'progoisItemB14', desc: 'Outros Débitos', field: 'item02_outrosDebitos' },
-            { id: 'progoisItemB15', desc: 'Estorno de Créditos', field: 'item03_estornoCreditos' },
-            { id: 'progoisItemB16', desc: 'Total de Débitos', field: 'item04_totalDebitos' },
-            { id: 'progoisItemB17', desc: 'Créditos por Entradas', field: 'item05_creditosEntradas' },
-            { id: 'progoisItemB18', desc: 'Outros Créditos', field: 'item06_outrosCreditos' },
-            { id: 'progoisItemB19', desc: 'Crédito ProGoiás', field: 'item09_creditoProgoias' },
-            { id: 'progoisIcmsDevido', desc: 'ICMS a Recolher', field: 'item13_icmsARecolher' },
-            { id: 'progoisValorProtege', desc: 'PROTEGE', field: 'item14_valorProtege' },
-            { id: 'progoisIcmsRecolher', desc: 'ICMS Final', field: 'item15_icmsFinal' },
-            { id: 'progoisEconomiaTotal', desc: 'Economia Total', field: 'economiaTotal' }
+            { id: 'progoiasItemB13', desc: 'Débito do ICMS', field: 'item01_debitoIcms' },
+            { id: 'progoiasItemB14', desc: 'Outros Débitos', field: 'item02_outrosDebitos' },
+            { id: 'progoiasItemB15', desc: 'Estorno de Créditos', field: 'item03_estornoCreditos' },
+            { id: 'progoiasItemB16', desc: 'Total de Débitos', field: 'item04_totalDebitos' },
+            { id: 'progoiasItemB17', desc: 'Créditos por Entradas', field: 'item05_creditosEntradas' },
+            { id: 'progoiasItemB18', desc: 'Outros Créditos', field: 'item06_outrosCreditos' },
+            { id: 'progoiasItemB19', desc: 'Crédito ProGoiás', field: 'item09_creditoProgoias' },
+            { id: 'progoiasIcmsDevido', desc: 'ICMS a Recolher', field: 'item13_icmsARecolher' },
+            { id: 'progoiasValorProtege', desc: 'PROTEGE', field: 'item14_valorProtege' },
+            { id: 'progoiasIcmsRecolher', desc: 'ICMS Final', field: 'item15_icmsFinal' },
+            { id: 'progoiasEconomiaTotal', desc: 'Economia Total', field: 'economiaTotal' }
         ];
         
         // Gerar linhas da tabela comparativa
         const generateRows = (rows, quadro) => {
             return rows.map(row => {
-                const valores = progoisMultiPeriodData.map(period => {
+                const valores = progoiasMultiPeriodData.map(period => {
                     const data = quadro === 'A' ? period.calculo?.quadroA : period.calculo?.quadroB;
                     let value = data?.[row.field] || 0;
                     
@@ -5488,19 +5953,19 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         
         const comparativeHTML = `
-            <div id="progoisPeriodsSelector" class="periods-selector">
+            <div id="progoiasPeriodsSelector" class="periods-selector">
                 <h3>📅 Períodos Processados</h3>
-                <div id="progoisPeriodsButtons" class="periods-buttons">
-                    ${progoisMultiPeriodData.map((period, index) => 
-                        `<button class="btn-style btn-small period-button ${index === progoisSelectedPeriodIndex ? 'active' : ''}" 
-                                onclick="progoisSelectedPeriodIndex=${index}; updateProgoisSinglePeriodView();">
+                <div id="progoiasPeriodsButtons" class="periods-buttons">
+                    ${progoiasMultiPeriodData.map((period, index) => 
+                        `<button class="btn-style btn-small period-button ${index === progoiasSelectedPeriodIndex ? 'active' : ''}" 
+                                onclick="progoiasSelectedPeriodIndex=${index}; updateProgoisSinglePeriodView();">
                             ${period.periodo}<br><small>${period.anoFruicao}º ano</small>
                         </button>`
                     ).join('')}
                 </div>
                 <div class="view-options">
-                    <button id="progoisViewSinglePeriod" class="btn-style btn-small">Visão Individual</button>
-                    <button id="progoisViewComparative" class="btn-style btn-small active">Visão Comparativa</button>
+                    <button id="progoiasViewSinglePeriod" class="btn-style btn-small">Visão Individual</button>
+                    <button id="progoiasViewComparative" class="btn-style btn-small active">Visão Comparativa</button>
                 </div>
             </div>
             
@@ -5546,19 +6011,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="resumo-grid">
                     <div class="resumo-item">
                         <label>Total Incentivos Acumulados:</label>
-                        <span class="valor-destaque valor-economia">R$ ${formatCurrency(progoisMultiPeriodData.reduce((sum, p) => sum + ((p.calculo?.quadroA?.GO100009 || 0) + (p.calculo?.quadroB?.item14_valorProtege || 0)), 0))}</span>
+                        <span class="valor-destaque valor-economia">R$ ${formatCurrency(progoiasMultiPeriodData.reduce((sum, p) => sum + ((p.calculo?.quadroA?.GO100009 || 0) + (p.calculo?.quadroB?.item14_valorProtege || 0)), 0))}</span>
                     </div>
                     <div class="resumo-item">
                         <label>Economia Total Acumulada:</label>
-                        <span class="valor-destaque valor-total">R$ ${formatCurrency(progoisMultiPeriodData.reduce((sum, p) => sum + (p.calculo?.quadroB?.economiaTotal || 0), 0))}</span>
+                        <span class="valor-destaque valor-total">R$ ${formatCurrency(progoiasMultiPeriodData.reduce((sum, p) => sum + (p.calculo?.quadroB?.economiaTotal || 0), 0))}</span>
                     </div>
                     <div class="resumo-item">
                         <label>Média de Economia por Período:</label>
-                        <span class="valor-destaque">R$ ${formatCurrency(progoisMultiPeriodData.reduce((sum, p) => sum + (p.calculo?.quadroB?.economiaTotal || 0), 0) / progoisMultiPeriodData.length)}</span>
+                        <span class="valor-destaque">R$ ${formatCurrency(progoiasMultiPeriodData.reduce((sum, p) => sum + (p.calculo?.quadroB?.economiaTotal || 0), 0) / progoiasMultiPeriodData.length)}</span>
                     </div>
                     <div class="resumo-item">
                         <label>ICMS Total Recolhido:</label>
-                        <span class="valor-destaque">R$ ${formatCurrency(progoisMultiPeriodData.reduce((sum, p) => sum + (p.calculo?.quadroB?.item15_icmsFinal || 0), 0))}</span>
+                        <span class="valor-destaque">R$ ${formatCurrency(progoiasMultiPeriodData.reduce((sum, p) => sum + (p.calculo?.quadroB?.item15_icmsFinal || 0), 0))}</span>
                     </div>
                 </div>
             </div>
@@ -5581,12 +6046,12 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         
         // Atualizar o conteúdo mantendo a estrutura original
-        document.getElementById('progoisResults').innerHTML = comparativeHTML;
+        document.getElementById('progoiasResults').innerHTML = comparativeHTML;
         
         // Reativar os event listeners dos botões
         setupProgoisComparativeEventListeners();
         
-        addLog(`Visualização comparativa gerada com ${progoisMultiPeriodData.length} períodos`, 'success');
+        addLog(`Visualização comparativa gerada com ${progoiasMultiPeriodData.length} períodos`, 'success');
     }
     
     function setupProgoisComparativeEventListeners() {
@@ -5595,8 +6060,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const exportPDFBtn = document.getElementById('exportProgoisPDF');
         const exportMemoriaBtn = document.getElementById('exportProgoisMemoria');
         const printBtn = document.getElementById('printProgoias');
-        const viewSingleBtn = document.getElementById('progoisViewSinglePeriod');
-        const viewComparativeBtn = document.getElementById('progoisViewComparative');
+        const viewSingleBtn = document.getElementById('progoiasViewSinglePeriod');
+        const viewComparativeBtn = document.getElementById('progoiasViewComparative');
         
         if (exportComparativeBtn) {
             exportComparativeBtn.onclick = exportProgoisComparativeReport;
@@ -5624,7 +6089,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     async function exportProgoisComparativeReport() {
-        if (progoisMultiPeriodData.length === 0) {
+        if (progoiasMultiPeriodData.length === 0) {
             alert('Nenhum dado ProGoiás para exportar. Processe múltiplos SPEDs primeiro.');
             return;
         }
@@ -5639,7 +6104,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function exportProgoisComparativePDF() {
-        if (progoisMultiPeriodData.length === 0) {
+        if (progoiasMultiPeriodData.length === 0) {
             alert('Nenhum dado ProGoiás para exportar PDF. Processe múltiplos SPEDs primeiro.');
             return;
         }
@@ -5665,21 +6130,21 @@ document.addEventListener('DOMContentLoaded', () => {
             doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, yPosition, { align: 'center' });
             yPosition += 5;
             
-            doc.text(`Períodos: ${progoisMultiPeriodData[0]?.periodo} a ${progoisMultiPeriodData[progoisMultiPeriodData.length - 1]?.periodo}`, pageWidth / 2, yPosition, { align: 'center' });
+            doc.text(`Períodos: ${progoiasMultiPeriodData[0]?.periodo} a ${progoiasMultiPeriodData[progoiasMultiPeriodData.length - 1]?.periodo}`, pageWidth / 2, yPosition, { align: 'center' });
             yPosition += 15;
             
             // Preparar dados para tabela
-            const headers = ['Rubrica', ...progoisMultiPeriodData.map(p => `${p.periodo}\n(${p.anoFruicao}º ano)`)];
+            const headers = ['Rubrica', ...progoiasMultiPeriodData.map(p => `${p.periodo}\n(${p.anoFruicao}º ano)`)];
             
             // Dados do Quadro A
             const quadroAData = [
-                ['ICMS Saídas Incentivadas', ...progoisMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroA?.GO100002 || 0))],
-                ['ICMS Entradas Incentivadas', ...progoisMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroA?.GO100003 || 0))],
-                ['Outros Créditos', ...progoisMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroA?.GO100004 || 0))],
-                ['Outros Débitos', ...progoisMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroA?.GO100005 || 0))],
-                ['Base de Cálculo', ...progoisMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroA?.baseCalculo || 0))],
-                ['Percentual ProGoiás (%)', ...progoisMultiPeriodData.map(p => (p.calculo?.quadroA?.GO100001 || 0).toFixed(2) + '%')],
-                ['Crédito ProGoiás', ...progoisMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroA?.GO100009 || 0))]
+                ['ICMS Saídas Incentivadas', ...progoiasMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroA?.GO100002 || 0))],
+                ['ICMS Entradas Incentivadas', ...progoiasMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroA?.GO100003 || 0))],
+                ['Outros Créditos', ...progoiasMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroA?.GO100004 || 0))],
+                ['Outros Débitos', ...progoiasMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroA?.GO100005 || 0))],
+                ['Base de Cálculo', ...progoiasMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroA?.baseCalculo || 0))],
+                ['Percentual ProGoiás (%)', ...progoiasMultiPeriodData.map(p => (p.calculo?.quadroA?.GO100001 || 0).toFixed(2) + '%')],
+                ['Crédito ProGoiás', ...progoiasMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroA?.GO100009 || 0))]
             ];
             
             // Usar autoTable para criar tabela
@@ -5709,16 +6174,16 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Dados do Quadro B
             const quadroBData = [
-                ['Débito do ICMS', ...progoisMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroB?.item01_debitoIcms || 0))],
-                ['Outros Débitos', ...progoisMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroB?.item02_outrosDebitos || 0))],
-                ['Total de Débitos', ...progoisMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroB?.item04_totalDebitos || 0))],
-                ['Créditos por Entradas', ...progoisMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroB?.item05_creditosEntradas || 0))],
-                ['Outros Créditos', ...progoisMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroB?.item06_outrosCreditos || 0))],
-                ['Crédito ProGoiás', ...progoisMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroB?.item09_creditoProgoias || 0))],
-                ['ICMS a Recolher', ...progoisMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroB?.item13_icmsARecolher || 0))],
-                ['PROTEGE', ...progoisMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroB?.item14_valorProtege || 0))],
-                ['ICMS Final', ...progoisMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroB?.item15_icmsFinal || 0))],
-                ['Economia Total', ...progoisMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroB?.economiaTotal || 0))]
+                ['Débito do ICMS', ...progoiasMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroB?.item01_debitoIcms || 0))],
+                ['Outros Débitos', ...progoiasMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroB?.item02_outrosDebitos || 0))],
+                ['Total de Débitos', ...progoiasMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroB?.item04_totalDebitos || 0))],
+                ['Créditos por Entradas', ...progoiasMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroB?.item05_creditosEntradas || 0))],
+                ['Outros Créditos', ...progoiasMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroB?.item06_outrosCreditos || 0))],
+                ['Crédito ProGoiás', ...progoiasMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroB?.item09_creditoProgoias || 0))],
+                ['ICMS a Recolher', ...progoiasMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroB?.item13_icmsARecolher || 0))],
+                ['PROTEGE', ...progoiasMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroB?.item14_valorProtege || 0))],
+                ['ICMS Final', ...progoiasMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroB?.item15_icmsFinal || 0))],
+                ['Economia Total', ...progoiasMultiPeriodData.map(p => formatCurrency(p.calculo?.quadroB?.economiaTotal || 0))]
             ];
             
             doc.autoTable({
@@ -5752,9 +6217,9 @@ document.addEventListener('DOMContentLoaded', () => {
             doc.setFontSize(10);
             doc.setFont(undefined, 'normal');
             
-            const totalIncentivos = progoisMultiPeriodData.reduce((sum, p) => sum + (p.calculo?.quadroA?.GO100009 || 0), 0);
-            const totalProtege = progoisMultiPeriodData.reduce((sum, p) => sum + (p.calculo?.quadroB?.item14_valorProtege || 0), 0);
-            const economiaTotal = progoisMultiPeriodData.reduce((sum, p) => sum + (p.calculo?.quadroB?.economiaTotal || 0), 0);
+            const totalIncentivos = progoiasMultiPeriodData.reduce((sum, p) => sum + (p.calculo?.quadroA?.GO100009 || 0), 0);
+            const totalProtege = progoiasMultiPeriodData.reduce((sum, p) => sum + (p.calculo?.quadroB?.item14_valorProtege || 0), 0);
+            const economiaTotal = progoiasMultiPeriodData.reduce((sum, p) => sum + (p.calculo?.quadroB?.economiaTotal || 0), 0);
             
             doc.text(`Total Incentivos ProGoiás: R$ ${formatCurrency(totalIncentivos)}`, margin, yPosition);
             yPosition += 7;
@@ -5762,10 +6227,10 @@ document.addEventListener('DOMContentLoaded', () => {
             yPosition += 7;
             doc.text(`Economia Fiscal Total: R$ ${formatCurrency(economiaTotal)}`, margin, yPosition);
             yPosition += 7;
-            doc.text(`Número de Períodos: ${progoisMultiPeriodData.length}`, margin, yPosition);
+            doc.text(`Número de Períodos: ${progoiasMultiPeriodData.length}`, margin, yPosition);
             
             // Salvar PDF
-            const filename = `Comparativo_ProGoias_${progoisMultiPeriodData.length}_periodos.pdf`;
+            const filename = `Comparativo_ProGoias_${progoiasMultiPeriodData.length}_periodos.pdf`;
             doc.save(filename);
             
             addLog(`PDF comparativo ProGoiás exportado: ${filename}`, 'success');
@@ -5799,7 +6264,7 @@ document.addEventListener('DOMContentLoaded', () => {
             worksheet.cell("A1").style('bold', true).style('fontSize', 14);
             
             worksheet.cell("A2").value("Gerado em: " + new Date().toLocaleString('pt-BR'));
-            worksheet.cell("A3").value(`Períodos: ${progoisMultiPeriodData[0]?.periodo} a ${progoisMultiPeriodData[progoisMultiPeriodData.length - 1]?.periodo}`);
+            worksheet.cell("A3").value(`Períodos: ${progoiasMultiPeriodData[0]?.periodo} a ${progoiasMultiPeriodData[progoiasMultiPeriodData.length - 1]?.periodo}`);
             
             let row = 5;
             
@@ -5810,7 +6275,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Cabeçalho com períodos em colunas
             worksheet.cell(`A${row}`).value("Rubrica").style('bold', true);
             let col = 2; // Coluna B
-            progoisMultiPeriodData.forEach(period => {
+            progoiasMultiPeriodData.forEach(period => {
                 const colLetter = getColumnLetter(col);
                 worksheet.cell(`${colLetter}${row}`).value(`${period.periodo} (${period.anoFruicao}º ano)`).style('bold', true);
                 col++;
@@ -5834,7 +6299,7 @@ document.addEventListener('DOMContentLoaded', () => {
             quadroARows.forEach(rubrica => {
                 worksheet.cell(`A${row}`).value(rubrica.desc);
                 let col = 2;
-                progoisMultiPeriodData.forEach(period => {
+                progoiasMultiPeriodData.forEach(period => {
                     const colLetter = getColumnLetter(col);
                     let value = period.calculo?.quadroA?.[rubrica.field] || 0;
                     
@@ -5857,7 +6322,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Cabeçalho novamente
             worksheet.cell(`A${row}`).value("Rubrica").style('bold', true);
             col = 2;
-            progoisMultiPeriodData.forEach(period => {
+            progoiasMultiPeriodData.forEach(period => {
                 const colLetter = getColumnLetter(col);
                 worksheet.cell(`${colLetter}${row}`).value(`${period.periodo} (${period.anoFruicao}º ano)`).style('bold', true);
                 col++;
@@ -5882,7 +6347,7 @@ document.addEventListener('DOMContentLoaded', () => {
             quadroBRows.forEach(rubrica => {
                 worksheet.cell(`A${row}`).value(rubrica.desc);
                 let col = 2;
-                progoisMultiPeriodData.forEach(period => {
+                progoiasMultiPeriodData.forEach(period => {
                     const colLetter = getColumnLetter(col);
                     const value = period.calculo?.quadroB?.[rubrica.field] || 0;
                     worksheet.cell(`${colLetter}${row}`).value(value).style('numberFormat', '#,##0.00');
@@ -5900,19 +6365,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const resumoRows = [
                 { 
                     desc: 'Total Incentivos ProGoiás', 
-                    values: progoisMultiPeriodData.map(p => p.calculo?.quadroA?.GO100009 || 0) 
+                    values: progoiasMultiPeriodData.map(p => p.calculo?.quadroA?.GO100009 || 0) 
                 },
                 { 
                     desc: 'Total PROTEGE', 
-                    values: progoisMultiPeriodData.map(p => p.calculo?.quadroB?.item14_valorProtege || 0) 
+                    values: progoiasMultiPeriodData.map(p => p.calculo?.quadroB?.item14_valorProtege || 0) 
                 },
                 { 
                     desc: 'Economia Total por Período', 
-                    values: progoisMultiPeriodData.map(p => p.calculo?.quadroB?.economiaTotal || 0) 
+                    values: progoiasMultiPeriodData.map(p => p.calculo?.quadroB?.economiaTotal || 0) 
                 },
                 { 
                     desc: 'ICMS Final por Período', 
-                    values: progoisMultiPeriodData.map(p => p.calculo?.quadroB?.item15_icmsFinal || 0) 
+                    values: progoiasMultiPeriodData.map(p => p.calculo?.quadroB?.item15_icmsFinal || 0) 
                 }
             ];
             
@@ -5932,9 +6397,9 @@ document.addEventListener('DOMContentLoaded', () => {
             worksheet.cell(`A${row}`).value("TOTAIS ACUMULADOS").style('bold', true);
             row++;
             
-            const totalIncentivos = progoisMultiPeriodData.reduce((sum, p) => sum + (p.calculo?.quadroA?.GO100009 || 0), 0);
-            const totalProtege = progoisMultiPeriodData.reduce((sum, p) => sum + (p.calculo?.quadroB?.item14_valorProtege || 0), 0);
-            const economiaTotal = progoisMultiPeriodData.reduce((sum, p) => sum + (p.calculo?.quadroB?.economiaTotal || 0), 0);
+            const totalIncentivos = progoiasMultiPeriodData.reduce((sum, p) => sum + (p.calculo?.quadroA?.GO100009 || 0), 0);
+            const totalProtege = progoiasMultiPeriodData.reduce((sum, p) => sum + (p.calculo?.quadroB?.item14_valorProtege || 0), 0);
+            const economiaTotal = progoiasMultiPeriodData.reduce((sum, p) => sum + (p.calculo?.quadroB?.economiaTotal || 0), 0);
             
             worksheet.cell(`A${row}`).value("Total Geral Incentivos ProGoiás:");
             worksheet.cell(`B${row}`).value(totalIncentivos).style('numberFormat', '#,##0.00').style('bold', true);
@@ -5949,7 +6414,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Ajustar largura das colunas
             worksheet.column("A").width(35);
-            for (let i = 2; i <= progoisMultiPeriodData.length + 1; i++) {
+            for (let i = 2; i <= progoiasMultiPeriodData.length + 1; i++) {
                 const colLetter = getColumnLetter(i);
                 worksheet.column(colLetter).width(18);
             }
@@ -5959,7 +6424,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let memoriaRow = 1;
             
             memoriaWorksheet.cell(`A${memoriaRow}`).value("MEMÓRIA DE CÁLCULO DETALHADA - MÚLTIPLOS PERÍODOS");
-            memoriaWorksheet.cell(`A${memoriaRow + 1}`).value(`Total de Períodos: ${progoisMultiPeriodData.length}`);
+            memoriaWorksheet.cell(`A${memoriaRow + 1}`).value(`Total de Períodos: ${progoiasMultiPeriodData.length}`);
             memoriaRow += 3;
             
             // Cabeçalho da tabela
@@ -5973,7 +6438,7 @@ document.addEventListener('DOMContentLoaded', () => {
             memoriaRow++;
             
             // Adicionar dados de cada período
-            progoisMultiPeriodData.forEach(periodo => {
+            progoiasMultiPeriodData.forEach(periodo => {
                 if (periodo.calculo?.operacoes?.memoriaCalculo?.detalhesOutrosCreditos?.length > 0) {
                     periodo.calculo.operacoes.memoriaCalculo.detalhesOutrosCreditos.forEach(item => {
                         memoriaWorksheet.cell(`A${memoriaRow}`).value(periodo.periodo);
@@ -6010,7 +6475,7 @@ document.addEventListener('DOMContentLoaded', () => {
             memoriaWorksheet.column("G").width(12);
             
             // Salvar arquivo
-            const filename = `Comparativo_ProGoias_${progoisMultiPeriodData.length}_periodos.xlsx`;
+            const filename = `Comparativo_ProGoias_${progoiasMultiPeriodData.length}_periodos.xlsx`;
             const blob = await workbook.outputAsync();
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -6028,16 +6493,16 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Funções auxiliares de drag and drop para ProGoiás - Single
     function highlightProgoisZone() {
-        const progoisDropZone = document.getElementById('progoisDropZone');
-        if (progoisDropZone) {
-            progoisDropZone.classList.add('dragover');
+        const progoiasDropZone = document.getElementById('progoiasDropZone');
+        if (progoiasDropZone) {
+            progoiasDropZone.classList.add('dragover');
         }
     }
     
     function unhighlightProgoisZone() {
-        const progoisDropZone = document.getElementById('progoisDropZone');
-        if (progoisDropZone) {
-            progoisDropZone.classList.remove('dragover');
+        const progoiasDropZone = document.getElementById('progoiasDropZone');
+        if (progoiasDropZone) {
+            progoiasDropZone.classList.remove('dragover');
         }
     }
 
@@ -6069,8 +6534,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function handleProgoisDragLeave(e) {
         preventDefaults(e);
-        const progoisDropZone = document.getElementById('progoisDropZone');
-        if (!progoisDropZone.contains(e.relatedTarget)) {
+        const progoiasDropZone = document.getElementById('progoiasDropZone');
+        if (!progoiasDropZone.contains(e.relatedTarget)) {
             unhighlightProgoisZone();
         }
     }
@@ -6164,7 +6629,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function exportProgoisMemoriaCalculo() {
         // Verificar se há dados (período único ou múltiplos períodos)
-        const hasData = progoisData || (progoisMultiPeriodData && progoisMultiPeriodData.length > 0);
+        const hasData = progoiasData || (progoiasMultiPeriodData && progoiasMultiPeriodData.length > 0);
         
         if (!hasData) {
             addLog('Erro: Nenhuma memória de cálculo ProGoiás disponível', 'error');
@@ -6172,13 +6637,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Se múltiplos períodos, usar dados do período selecionado
-        if (progoisMultiPeriodData && progoisMultiPeriodData.length > 0) {
-            const selectedPeriod = progoisMultiPeriodData[progoisSelectedPeriodIndex] || progoisMultiPeriodData[0];
+        if (progoiasMultiPeriodData && progoiasMultiPeriodData.length > 0) {
+            const selectedPeriod = progoiasMultiPeriodData[progoiasSelectedPeriodIndex] || progoiasMultiPeriodData[0];
             const operacoes = classifyOperations(selectedPeriod.registros);
             exportMemoriaCalculo(operacoes.memoriaCalculo, `ProGoiás_${selectedPeriod.periodo}`);
         } else {
             // Período único
-            const operacoes = classifyOperations(progoisRegistrosCompletos);
+            const operacoes = classifyOperations(progoiasRegistrosCompletos);
             exportMemoriaCalculo(operacoes.memoriaCalculo, 'ProGoiás');
         }
     }

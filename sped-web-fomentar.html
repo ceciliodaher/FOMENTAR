@@ -313,7 +313,7 @@
             </div>
 
             <!-- Painel ProGoiás -->
-            <div id="progoisPanel" class="converter-panel tab-content">
+            <div id="progoiasPanel" class="converter-panel tab-content">
                 <div class="fomentar-header">
                     <h2>🏛️ Apuração ProGoiás</h2>
                     <p class="fomentar-subtitle">Conforme Instrução Normativa nº 1478/2020 e Decreto nº 9.724/2020</p>
@@ -342,7 +342,7 @@
                     </div>
                     
                     <div id="singleImportSectionProgoias" class="import-section">
-                        <div id="progoisDropZone" class="drop-zone">
+                        <div id="progoiasDropZone" class="drop-zone">
                             <span class="drop-zone-icon">📁</span>
                             <p class="drop-zone-text">Arraste e solte o arquivo SPED aqui</p>
                             <p class="drop-zone-or">- ou -</p>
@@ -350,7 +350,7 @@
                                 <span class="btn-icon">📂</span> Importar SPED para ProGoiás
                             </button>
                         </div>
-                        <p id="progoisSpedStatus">Nenhum arquivo SPED importado</p>
+                        <p id="progoiasSpedStatus">Nenhum arquivo SPED importado</p>
                     </div>
                     
                     <div id="multipleImportSectionProgoias" class="import-section" style="display: none;">
@@ -366,12 +366,12 @@
                         </div>
                         
                         <!-- Configurações específicas para múltiplos períodos -->
-                        <div class="fomentar-config" id="progoisMultipleConfig" style="display: none;">
+                        <div class="fomentar-config" id="progoiasMultipleConfig" style="display: none;">
                             <h3>⚙️ Configurações para Múltiplos Períodos ProGoiás</h3>
                             <div class="config-grid">
                                 <div class="config-item">
-                                    <label for="progoisMultipleTipoEmpresa">Tipo de Empresa:</label>
-                                    <select id="progoisMultipleTipoEmpresa" class="input-style">
+                                    <label for="progoiasMultipleTipoEmpresa">Tipo de Empresa:</label>
+                                    <select id="progoiasMultipleTipoEmpresa" class="input-style">
                                         <option value="">Selecione...</option>
                                         <option value="MICRO">Microempresa</option>
                                         <option value="PEQUENA">Empresa de Pequeno Porte</option>
@@ -380,9 +380,9 @@
                                     </select>
                                 </div>
                                 <div class="config-item">
-                                    <label for="progoisMultipleInicioFruicao">Início da Fruição (Mês/Ano):</label>
+                                    <label for="progoiasMultipleInicioFruicao">Início da Fruição (Mês/Ano):</label>
                                     <div style="display: flex; gap: 10px;">
-                                        <select id="progoisMultipleMesInicio" class="input-style" style="flex: 1;">
+                                        <select id="progoiasMultipleMesInicio" class="input-style" style="flex: 1;">
                                             <option value="">Mês...</option>
                                             <option value="01">Janeiro</option>
                                             <option value="02">Fevereiro</option>
@@ -397,7 +397,7 @@
                                             <option value="11">Novembro</option>
                                             <option value="12">Dezembro</option>
                                         </select>
-                                        <input type="number" id="progoisMultipleAnoInicio" class="input-style" 
+                                        <input type="number" id="progoiasMultipleAnoInicio" class="input-style" 
                                                placeholder="2024" min="2020" max="2030" style="flex: 1;">
                                     </div>
                                     <small style="color: #666; font-size: 0.9em;">
@@ -405,18 +405,18 @@
                                     </small>
                                 </div>
                                 <div class="config-item">
-                                    <label for="progoisMultipleIcmsPorMedia">ICMS por Média (R$):</label>
-                                    <input type="number" id="progoisMultipleIcmsPorMedia" class="input-style" 
+                                    <label for="progoiasMultipleIcmsPorMedia">ICMS por Média (R$):</label>
+                                    <input type="number" id="progoiasMultipleIcmsPorMedia" class="input-style" 
                                            step="0.01" value="0.00">
                                 </div>
                                 <div class="config-item">
-                                    <label for="progoisMultipleSaldoCredor">Saldo Credor Anterior - 1º Período (R$):</label>
-                                    <input type="number" id="progoisMultipleSaldoCredor" class="input-style" 
+                                    <label for="progoiasMultipleSaldoCredor">Saldo Credor Anterior - 1º Período (R$):</label>
+                                    <input type="number" id="progoiasMultipleSaldoCredor" class="input-style" 
                                            step="0.01" value="0.00">
                                 </div>
                                 <div class="config-item">
-                                    <label for="progoisMultipleAjustePeriodoAnterior">Ajuste Período Anterior - 1º Período (R$):</label>
-                                    <input type="number" id="progoisMultipleAjustePeriodoAnterior" class="input-style" 
+                                    <label for="progoiasMultipleAjustePeriodoAnterior">Ajuste Período Anterior - 1º Período (R$):</label>
+                                    <input type="number" id="progoiasMultipleAjustePeriodoAnterior" class="input-style" 
                                            step="0.01" value="0.00">
                                 </div>
                             </div>
@@ -426,12 +426,12 @@
                 </div>
 
                 <!-- Configuração para período único (só aparece quando necessário) -->
-                <div class="fomentar-config" id="progoisSingleConfig" style="display: block;">
+                <div class="fomentar-config" id="progoiasSingleConfig" style="display: block;">
                     <h3>⚙️ Configurações da Apuração ProGoiás - Período Único</h3>
                     <div class="config-grid">
                         <div class="config-item">
-                            <label for="progoisTipoEmpresa">Tipo de Empresa:</label>
-                            <select id="progoisTipoEmpresa" class="input-style">
+                            <label for="progoiasTipoEmpresa">Tipo de Empresa:</label>
+                            <select id="progoiasTipoEmpresa" class="input-style">
                                 <option value="">Selecione...</option>
                                 <option value="MICRO">Microempresa</option>
                                 <option value="PEQUENA">Empresa de Pequeno Porte</option>
@@ -440,45 +440,45 @@
                             </select>
                         </div>
                         <div class="config-item">
-                            <label for="progoisOpcaoCalculo">Opção de Cálculo:</label>
-                            <select id="progoisOpcaoCalculo" class="input-style">
+                            <label for="progoiasOpcaoCalculo">Opção de Cálculo:</label>
+                            <select id="progoiasOpcaoCalculo" class="input-style">
                                 <option value="">Selecione...</option>
                                 <option value="ano">Informar Ano de Fruição Atual</option>
                                 <option value="manual">Informar Percentual Manualmente</option>
                             </select>
                         </div>
-                        <div class="config-item" id="progoisGrupoAno" style="display: none;">
-                            <label for="progoisAnoFruicao">Ano de Fruição:</label>
-                            <select id="progoisAnoFruicao" class="input-style">
+                        <div class="config-item" id="progoiasGrupoAno" style="display: none;">
+                            <label for="progoiasAnoFruicao">Ano de Fruição:</label>
+                            <select id="progoiasAnoFruicao" class="input-style">
                                 <option value="">Selecione...</option>
                                 <option value="1">1º Ano (ProGoiás: 64% | PROTEGE: 10%)</option>
                                 <option value="2">2º Ano (ProGoiás: 65% | PROTEGE: 8%)</option>
                                 <option value="3">3º Ano+ (ProGoiás: 66% | PROTEGE: 6%)</option>
                             </select>
                         </div>
-                        <div class="config-item" id="progoisGrupoManual" style="display: none;">
-                            <label for="progoisPercentualManual">Percentual ProGoiás (%):</label>
-                            <input type="number" id="progoisPercentualManual" class="input-style" 
+                        <div class="config-item" id="progoiasGrupoManual" style="display: none;">
+                            <label for="progoiasPercentualManual">Percentual ProGoiás (%):</label>
+                            <input type="number" id="progoiasPercentualManual" class="input-style" 
                                    step="0.01" min="0" max="100" placeholder="Digite o percentual">
                         </div>
                         <div class="config-item">
-                            <label for="progoisPercentualCalculado">Percentual Calculado:</label>
-                            <input type="text" id="progoisPercentualCalculado" class="input-style" 
+                            <label for="progoiasPercentualCalculado">Percentual Calculado:</label>
+                            <input type="text" id="progoiasPercentualCalculado" class="input-style" 
                                    readonly placeholder="Será calculado automaticamente" style="background-color: #f5f5f5;">
                         </div>
                         <div class="config-item">
-                            <label for="progoisIcmsPorMedia">ICMS por Média (R$):</label>
-                            <input type="number" id="progoisIcmsPorMedia" class="input-style" 
+                            <label for="progoiasIcmsPorMedia">ICMS por Média (R$):</label>
+                            <input type="number" id="progoiasIcmsPorMedia" class="input-style" 
                                    step="0.01" value="0.00">
                         </div>
                         <div class="config-item">
-                            <label for="progoisSaldoCredorAnterior">Saldo Credor Anterior (R$):</label>
-                            <input type="number" id="progoisSaldoCredorAnterior" class="input-style" 
+                            <label for="progoiasSaldoCredorAnterior">Saldo Credor Anterior (R$):</label>
+                            <input type="number" id="progoiasSaldoCredorAnterior" class="input-style" 
                                    step="0.01" value="0.00">
                         </div>
                         <div class="config-item">
-                            <label for="progoisAjustePeriodoAnterior">Ajuste Período Anterior (R$):</label>
-                            <input type="number" id="progoisAjustePeriodoAnterior" class="input-style" 
+                            <label for="progoiasAjustePeriodoAnterior">Ajuste Período Anterior (R$):</label>
+                            <input type="number" id="progoiasAjustePeriodoAnterior" class="input-style" 
                                    step="0.01" value="0.00">
                         </div>
                     </div>
@@ -489,22 +489,44 @@
                             <span class="btn-icon">⚙️</span> Processar Apuração ProGoiás
                         </button>
                         
-                        <div id="progoisProgressSection" class="progress-section" style="display: none;">
+                        <div id="progoiasProgressSection" class="progress-section" style="display: none;">
                             <div class="progress-bar-container-style">
-                                <div id="progoisProgressBar" class="progress-bar-style" style="width: 0%;">0%</div>
+                                <div id="progoiasProgressBar" class="progress-bar-style" style="width: 0%;">0%</div>
                             </div>
-                            <p id="progoisProgressMessage" class="status-message-text">Processando arquivos...</p>
+                            <p id="progoiasProgressMessage" class="status-message-text">Processando arquivos...</p>
                         </div>
                     </div>
                 </div>
 
-                <div id="progoisResults" style="display: none;">
-                    <div id="progoisPeriodsSelector" class="periods-selector" style="display: none;">
+                <!-- Seção de Correção de Códigos E111 - ProGoiás -->
+                <div id="progoiasCodigoCorrecaoSection" class="codigo-correcao-section" style="display: none;">
+                    <h3>🔧 Correção de Códigos de Ajuste E111 - ProGoiás</h3>
+                    <p class="codigo-correcao-info">
+                        Códigos de ajuste com erro no SPED podem ser corrigidos antes do cálculo ProGoiás.
+                        <strong>Importante:</strong> Esta correção afeta a classificação entre operações incentivadas/não incentivadas.
+                    </p>
+                    
+                    <div id="progoiasCodigosEncontrados" class="codigos-encontrados">
+                        <!-- Será preenchido dinamicamente via JavaScript -->
+                    </div>
+                    
+                    <div class="correcao-actions">
+                        <button id="btnAplicarCorrecoesProgoias" class="btn-style btn-aplicar-correcoes">
+                            ✅ Aplicar Correções e Calcular ProGoiás
+                        </button>
+                        <button id="btnPularCorrecoesProgoias" class="btn-style btn-pular-correcoes">
+                            ⏭️ Pular Correções
+                        </button>
+                    </div>
+                </div>
+
+                <div id="progoiasResults" style="display: none;">
+                    <div id="progoiasPeriodsSelector" class="periods-selector" style="display: none;">
                         <h3>📅 Períodos Processados</h3>
-                        <div id="progoisPeriodsButtons" class="periods-buttons"></div>
+                        <div id="progoiasPeriodsButtons" class="periods-buttons"></div>
                         <div class="view-options">
-                            <button id="progoisViewSinglePeriod" class="btn-style btn-small active">Visão Individual</button>
-                            <button id="progoisViewComparative" class="btn-style btn-small">Visão Comparativa</button>
+                            <button id="progoiasViewSinglePeriod" class="btn-style btn-small active">Visão Individual</button>
+                            <button id="progoiasViewComparative" class="btn-style btn-small">Visão Comparativa</button>
                         </div>
                     </div>
 
@@ -521,16 +543,16 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr><td>GO100002</td><td>ICMS Saídas Incentivadas</td><td id="progoisItemA01">0,00</td></tr>
-                                    <tr><td>GO100003</td><td>ICMS Entradas Incentivadas</td><td id="progoisItemA02">0,00</td></tr>
-                                    <tr><td>GO100004</td><td>Outros Créditos (Anexo II)</td><td id="progoisItemA03">0,00</td></tr>
-                                    <tr><td>GO100005</td><td>Outros Débitos (Anexo II)</td><td id="progoisItemA04">0,00</td></tr>
-                                    <tr><td>GO100007</td><td>Ajuste Período Anterior</td><td id="progoisItemA05">0,00</td></tr>
-                                    <tr><td>GO100006</td><td>Média ICMS (se aplicável)</td><td id="progoisItemA06">0,00</td></tr>
-                                    <tr><td>-</td><td><strong>Base de Cálculo</strong></td><td id="progoisItemA07" style="background: #e3f2fd; font-weight: bold;">0,00</td></tr>
-                                    <tr><td>GO100001</td><td>Percentual ProGoiás (%)</td><td id="progoisItemA08">0,00</td></tr>
-                                    <tr><td>GO100009</td><td><strong>Crédito Outorgado ProGoiás</strong></td><td id="progoisItemA09" style="background: #c8e6c9; font-weight: bold;">0,00</td></tr>
-                                    <tr><td>GO100008</td><td>Ajuste Próximo Período</td><td id="progoisItemA10">0,00</td></tr>
+                                    <tr><td>GO100002</td><td>ICMS Saídas Incentivadas</td><td id="progoiasItemA01">0,00</td></tr>
+                                    <tr><td>GO100003</td><td>ICMS Entradas Incentivadas</td><td id="progoiasItemA02">0,00</td></tr>
+                                    <tr><td>GO100004</td><td>Outros Créditos (Anexo II)</td><td id="progoiasItemA03">0,00</td></tr>
+                                    <tr><td>GO100005</td><td>Outros Débitos (Anexo II)</td><td id="progoiasItemA04">0,00</td></tr>
+                                    <tr><td>GO100007</td><td>Ajuste Período Anterior</td><td id="progoiasItemA05">0,00</td></tr>
+                                    <tr><td>GO100006</td><td>Média ICMS (se aplicável)</td><td id="progoiasItemA06">0,00</td></tr>
+                                    <tr><td>-</td><td><strong>Base de Cálculo</strong></td><td id="progoiasItemA07" style="background: #e3f2fd; font-weight: bold;">0,00</td></tr>
+                                    <tr><td>GO100001</td><td>Percentual ProGoiás (%)</td><td id="progoiasItemA08">0,00</td></tr>
+                                    <tr><td>GO100009</td><td><strong>Crédito Outorgado ProGoiás</strong></td><td id="progoiasItemA09" style="background: #c8e6c9; font-weight: bold;">0,00</td></tr>
+                                    <tr><td>GO100008</td><td>Ajuste Próximo Período</td><td id="progoiasItemA10">0,00</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -549,18 +571,18 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr><td>01</td><td>Débito do ICMS</td><td id="progoisItemB13">0,00</td></tr>
-                                    <tr><td>02</td><td>Outros Débitos</td><td id="progoisItemB14">0,00</td></tr>
-                                    <tr><td>03</td><td>Estorno de Créditos</td><td id="progoisItemB15">0,00</td></tr>
-                                    <tr><td>04</td><td><strong>Total de Débitos</strong></td><td id="progoisItemB16" style="background: #ffebee; font-weight: bold;">0,00</td></tr>
-                                    <tr><td>05</td><td>Créditos por Entradas</td><td id="progoisItemB17">0,00</td></tr>
-                                    <tr><td>06</td><td>Outros Créditos</td><td id="progoisItemB18">0,00</td></tr>
-                                    <tr><td>09</td><td><strong>Crédito ProGoiás</strong></td><td id="progoisItemB19" style="background: #c8e6c9; font-weight: bold;">0,00</td></tr>
+                                    <tr><td>01</td><td>Débito do ICMS</td><td id="progoiasItemB13">0,00</td></tr>
+                                    <tr><td>02</td><td>Outros Débitos</td><td id="progoiasItemB14">0,00</td></tr>
+                                    <tr><td>03</td><td>Estorno de Créditos</td><td id="progoiasItemB15">0,00</td></tr>
+                                    <tr><td>04</td><td><strong>Total de Débitos</strong></td><td id="progoiasItemB16" style="background: #ffebee; font-weight: bold;">0,00</td></tr>
+                                    <tr><td>05</td><td>Créditos por Entradas</td><td id="progoiasItemB17">0,00</td></tr>
+                                    <tr><td>06</td><td>Outros Créditos</td><td id="progoiasItemB18">0,00</td></tr>
+                                    <tr><td>09</td><td><strong>Crédito ProGoiás</strong></td><td id="progoiasItemB19" style="background: #c8e6c9; font-weight: bold;">0,00</td></tr>
                                     <tr><td>-</td><td>Resumo ICMS</td><td colspan="2" style="background: #f5f5f5; text-align: center; font-style: italic;">Valores Finais</td></tr>
-                                    <tr><td>13</td><td><strong>ICMS a Recolher</strong></td><td id="progoisIcmsDevido" style="background: #fff3e0; font-weight: bold;">R$ 0,00</td></tr>
-                                    <tr><td>14</td><td>PROTEGE</td><td id="progoisValorProtege">R$ 0,00</td></tr>
-                                    <tr><td>15</td><td><strong>ICMS Final</strong></td><td id="progoisIcmsRecolher" style="background: #e8f5e8; font-weight: bold;">R$ 0,00</td></tr>
-                                    <tr><td>-</td><td><strong>Economia Total</strong></td><td id="progoisEconomiaTotal" style="background: #e3f2fd; font-weight: bold;">R$ 0,00</td></tr>
+                                    <tr><td>13</td><td><strong>ICMS a Recolher</strong></td><td id="progoiasIcmsDevido" style="background: #fff3e0; font-weight: bold;">R$ 0,00</td></tr>
+                                    <tr><td>14</td><td>PROTEGE</td><td id="progoiasValorProtege">R$ 0,00</td></tr>
+                                    <tr><td>15</td><td><strong>ICMS Final</strong></td><td id="progoiasIcmsRecolher" style="background: #e8f5e8; font-weight: bold;">R$ 0,00</td></tr>
+                                    <tr><td>-</td><td><strong>Economia Total</strong></td><td id="progoiasEconomiaTotal" style="background: #e3f2fd; font-weight: bold;">R$ 0,00</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -579,12 +601,12 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr><td>18</td><td>Saídas com Incentivo</td><td id="progoisItemC18">0,00</td></tr>
-                                    <tr><td>19</td><td>Saídas sem Incentivo</td><td id="progoisItemC19">0,00</td></tr>
-                                    <tr><td>20</td><td>Total das Saídas</td><td id="progoisItemC20">0,00</td></tr>
-                                    <tr><td>21</td><td>Entradas com Incentivo</td><td id="progoisItemC21">0,00</td></tr>
-                                    <tr><td>22</td><td>Entradas sem Incentivo</td><td id="progoisItemC22">0,00</td></tr>
-                                    <tr><td>23</td><td>Total das Entradas</td><td id="progoisItemC23">0,00</td></tr>
+                                    <tr><td>18</td><td>Saídas com Incentivo</td><td id="progoiasItemC18">0,00</td></tr>
+                                    <tr><td>19</td><td>Saídas sem Incentivo</td><td id="progoiasItemC19">0,00</td></tr>
+                                    <tr><td>20</td><td>Total das Saídas</td><td id="progoiasItemC20">0,00</td></tr>
+                                    <tr><td>21</td><td>Entradas com Incentivo</td><td id="progoiasItemC21">0,00</td></tr>
+                                    <tr><td>22</td><td>Entradas sem Incentivo</td><td id="progoiasItemC22">0,00</td></tr>
+                                    <tr><td>23</td><td>Total das Entradas</td><td id="progoiasItemC23">0,00</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -596,23 +618,23 @@
                         <div class="resumo-grid">
                             <div class="resumo-item">
                                 <label>ICMS Devido antes dos Incentivos:</label>
-                                <span id="progoisIcmsDevido" class="valor-destaque">R$ 0,00</span>
+                                <span id="progoiasIcmsDevido" class="valor-destaque">R$ 0,00</span>
                             </div>
                             <div class="resumo-item">
                                 <label>Valor do Incentivo ProGoiás:</label>
-                                <span id="progoisValorIncentivo" class="valor-destaque valor-economia">R$ 0,00</span>
+                                <span id="progoiasValorIncentivo" class="valor-destaque valor-economia">R$ 0,00</span>
                             </div>
                             <div class="resumo-item">
                                 <label>Valor do PROTEGE:</label>
-                                <span id="progoisValorProtege" class="valor-destaque valor-economia">R$ 0,00</span>
+                                <span id="progoiasValorProtege" class="valor-destaque valor-economia">R$ 0,00</span>
                             </div>
                             <div class="resumo-item">
                                 <label>ICMS a Recolher após Incentivos:</label>
-                                <span id="progoisIcmsRecolher" class="valor-destaque">R$ 0,00</span>
+                                <span id="progoiasIcmsRecolher" class="valor-destaque">R$ 0,00</span>
                             </div>
                             <div class="resumo-item">
                                 <label>Economia Fiscal Total:</label>
-                                <span id="progoisEconomiaTotal" class="valor-destaque valor-total">R$ 0,00</span>
+                                <span id="progoiasEconomiaTotal" class="valor-destaque valor-total">R$ 0,00</span>
                             </div>
                         </div>
                     </div>
