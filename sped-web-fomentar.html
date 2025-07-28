@@ -153,6 +153,45 @@
                     </div>
                 </div>
 
+                <!-- Seção de Opção para CFOPs Genéricos -->
+                <div id="cfopOpcaoSection" class="cfop-opcao-section" style="display: none;">
+                    <h3>⚙️ CFOPs Genéricos Detectados</h3>
+                    <p class="cfop-opcao-info">
+                        Foram encontrados CFOPs genéricos no SPED que podem ser utilizados para operações 
+                        incentivadas ou não incentivadas. <strong>Escolha uma opção:</strong>
+                    </p>
+                    
+                    <div class="cfop-opcao-actions">
+                        <button id="btnListarCfops" class="btn-style btn-listar-cfops">
+                            📋 Listar CFOPs Genéricos
+                        </button>
+                        <button id="btnCalcularSemCfops" class="btn-style btn-calcular-sem-cfops">
+                            🚀 Calcular sem Corrigir CFOPs
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Seção de Configuração de CFOPs Genéricos -->
+                <div id="cfopGenericoSection" class="cfop-generico-section" style="display: none;">
+                    <h3>⚙️ Configuração de CFOPs Genéricos</h3>
+                    <p class="cfop-generico-info">
+                        Configure individualmente cada ocorrência de CFOP genérico encontrada no SPED:
+                    </p>
+                    
+                    <div id="cfopsEncontrados" class="cfops-encontrados">
+                        <!-- Será preenchido dinamicamente via JavaScript -->
+                    </div>
+                    
+                    <div class="cfop-actions">
+                        <button id="btnAplicarCfops" class="btn-style btn-aplicar-cfops">
+                            ✅ Aplicar Configurações
+                        </button>
+                        <button id="btnPularCfops" class="btn-style btn-pular-cfops">
+                            ⏭️ Usar Configuração Padrão
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Seção de Correção de Códigos E111 -->
                 <div id="codigoCorrecaoSection" class="codigo-correcao-section" style="display: none;">
                     <h3>🔧 Correção de Códigos de Ajuste E111</h3>

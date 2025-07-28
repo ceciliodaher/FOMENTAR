@@ -1044,6 +1044,245 @@ body {
 }
 
 /* --- Seção de Correção de Códigos E111 --- */
+/* Seção de Opção para CFOPs Genéricos */
+.cfop-opcao-section {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid #007BFF;
+}
+
+.cfop-opcao-info {
+    text-align: left;
+    color: #666;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #E3F2FD;
+    border-radius: 8px;
+    border-left: 4px solid #007BFF;
+}
+
+.cfop-opcao-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-listar-cfops {
+    background: linear-gradient(135deg, #007BFF 0%, #0056B3 100%);
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1.1em;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-listar-cfops:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 123, 255, 0.3);
+}
+
+.btn-calcular-sem-cfops {
+    background: linear-gradient(135deg, #28A745 0%, #20C997 100%);
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1.1em;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-calcular-sem-cfops:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);
+}
+
+/* Seção de Configuração de CFOPs Genéricos */
+.cfop-generico-section {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid #28A745;
+}
+
+.cfop-generico-info {
+    text-align: left;
+    color: #666;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #E8F5E8;
+    border-radius: 8px;
+    border-left: 4px solid #28A745;
+}
+
+.cfops-encontrados {
+    margin: 20px 0;
+}
+
+.cfop-item {
+    background: #F8F9FA;
+    border: 1px solid #E9ECEF;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    display: grid;
+    grid-template-columns: 2fr 1fr 2fr auto;
+    gap: 15px;
+    align-items: center;
+}
+
+.cfop-item.multiplo-periodo {
+    border-left: 4px solid #007BFF;
+}
+
+.cfop-info {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.cfop-codigo {
+    font-weight: bold;
+    color: #333;
+    font-size: 1.1em;
+    text-align: center;
+    background: #E9ECEF;
+    padding: 8px;
+    border-radius: 6px;
+}
+
+.cfop-descricao {
+    font-size: 0.85em;
+    color: #666;
+    text-align: center;
+    font-style: italic;
+}
+
+.cfop-detalhes {
+    font-size: 0.8em;
+    color: #888;
+    text-align: center;
+    margin-top: 5px;
+    padding: 5px;
+    background: #F8F9FA;
+    border-radius: 4px;
+}
+
+.cfop-ocorrencias {
+    text-align: center;
+    color: #666;
+    font-size: 0.9em;
+}
+
+.cfop-classificacao {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.cfop-classificacao label {
+    font-size: 0.9em;
+    color: #555;
+    font-weight: 500;
+}
+
+.cfop-radio-group {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.cfop-radio-option {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.cfop-radio-option:hover {
+    background: #F0F0F0;
+}
+
+.cfop-radio-option input[type="radio"] {
+    margin: 0;
+}
+
+.cfop-radio-option.incentivado {
+    color: #28A745;
+}
+
+.cfop-radio-option.nao-incentivado {
+    color: #DC3545;
+}
+
+.cfop-radio-option.padrao {
+    color: #6C757D;
+}
+
+.cfop-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.btn-aplicar-cfops {
+    background: linear-gradient(135deg, #28A745 0%, #20C997 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-aplicar-cfops:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);
+}
+
+.btn-pular-cfops {
+    background: linear-gradient(135deg, #6C757D 0%, #ADB5BD 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-pular-cfops:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(108, 117, 125, 0.3);
+}
+
 .codigo-correcao-section {
     background: white;
     border-radius: 12px;

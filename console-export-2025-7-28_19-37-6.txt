@@ -1,0 +1,142 @@
+[7:35:58 PM] Log inicializado. Aguardando ação... script.js:1471:21
+[7:36:07 PM] Arquivo SPED detectado para FOMENTAR: 01784792000103-101501668-20240701-20240731-0-DF66F83CB432B2DC67AEF2477C9A5DD0C99E1EA6-SPED-EFD.txt script.js:1471:21
+[7:36:07 PM] Log inicializado. Aguardando ação... script.js:1471:21
+[7:36:07 PM] Processando arquivo: 01784792000103-101501668-20240701-20240731-0-DF66F83CB432B2DC67AEF2477C9A5DD0C99E1EA6-SPED-EFD.txt script.js:1471:21
+[7:36:07 PM] Lendo arquivo SPED... script.js:1471:21
+Arquivo lido com sucesso usando ISO-8859-1 script.js:459:25
+[7:36:07 PM] Encoding detectado: ISO-8859-1 script.js:1471:21
+[7:36:07 PM] Extraindo informações do cabeçalho... script.js:1471:21
+[7:36:07 PM] Cabeçalho: Empresa "EQUIPLEX INDUSTRIA FARMACEUTICA LTDA", Período "01/07/2024" script.js:1471:21
+[7:36:07 PM] Nome de arquivo Excel sugerido: EQUIPLEX_SPED_07_2024.xlsx script.js:1471:21
+[7:36:07 PM] Arquivo analisado e pronto para conversão. script.js:1471:21
+[7:36:07 PM] Processando dados SPED para apuração FOMENTAR... script.js:1471:21
+SPED Completo Lido e Estruturado. Contagem de Tipos: 82 script.js:709:17
+[7:36:07 PM] CFOPs genéricos detectados. Iniciando configuração... script.js:1471:21
+[7:36:07 PM] 48 CFOPs genéricos encontrados. Configure conforme necessário. script.js:1471:21
+[7:36:13 PM] Configuração padrão de CFOPs aplicada conforme normativa. script.js:1471:21
+[7:36:13 PM] Encontrados 4 códigos de ajuste E111 para possível correção script.js:1471:21
+[7:36:14 PM] Correções de código puladas. Prosseguindo com códigos originais... script.js:1471:21
+[7:36:14 PM] 🔄 Iniciando continuarCalculoFomentar... script.js:1471:21
+[7:36:14 PM] Iniciando classificação de operações... script.js:1471:21
+[7:36:14 PM] Configurações CFOP aplicadas: 1910: padrao, 1949: padrao, 2949: padrao, 3949: padrao, 5927: padrao, 5949: padrao, 6910: padrao, 7949: padrao script.js:1471:21
+[7:36:14 PM] Processando registros consolidados C190, C590, D190, D590... script.js:1471:21
+[7:36:14 PM] Processando 4 registros E111 para outros créditos/débitos... script.js:1471:21
+[7:36:14 PM] E111 Débito: GO010041 = R$ 2.554,20 (Não Incentivado) script.js:1471:21
+[7:36:14 PM] E111 Crédito: GO020079 = R$ 96.331,64 (Incentivado) script.js:1471:21
+[7:36:14 PM] E111 Crédito: GO020138 = R$ 151.422,37 (Não Incentivado) script.js:1471:21
+[7:36:14 PM] Processando 43 registros C197 para ajustes de débitos... script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 1.839,26 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 1.614,67 2 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 957,78 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 2.767,11 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 2.391,39 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 1.183,70 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 894,52 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 51,85 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 173,39 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 1.859,96 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 196,02 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 45,74 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 28,15 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 13.278,13 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 2.661,59 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 187,50 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 804,66 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 178,85 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 397,70 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 4.984,11 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 67,35 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 186,87 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 66,37 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 337,96 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 86,90 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 373,33 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 110,13 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 55,07 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 597,47 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 215,59 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 42,26 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 14,16 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 20,46 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 86,76 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 36,01 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 93,51 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 741,10 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 219,18 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 3.711,84 script.js:1471:21
+[7:36:14 PM] C197 Débito (GO4 Não Incentivado): GO40000029 = R$ 4.798,28 script.js:1471:21
+✅ [7:36:14 PM] Resumo: 322 saídas incentivadas, 30 saídas não incentivadas script.js:1469:21
+✅ [7:36:14 PM] Créditos de entradas: R$ 845.352,60, Outros créditos: R$ 247.754,01 script.js:1469:21
+✅ [7:36:14 PM] Débitos de operações: R$ 2.617.835,21, Outros débitos (E111+C197+D197): R$ 52.525,55 script.js:1469:21
+[7:36:14 PM] Total de exclusões aplicadas: 3 script.js:1471:21
+[7:36:14 PM] Outros Débitos TOTAL: R$ 52.525,55 script.js:1471:21
+[7:36:14 PM]   - Incentivados: R$ 0,00 (0.0%) script.js:1471:21
+[7:36:14 PM]   - Não Incentivados: R$ 52.525,55 script.js:1471:21
+✅ [7:36:14 PM]   - Soma: R$ 52.525,55 - OK script.js:1469:21
+[7:36:14 PM] Outros Créditos TOTAL: R$ 247.754,01 script.js:1471:21
+[7:36:14 PM]   - Incentivados: R$ 96.331,64 (38.9%) script.js:1471:21
+[7:36:14 PM]   - Não Incentivados: R$ 151.422,37 script.js:1471:21
+[7:36:14 PM] Créditos Entradas TOTAL: R$ 845.352,60 script.js:1471:21
+[7:36:14 PM]   - Incentivados: R$ 842.798,40 (99.7%) script.js:1471:21
+[7:36:14 PM]   - Não Incentivados: R$ 2.554,20 script.js:1471:21
+[7:36:14 PM] OUTROS CRÉDITOS (2 registros): script.js:1471:21
+[7:36:14 PM]   E111 - Ajustes da Apuração do ICMS | GO020079: R$ 96.331,64 (Incentivado) script.js:1471:21
+[7:36:14 PM]   E111 - Ajustes da Apuração do ICMS | GO020138: R$ 151.422,37 (Não Incentivado) script.js:1471:21
+[7:36:14 PM] OUTROS DÉBITOS (42 registros): script.js:1471:21
+[7:36:14 PM]   E111 - Ajustes da Apuração do ICMS | GO010041: R$ 2.554,20 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 1.839,26 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 1.614,67 (Não Incentivado) 2 script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 957,78 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 2.767,11 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 2.391,39 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 1.183,70 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 894,52 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 51,85 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 173,39 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 1.859,96 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 196,02 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 45,74 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 28,15 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 13.278,13 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 2.661,59 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 187,50 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 804,66 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 178,85 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 397,70 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 4.984,11 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 67,35 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 186,87 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 66,37 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 337,96 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 86,90 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 373,33 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 110,13 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 55,07 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 597,47 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 215,59 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 42,26 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 14,16 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 20,46 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 86,76 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 36,01 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 93,51 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 741,10 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 219,18 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 3.711,84 (Não Incentivado) script.js:1471:21
+[7:36:14 PM]   C197 - Outras Obrigações Tributárias, Ajustes e Informações de Valores Provenientes de Documento Fiscal | GO40000029: R$ 4.798,28 (Não Incentivado) script.js:1471:21
+✅ [7:36:14 PM] Classificação de operações concluída script.js:1469:21
+[7:36:14 PM] Total de operações classificadas: 1074 script.js:1471:21
+[7:36:14 PM] - Saídas incentivadas: 322 script.js:1471:21
+[7:36:14 PM] - Saídas não incentivadas: 30 script.js:1471:21
+[7:36:14 PM] - Entradas incentivadas: 507 script.js:1471:21
+[7:36:14 PM] - Entradas não incentivadas: 215 script.js:1471:21
+[7:36:14 PM] Executando cálculo FOMENTAR... script.js:1471:21
+[7:36:14 PM] Valores calculados salvos para exportação script.js:1471:21
+✅ [7:36:14 PM] Cálculo FOMENTAR executado com sucesso script.js:1469:21
+✅ [7:36:14 PM] Interface de resultados FOMENTAR exibida script.js:1469:21
+✅ [7:36:14 PM] Apuração FOMENTAR calculada: 1074 operações analisadas script.js:1469:21
+[7:36:14 PM] Revise os valores calculados e ajuste os campos editáveis conforme necessário script.js:1471:21
+✅ [7:36:14 PM] ✅ Processo concluído com sucesso! script.js:1469:21
+[7:36:17 PM] Valores para exportação: saidasIncentivadas=24018773.029999997, debitoIncentivadas=2567257.85, debitoNaoIncentivadas=50577.36000000001 script.js:1471:21
+[7:36:17 PM] Gerando relatório FOMENTAR para exportação... script.js:1471:21
+✅ [7:36:18 PM] Relatório FOMENTAR exportado com sucesso script.js:1469:21

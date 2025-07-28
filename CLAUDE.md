@@ -11,7 +11,9 @@ Este é um sistema web completo para conversão de arquivos SPED e apuração de
 ```
 /Users/ceciliodaher/Documents/git/FOMENTAR/
 ├── index.html                   # Interface unificada com 3 abas principais
-├── script.js                    # Sistema unificado (SPED + FOMENTAR + ProGoiás)
+├── script.js                    # Sistema unificado (SPED + FOMENTAR + ProGoiás + CFOPs Genéricos)
+├── script.ori.js                # Versão original antes da implementação CFOPs
+├── script-cfop.js               # Versão anterior com tentativas de CFOPs (backup)
 ├── style.css                    # Estilos responsivos com sistema de 3 abas
 ├── sped-web-fomentar.html       # Versão alternativa focada em FOMENTAR
 ├── CORRECOES_IMPLEMENTADAS.md   # Documentação de correções recentes

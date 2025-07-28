@@ -1457,30 +1457,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- New Logging Function ---
     function addLog(message, type = 'info') {
-        // Sempre mostrar no console para debug
+        if (!logWindow) return;
+
+        const logEntry = document.createElement('div'); // Or 'p'
+        logEntry.classList.add('log-message');
+        logEntry.classList.add(`log-${type}`); // e.g., log-info, log-error, log-success, log-warn
+        
         const timestamp = new Date().toLocaleTimeString();
-        const logMessage = `[${timestamp}] ${message}`;
+        logEntry.textContent = `[${timestamp}] ${message}`;
         
-        if (type === 'error') {
-            console.error(logMessage);
-        } else if (type === 'warn') {
-            console.warn(logMessage);
-        } else if (type === 'success') {
-            console.log(`✅ ${logMessage}`);
-        } else {
-            console.log(logMessage);
-        }
-        
-        // Também adicionar à interface se existir
-        if (logWindow) {
-            const logEntry = document.createElement('div');
-            logEntry.classList.add('log-message');
-            logEntry.classList.add(`log-${type}`);
-            logEntry.textContent = logMessage;
-            
-            logWindow.appendChild(logEntry);
-            logWindow.scrollTop = logWindow.scrollHeight;
-        }
+        logWindow.appendChild(logEntry);
+        logWindow.scrollTop = logWindow.scrollHeight; // Auto-scroll to bottom
     }
 
     // --- Function to clear logs ---
@@ -1493,6 +1480,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // --- FOMENTAR Constants ---
+    // CFOPs Genéricos que podem ser incentivados ou não dependendo da operação específica
+    const CFOPS_GENERICOS = [
+        '1910', '1911', '1917', '1918', '1949', // Entradas genéricas
+        '2905', '2910', '2911', '2917', '2918', '2934', '2949', // Transfer/Devoluções/Outras
+        '3949', // Entrada genérica
+        '5910', '5917', '5918', '5927', '5928', '5949', // Saídas genéricas 
+        '6905', '6910', '6917', '6918', '6934', '6949', // Saídas interestaduais genéricas
+        '7949' // Saída para exterior genérica
+    ];
+    
+    const CFOPS_GENERICOS_DESCRICOES = {
+        '1910': 'Entrada - Outros (genérico)',
+        '1911': 'Entrada - Devolução (genérico)', 
+        '1917': 'Entrada - Aquisição de serviço (genérico)',
+        '1918': 'Entrada - Operação diversa (genérico)',
+        '1949': 'Entrada - Outra operação (genérico)',
+        '2905': 'Transfer - Entrada via armazém geral (genérico)',
+        '2910': 'Transfer - Entrada outros (genérico)',
+        '2911': 'Transfer - Entrada devolução (genérico)', 
+        '2917': 'Transfer - Entrada serviço (genérico)',
+        '2918': 'Transfer - Entrada operação diversa (genérico)',
+        '2934': 'Transfer - Entrada complementar ICMS (genérico)',
+        '2949': 'Transfer - Entrada outra operação (genérico)',
+        '3949': 'Entrada - Outra operação (genérico)',
+        '5910': 'Saída - Outros (genérico)',
+        '5917': 'Saída - Prestação de serviço (genérico)',
+        '5918': 'Saída - Operação diversa (genérico)',
+        '5927': 'Saída - Lançamento efetuado a título de simples faturamento (genérico)',
+        '5928': 'Saída - Lançamento efetuado a título de simples faturamento decorrente de venda (genérico)',
+        '5949': 'Saída - Outra operação (genérico)',
+        '6905': 'Saída Interestadual - Via armazém geral (genérico)',
+        '6910': 'Saída Interestadual - Outros (genérico)',
+        '6917': 'Saída Interestadual - Prestação de serviço (genérico)',
+        '6918': 'Saída Interestadual - Operação diversa (genérico)',
+        '6934': 'Saída Interestadual - Complementar ICMS (genérico)',
+        '6949': 'Saída Interestadual - Outra operação (genérico)',
+        '7949': 'Saída Exterior - Outra operação (genérico)'
+    };
+    
     // CFOPs para classificação de operações incentivadas (baseado na IN 885/07-GSF)
     const CFOP_ENTRADAS_INCENTIVADAS = [
         '1101', '1116', '1120', '1122', '1124', '1125', '1131', '1135', '1151', '1159',
@@ -1581,45 +1607,6 @@ document.addEventListener('DOMContentLoaded', () => {
         'GO40009035', 'GO40990021', 'GO40991022', 'GO40993020'
     ];
 
-    // === CONSTANTES CFOP GENÉRICO ===
-    const CFOPS_GENERICOS = [
-        '1910', '1911', '1917', '1918', '1949', // Entradas genéricas
-        '2905', '2910', '2911', '2917', '2918', '2934', '2949', // Transfer/Devoluções/Outras
-        '3949', // Entrada genérica
-        '5910', '5917', '5918', '5927', '5928', '5949', // Saídas genéricas 
-        '6905', '6910', '6917', '6918', '6934', '6949', // Saídas interestaduais genéricas
-        '7949' // Saída para exterior genérica
-    ];
-    
-    const CFOPS_GENERICOS_DESCRICOES = {
-        '1910': 'Entrada - Outros (genérico)',
-        '1911': 'Entrada - Devolução (genérico)', 
-        '1917': 'Entrada - Aquisição de serviço (genérico)',
-        '1918': 'Entrada - Operação diversa (genérico)',
-        '1949': 'Entrada - Outra operação (genérico)',
-        '2905': 'Transfer - Entrada via armazém geral (genérico)',
-        '2910': 'Transfer - Entrada outros (genérico)',
-        '2911': 'Transfer - Entrada devolução (genérico)', 
-        '2917': 'Transfer - Entrada serviço (genérico)',
-        '2918': 'Transfer - Entrada operação diversa (genérico)',
-        '2934': 'Transfer - Entrada complementar ICMS (genérico)',
-        '2949': 'Transfer - Entrada outra operação (genérico)',
-        '3949': 'Entrada - Outra operação (genérico)',
-        '5910': 'Saída - Outros (genérico)',
-        '5917': 'Saída - Prestação de serviço (genérico)',
-        '5918': 'Saída - Operação diversa (genérico)',
-        '5927': 'Saída - Lançamento efetuado a título de simples faturamento (genérico)',
-        '5928': 'Saída - Lançamento efetuado a título de simples faturamento decorrente de venda (genérico)',
-        '5949': 'Saída - Outra operação (genérico)',
-        '6905': 'Saída Interestadual - Via armazém geral (genérico)',
-        '6910': 'Saída Interestadual - Outros (genérico)',
-        '6917': 'Saída Interestadual - Prestação de serviço (genérico)',
-        '6918': 'Saída Interestadual - Operação diversa (genérico)',
-        '6934': 'Saída Interestadual - Complementar ICMS (genérico)',
-        '6949': 'Saída Interestadual - Outra operação (genérico)',
-        '7949': 'Saída Exterior - Outra operação (genérico)'
-    };
-
     // Códigos de crédito FOMENTAR/PRODUZIR/MICROPRODUZIR que devem ser EXCLUÍDOS da base de cálculo
     const CODIGOS_CREDITO_FOMENTAR = [
         'GO040007', // FOMENTAR
@@ -1689,34 +1676,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error('SPED não contém operações suficientes para apuração FOMENTAR');
             }
             
-            // Verificar CFOPs genéricos primeiro, depois E111
-            const temCfopsGenericos = verificarExistenciaCfopsGenericos(registrosCompletos);
-            
-            if (temCfopsGenericos) {
-                // Detectar e configurar CFOPs genéricos encontrados
-                addLog('CFOPs genéricos detectados. Iniciando configuração...', 'info');
-                detectarCfopsGenericosIndividuais(registrosCompletos);
-                return; // Parar aqui até a configuração de CFOPs
-            } else {
-                // Não há CFOPs genéricos, prosseguir diretamente para E111
-                const temCodigosParaCorrigir = analisarCodigosE111(registrosCompletos, false);
-            
-                if (temCodigosParaCorrigir) {
-                // Mostrar interface de correção e parar aqui
-                addLog('Códigos de ajuste E111 encontrados. Verifique se há necessidade de correção antes de prosseguir.', 'warn');
-                
-                // Atualizar status
-                document.getElementById('fomentarSpedStatus').textContent = 
-                    `Arquivo SPED importado. Códigos E111 encontrados para possível correção.`;
-                document.getElementById('fomentarSpedStatus').style.color = '#FF6B35';
-                
-                return; // Parar aqui até o usuário decidir sobre as correções
-            } else {
-                    // Não há códigos para corrigir, prosseguir diretamente
-                    addLog('Nenhum código de ajuste E111 encontrado. Prosseguindo com cálculo...', 'info');
-                    continuarCalculoFomentar();
-                }
-            }
+            // Verificar CFOPs genéricos e códigos E111 simultaneamente
+            verificarCfopsGenericosECodigosE111();
             
         } catch (error) {
             addLog(`Erro ao processar dados FOMENTAR: ${error.message}`, 'error');
@@ -1795,29 +1756,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Determinar tipo de operação pelo CFOP
             const tipoOperacao = cfop.startsWith('1') || cfop.startsWith('2') || cfop.startsWith('3') ? 'ENTRADA' : 'SAIDA';
             
-            // Verificar se é CFOP genérico configurado pelo usuário
-            let isIncentivada;
-            
-            // Primeiro, usar lógica normativa como padrão
-            const isIncentivadiaPadrao = tipoOperacao === 'ENTRADA' 
+            const isIncentivada = tipoOperacao === 'ENTRADA' 
                 ? CFOP_ENTRADAS_INCENTIVADAS.includes(cfop)
                 : CFOP_SAIDAS_INCENTIVADAS.includes(cfop);
-            
-            // Se é CFOP genérico E foi configurado pelo usuário, aplicar configuração
-            if (CFOPS_GENERICOS.includes(cfop) && cfopsGenericosConfig && cfopsGenericosConfig[cfop]) {
-                const config = cfopsGenericosConfig[cfop];
-                if (config === 'incentivado') {
-                    isIncentivada = true;
-                } else if (config === 'nao-incentivado') {
-                    isIncentivada = false;
-                } else {
-                    // config === 'padrao' ou qualquer outro valor - usar lógica normativa
-                    isIncentivada = isIncentivadiaPadrao;
-                }
-            } else {
-                // CFOP normal ou genérico não configurado - usar lógica normativa
-                isIncentivada = isIncentivadiaPadrao;
-            }
             
             const operacao = {
                 tipo: tipoRegistro,
@@ -1885,29 +1826,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Determinar tipo de operação pelo CFOP
             const tipoOperacao = cfop.startsWith('1') || cfop.startsWith('2') || cfop.startsWith('3') ? 'ENTRADA' : 'SAIDA';
             
-            // Verificar se é CFOP genérico configurado pelo usuário
-            let isIncentivada;
-            
-            // Primeiro, usar lógica normativa como padrão
-            const isIncentivadiaPadrao = tipoOperacao === 'ENTRADA' 
+            const isIncentivada = tipoOperacao === 'ENTRADA' 
                 ? CFOP_ENTRADAS_INCENTIVADAS.includes(cfop)
                 : CFOP_SAIDAS_INCENTIVADAS.includes(cfop);
-            
-            // Se é CFOP genérico E foi configurado pelo usuário, aplicar configuração
-            if (CFOPS_GENERICOS.includes(cfop) && cfopsGenericosConfig && cfopsGenericosConfig[cfop]) {
-                const config = cfopsGenericosConfig[cfop];
-                if (config === 'incentivado') {
-                    isIncentivada = true;
-                } else if (config === 'nao-incentivado') {
-                    isIncentivada = false;
-                } else {
-                    // config === 'padrao' ou qualquer outro valor - usar lógica normativa
-                    isIncentivada = isIncentivadiaPadrao;
-                }
-            } else {
-                // CFOP normal ou genérico não configurado - usar lógica normativa
-                isIncentivada = isIncentivadiaPadrao;
-            }
             
             const operacao = {
                 tipo: tipoRegistro,
@@ -2243,64 +2164,87 @@ document.addEventListener('DOMContentLoaded', () => {
         return operations;
     }
     
-    // === FUNÇÕES DE CFOP GENÉRICO ===
+    // === FUNÇÕES DE CONFIGURAÇÃO DE CFOPs GENÉRICOS ===
     
+    // Verifica apenas se existem CFOPs genéricos (sem listar)
     function verificarExistenciaCfopsGenericos(registros) {
-        cfopsGenericosEncontrados = [];
-        cfopsGenericosDetectados = false;
+        const tiposRegistros = ['C190', 'C590', 'D190', 'D590'];
         
-        // Verificar registros consolidados C190, C590, D190, D590
-        ['C190', 'C590', 'D190', 'D590'].forEach(tipoRegistro => {
-            if (registros[tipoRegistro]) {
-                registros[tipoRegistro].forEach((registro, index) => {
-                    const layout = obterLayoutRegistro(tipoRegistro);
+        for (const tipo of tiposRegistros) {
+            if (registros[tipo] && registros[tipo].length > 0) {
+                for (const registro of registros[tipo]) {
+                    // Extrair CFOP corretamente usando layout
                     const campos = registro.slice(1, -1);
-                    const cfop = campos[layout.indexOf('CFOP')] || '';
+                    const layout = obterLayoutRegistro(tipo);
+                    const cfopIndex = layout.indexOf('CFOP');
+                    const cfop = campos[cfopIndex] || '';
                     
                     if (cfop && CFOPS_GENERICOS.includes(cfop)) {
-                        cfopsGenericosEncontrados.push({
-                            cfop: cfop,
-                            tipoRegistro: tipoRegistro,
-                            indiceRegistro: index,
-                            descricao: CFOPS_GENERICOS_DESCRICOES[cfop] || 'Sem descrição'
-                        });
+                        return true; // Encontrou pelo menos um CFOP genérico
                     }
-                });
+                }
             }
-        });
-        
-        if (cfopsGenericosEncontrados.length > 0) {
-            cfopsGenericosDetectados = true;
-            return true;
         }
-        
-        return false;
+        return false; // Nenhum CFOP genérico encontrado
     }
     
+    // Mostra interface de opção (Listar CFOPs ou Calcular sem corrigir)
+    function mostrarOpcaoCfopsGenericos() {
+        const section = document.getElementById('cfopOpcaoSection');
+        section.style.display = 'block';
+        
+        // Scroll para a seção
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    
+    // Lista CFOPs genéricos individuais (não consolidados) para configuração
     function detectarCfopsGenericosIndividuais(registros) {
         cfopsGenericosEncontrados = [];
         cfopsGenericosDetectados = false;
         
-        // Verificar registros consolidados C190, C590, D190, D590
-        ['C190', 'C590', 'D190', 'D590'].forEach(tipoRegistro => {
-            if (registros[tipoRegistro]) {
-                registros[tipoRegistro].forEach((registro, index) => {
-                    const layout = obterLayoutRegistro(tipoRegistro);
+        // Analisar todos os registros consolidados C190, C590, D190, D590
+        const tiposRegistros = ['C190', 'C590', 'D190', 'D590'];
+        let indiceGlobal = 0;
+        
+        tiposRegistros.forEach(tipo => {
+            if (registros[tipo] && registros[tipo].length > 0) {
+                registros[tipo].forEach((registro, indice) => {
+                    // Extrair dados corretamente usando layout
                     const campos = registro.slice(1, -1);
-                    const cfop = campos[layout.indexOf('CFOP')] || '';
+                    const layout = obterLayoutRegistro(tipo);
+                    const cfopIndex = layout.indexOf('CFOP');
+                    const valorOprIndex = layout.indexOf('VL_OPR');
+                    const valorIcmsIndex = layout.indexOf('VL_ICMS');
+                    
+                    const cfop = campos[cfopIndex] || '';
+                    const valorOperacao = parseFloat((campos[valorOprIndex] || '0').replace(',', '.'));
+                    const valorIcms = parseFloat((campos[valorIcmsIndex] || '0').replace(',', '.'));
                     
                     if (cfop && CFOPS_GENERICOS.includes(cfop)) {
-                        const valorOperacao = parseFloat((campos[layout.indexOf('VL_OPR')] || '0').replace(',', '.'));
-                        const valorIcms = parseFloat((campos[layout.indexOf('VL_ICMS')] || '0').replace(',', '.'));
+                        // Determinar classificação padrão baseada nas listas existentes
+                        let classificacaoPadrao = 'padrao';
+                        if (cfop.startsWith('1') || cfop.startsWith('2') || cfop.startsWith('3')) {
+                            // CFOPs de entrada
+                            if (CFOP_ENTRADAS_INCENTIVADAS.includes(cfop)) {
+                                classificacaoPadrao = 'incentivado';
+                            }
+                        } else if (cfop.startsWith('5') || cfop.startsWith('6') || cfop.startsWith('7')) {
+                            // CFOPs de saída
+                            if (CFOP_SAIDAS_INCENTIVADAS.includes(cfop)) {
+                                classificacaoPadrao = 'incentivado';
+                            }
+                        }
                         
+                        // Adicionar cada ocorrência individual
                         cfopsGenericosEncontrados.push({
                             cfop: cfop,
-                            tipoRegistro: tipoRegistro,
-                            indiceRegistro: index,
-                            descricao: CFOPS_GENERICOS_DESCRICOES[cfop] || 'Sem descrição',
+                            tipoRegistro: tipo,
+                            indiceRegistro: indice,
+                            indiceGlobal: indiceGlobal++,
                             valorOperacao: valorOperacao,
                             valorIcms: valorIcms,
-                            classificacao: 'padrao' // Padrão inicial
+                            classificacaoPadrao: classificacaoPadrao,
+                            registro: registro // Referência completa para o registro
                         });
                     }
                 });
@@ -2309,92 +2253,113 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (cfopsGenericosEncontrados.length > 0) {
             cfopsGenericosDetectados = true;
+            addLog(`${cfopsGenericosEncontrados.length} CFOPs genéricos encontrados para configuração individual`, 'info');
             mostrarInterfaceCfopsGenericosIndividuais();
+        } else {
+            addLog('Nenhum CFOP genérico encontrado nos registros analisados', 'info');
         }
     }
     
+    // Mostra interface para configuração individual de CFOPs genéricos
     function mostrarInterfaceCfopsGenericosIndividuais() {
-        const container = document.getElementById('cfopGenericoSection');
-        if (!container) {
-            addLog('ERRO: Seção cfopGenericoSection não encontrada no HTML', 'error');
-            // Prosseguir para E111
-            prosseguirParaE111();
+        const section = document.getElementById('cfopGenericoSection');
+        const container = document.getElementById('cfopsEncontrados');
+        
+        // Verificar se elementos existem
+        if (!section || !container) {
+            addLog('ERRO: Elementos HTML necessários não encontrados para CFOPs genéricos', 'error');
             return;
         }
         
-        let html = '<h3>🔧 Configuração de CFOPs Genéricos</h3>';
-        html += '<p>Os seguintes CFOPs genéricos foram encontrados. Configure se devem ser tratados como incentivados ou não incentivados:</p>';
+        // Ocultar seção de opção
+        document.getElementById('cfopOpcaoSection').style.display = 'none';
         
-        html += '<div class="cfops-individuais">';
+        // Limpar container
+        container.innerHTML = '';
+        
+        // Criar lista de CFOPs encontrados individualmente
         cfopsGenericosEncontrados.forEach((cfopInfo, index) => {
-            html += `
-                <div class="cfop-individual-item">
-                    <div class="cfop-info">
-                        <strong>CFOP ${cfopInfo.cfop}</strong> - ${cfopInfo.descricao}<br>
-                        <small>Registro: ${cfopInfo.tipoRegistro}[${cfopInfo.indiceRegistro + 1}] | 
-                        Valor Op: R$ ${cfopInfo.valorOperacao.toLocaleString('pt-BR', {minimumFractionDigits: 2})} | 
-                        ICMS: R$ ${cfopInfo.valorIcms.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</small>
-                    </div>
-                    <div class="cfop-opcoes">
-                        <label>
-                            <input type="radio" name="cfop_${index}" value="incentivado">
-                            Incentivado
-                        </label>
-                        <label>
-                            <input type="radio" name="cfop_${index}" value="nao-incentivado">
-                            Não Incentivado
-                        </label>
-                        <label>
-                            <input type="radio" name="cfop_${index}" value="padrao" checked>
-                            Padrão (Conforme Normativa)
-                        </label>
+            const cfopDiv = document.createElement('div');
+            cfopDiv.className = 'cfop-item';
+            
+            const descricao = CFOPS_GENERICOS_DESCRICOES[cfopInfo.cfop] || 'Operação genérica';
+            const valorOperacao = parseFloat(cfopInfo.valorOperacao || 0).toLocaleString('pt-BR', {
+                style: 'currency', currency: 'BRL'
+            });
+            const valorIcms = parseFloat(cfopInfo.valorIcms || 0).toLocaleString('pt-BR', {
+                style: 'currency', currency: 'BRL'
+            });
+            
+            cfopDiv.innerHTML = `
+                <div class="cfop-info">
+                    <div class="cfop-codigo">${cfopInfo.cfop}</div>
+                    <div class="cfop-descricao">${descricao}</div>
+                    <div class="cfop-detalhes">
+                        <small>Registro: ${cfopInfo.tipoRegistro} #${cfopInfo.indiceRegistro + 1}</small><br>
+                        <small>Valor Op.: ${valorOperacao} | ICMS: ${valorIcms}</small>
                     </div>
                 </div>
+                <div class="cfop-classificacao">
+                    <label>
+                        <input type="radio" name="cfop_individual_${index}" value="incentivado">
+                        <span class="radio-label incentivado">✅ Incentivado</span>
+                    </label>
+                    <label>
+                        <input type="radio" name="cfop_individual_${index}" value="nao-incentivado">
+                        <span class="radio-label nao-incentivado">❌ Não Incentivado</span>
+                    </label>
+                    <label>
+                        <input type="radio" name="cfop_individual_${index}" value="padrao" ${cfopInfo.classificacaoPadrao === 'padrao' ? 'checked' : ''}>
+                        <span class="radio-label padrao">⚪ Usar Padrão</span>
+                    </label>
+                </div>
             `;
+            
+            container.appendChild(cfopDiv);
         });
-        html += '</div>';
         
-        html += `
-            <div class="cfop-actions">
-                <button id="btnAplicarCfops" class="btn-style">✅ Aplicar Configuração</button>
-                <button id="btnPularCfops" class="btn-style">⏭️ Usar Configuração Padrão</button>
-            </div>
-        `;
+        // Mostrar seção de CFOPs
+        section.style.display = 'block';
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
         
-        container.innerHTML = html;
-        container.style.display = 'block';
+        // Event listeners para os botões (se ainda não existirem)
+        const btnAplicar = document.getElementById('btnAplicarCfops');
+        const btnPular = document.getElementById('btnPularCfops');
         
-        // Event listeners
-        document.getElementById('btnAplicarCfops').addEventListener('click', aplicarCfopsEContinuar);
-        document.getElementById('btnPularCfops').addEventListener('click', pularCfopsEContinuar);
-        
-        addLog(`${cfopsGenericosEncontrados.length} CFOPs genéricos encontrados. Configure conforme necessário.`, 'info');
+        if (btnAplicar && !btnAplicar.hasEventListener) {
+            btnAplicar.addEventListener('click', aplicarCfopsEContinuar);
+            btnAplicar.hasEventListener = true;
+        }
+        if (btnPular && !btnPular.hasEventListener) {
+            btnPular.addEventListener('click', pularCfopsEContinuar);
+            btnPular.hasEventListener = true;
+        }
     }
     
+    // Aplica configurações individuais de CFOPs e continua processamento
     function aplicarCfopsEContinuar() {
-        // Capturar configurações do usuário
+        // Coletar configurações do usuário para cada CFOP individual
         cfopsGenericosConfig = {};
         let configuracaoIndividual = {};
         
         cfopsGenericosEncontrados.forEach((cfopInfo, index) => {
-            const radios = document.querySelectorAll(`input[name="cfop_${index}"]`);
-            let classificacaoEscolhida = 'padrao';
-            
-            radios.forEach(radio => {
+            const radios = document.querySelectorAll(`input[name="cfop_individual_${index}"]`);
+            for (const radio of radios) {
                 if (radio.checked) {
-                    classificacaoEscolhida = radio.value;
+                    // Salvar configuração individual por índice global
+                    configuracaoIndividual[cfopInfo.indiceGlobal] = {
+                        cfop: cfopInfo.cfop,
+                        classificacao: radio.value,
+                        tipoRegistro: cfopInfo.tipoRegistro,
+                        indiceRegistro: cfopInfo.indiceRegistro
+                    };
+                    break;
                 }
-            });
-            
-            cfopInfo.classificacao = classificacaoEscolhida;
-            cfopsGenericosConfig[cfopInfo.cfop] = classificacaoEscolhida;
-            configuracaoIndividual[index] = {
-                cfop: cfopInfo.cfop,
-                tipoRegistro: cfopInfo.tipoRegistro,
-                indiceRegistro: cfopInfo.indiceRegistro,
-                classificacao: classificacaoEscolhida
-            };
+            }
         });
+        
+        // Salvar configurações para uso na classificação
+        cfopsGenericosConfig = configuracaoIndividual;
         
         // Log das configurações aplicadas
         const configuracoes = Object.entries(configuracaoIndividual)
@@ -2405,10 +2370,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // Ocultar seção de CFOPs
         document.getElementById('cfopGenericoSection').style.display = 'none';
         
-        // Prosseguir para E111
-        prosseguirParaE111();
+        // Continuar com próxima etapa - verificar se há E111 ou finalizar
+        if (window.proximaEtapaE111) {
+            continuarFluxoCorrecoes();
+        } else {
+            finalizarApenaseCfops();
+        }
     }
     
+    // Pula configuração e usa valores padrão
     function pularCfopsEContinuar() {
         // Usar configuração padrão (conforme normativa)
         cfopsGenericosConfig = {};
@@ -2421,34 +2391,221 @@ document.addEventListener('DOMContentLoaded', () => {
         // Ocultar seção de CFOPs
         document.getElementById('cfopGenericoSection').style.display = 'none';
         
-        // Prosseguir para E111
-        prosseguirParaE111();
+        // Continuar com próxima etapa - verificar se há E111 ou finalizar
+        if (window.proximaEtapaE111) {
+            continuarFluxoCorrecoes();
+        } else {
+            finalizarApenaseCfops();
+        }
     }
     
-    function prosseguirParaE111() {
+    // Função para o botão "Listar CFOPs Genéricos"
+    function listarCfopsGenericos() {
+        addLog('Listando CFOPs genéricos individuais...', 'info');
+        detectarCfopsGenericosIndividuais(registrosCompletos);
+    }
+    
+    // Função para o botão "Calcular sem Corrigir CFOPs"
+    function calcularSemCfopsGenericos() {
+        addLog('Prosseguindo com cálculo sem configurar CFOPs genéricos...', 'info');
+        
+        // Ocultar seção de opção
+        document.getElementById('cfopOpcaoSection').style.display = 'none';
+        
         // Analisar códigos E111 para possível correção
-        const temCodigosParaCorrigir = analisarCodigosE111(registrosCompletos, false);
+        const temCodigosParaCorrigir = analisarCodigosE111(registrosCompletos, false, true);
         
         if (temCodigosParaCorrigir) {
-            // Mostrar interface de correção E111 e parar aqui
+            // Mostrar interface de correção E111
             addLog('Códigos de ajuste E111 encontrados. Verifique se há necessidade de correção antes de prosseguir.', 'warn');
-            
-            // Atualizar status
-            document.getElementById('fomentarSpedStatus').textContent = 
-                `Arquivo SPED importado. Códigos E111 encontrados para possível correção.`;
-            document.getElementById('fomentarSpedStatus').style.color = '#FF6B35';
-            
-            return; // Parar aqui até o usuário decidir sobre as correções E111
         } else {
-            // Não há códigos E111 para corrigir, prosseguir diretamente com o cálculo
+            // Não há códigos para corrigir, prosseguir diretamente
             addLog('Nenhum código de ajuste E111 encontrado. Prosseguindo com cálculo...', 'info');
+            fomentarData = classifyOperations(registrosCompletos);
+            calculateFomentar();
+        }
+    }
+    
+    // Função unificada para verificar CFOPs genéricos e códigos E111
+    function verificarCfopsGenericosECodigosE111() {
+        addLog('Verificando CFOPs genéricos e códigos de ajuste E111...', 'info');
+        
+        // Verificar CFOPs genéricos
+        const temCfopsGenericos = verificarExistenciaCfopsGenericos(registrosCompletos);
+        
+        // Verificar códigos E111 (sem mostrar interface se houver CFOPs também)
+        const temCodigosE111 = analisarCodigosE111(registrosCompletos, false, false);
+        
+        // IMPORTANTE: Garantir que seção E111 permaneça oculta para evitar duplicação
+        const codigoSection = document.getElementById('codigoCorrecaoSection');
+        if (codigoSection) {
+            codigoSection.style.display = 'none';
+        }
+        
+        if (!temCfopsGenericos && !temCodigosE111) {
+            // Nenhuma correção necessária, prosseguir diretamente
+            addLog('Nenhum CFOP genérico ou código E111 encontrado. Prosseguindo com cálculo...', 'info');
+            continuarCalculoFomentar();
+            return;
+        }
+        
+        if (temCfopsGenericos && temCodigosE111) {
+            // Ambos encontrados - mostrar opções para o usuário escolher
+            mostrarOpcoesDeTipoDeCorrecao(temCfopsGenericos, temCodigosE111);
+        } else if (temCfopsGenericos) {
+            // Apenas CFOPs - ir direto para configuração
+            addLog('CFOPs genéricos encontrados. Iniciando configuração...', 'info');
+            detectarCfopsGenericosIndividuais(registrosCompletos);
+        } else if (temCodigosE111) {
+            // Apenas E111 - ir direto para correção (comportamento original)
+            addLog('Códigos de ajuste E111 encontrados. Verifique se há necessidade de correção antes de prosseguir.', 'warn');
+            analisarCodigosE111(registrosCompletos, false, true); // Mostrar interface
+        }
+    }
+    
+    // Mostra interface perguntando o que o usuário deseja alterar
+    function mostrarOpcoesDeTipoDeCorrecao(temCfops, temE111) {
+        // Usar seção de CFOPs existente para mostrar as opções
+        const section = document.getElementById('cfopOpcaoSection');
+        if (!section) {
+            addLog('ERRO: Seção cfopOpcaoSection não encontrada no HTML', 'error');
+            // Fallback: prosseguir diretamente com cálculo
+            fomentarData = classifyOperations(registrosCompletos);
+            calculateFomentar();
+            return;
+        }
+        const container = section;
+        
+        let opcoes = [];
+        let html = '<h3>🔧 Correções Disponíveis</h3>';
+        html += '<p>Escolha o que deseja revisar antes do cálculo:</p>';
+        html += '<div class="tipo-correcao-opcoes">';
+        
+        if (temCfops) {
+            opcoes.push('cfops');
+            html += `
+                <label class="tipo-correcao-option">
+                    <input type="checkbox" id="optCfops" value="cfops">
+                    <span>📋 CFOPs Genéricos (${cfopsGenericosEncontrados.length || 'detectados'})</span>
+                </label>
+            `;
+        }
+        
+        if (temE111) {
+            opcoes.push('e111');  
+            html += `
+                <label class="tipo-correcao-option">
+                    <input type="checkbox" id="optE111" value="e111">
+                    <span>⚙️ Códigos de Ajuste E111 (${codigosEncontrados.length} encontrados)</span>
+                </label>
+            `;
+        }
+        
+        html += '</div>';
+        html += `
+            <div class="tipo-correcao-actions">
+                <button id="btnConfirmarTipoCorrecao" class="btn-style">✅ Continuar</button>
+                <button id="btnPularTodasCorrecoes" class="btn-style">🚀 Calcular Sem Alterações</button>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+        section.style.display = 'block';
+        
+        // Event listeners para os botões
+        document.getElementById('btnConfirmarTipoCorrecao').addEventListener('click', processarEscolhaTipoCorrecao);
+        document.getElementById('btnPularTodasCorrecoes').addEventListener('click', pularTodasCorrecoes);
+        
+        // Atualizar status
+        document.getElementById('fomentarSpedStatus').textContent = 
+            `Arquivo SPED processado. Correções disponíveis para revisão.`;
+        document.getElementById('fomentarSpedStatus').style.color = '#007BFF';
+        
+        // Scroll para a seção
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    
+    // Processa a escolha do usuário sobre o tipo de correção
+    function processarEscolhaTipoCorrecao() {
+        const optCfops = document.getElementById('optCfops');
+        const optE111 = document.getElementById('optE111');
+        
+        const querCfops = optCfops && optCfops.checked;
+        const querE111 = optE111 && optE111.checked;
+        
+        // Ocultar seção de escolha
+        document.getElementById('cfopOpcaoSection').style.display = 'none';
+        
+        if (!querCfops && !querE111) {
+            // Usuário não escolheu nada, prosseguir com cálculo
+            addLog('Nenhuma correção selecionada. Prosseguindo com cálculo...', 'info');
+            fomentarData = classifyOperations(registrosCompletos);
+            calculateFomentar();
+            return;
+        }
+        
+        // Processar correções escolhidas sequencialmente
+        processarCorrecoesSequenciais(querCfops, querE111);
+    }
+    
+    // Processa correções de forma sequencial
+    function processarCorrecoesSequenciais(fazCfops, fazE111) {
+        if (fazCfops) {
+            // Primeiro mostrar CFOPs genéricos se escolhido
+            addLog('Iniciando configuração de CFOPs genéricos...', 'info');
+            detectarCfopsGenericosIndividuais(registrosCompletos);
+            // Função detectarCfopsGenericosIndividuais já chama mostrarInterfaceCfopsGenericosIndividuais
+            // Quando usuário terminar CFOPs, continuarAposCfops será chamada com fazE111
+            window.proximaEtapaE111 = fazE111; // Flag para próxima etapa
+        } else if (fazE111) {
+            // Apenas mostrar E111
+            addLog('Iniciando correção de códigos E111...', 'info');
+            // analisarCodigosE111 já foi chamado para detectar, agora mostrar interface
+            exibirCodigosParaCorrecao();
+        } else {
+            // Nenhuma correção, prosseguir
+            fomentarData = classifyOperations(registrosCompletos);
+            calculateFomentar();
+        }
+    }
+    
+    // Função centralizada para gerenciar fluxo de correções
+    function continuarFluxoCorrecoes() {
+        // Verificar se precisa mostrar E111 ou prosseguir com cálculo
+        if (window.proximaEtapaE111) {
+            addLog('Iniciando correção de códigos E111...', 'info');
+            // Mostrar interface E111
+            exibirCodigosParaCorrecao();
+            // Limpar flag
+            window.proximaEtapaE111 = false;
+        } else {
+            // Prosseguir diretamente com cálculo
+            addLog('Correções finalizadas. Prosseguindo com cálculo FOMENTAR...', 'info');
             continuarCalculoFomentar();
         }
     }
-
+    
+    // Função para CFOPs sem E111 subsequente
+    function finalizarApenaseCfops() {
+        addLog('CFOPs configurados. Prosseguindo com cálculo FOMENTAR...', 'info');
+        continuarCalculoFomentar();
+    }
+    
+    // Pula todas as correções e vai direto para o cálculo
+    function pularTodasCorrecoes() {
+        addLog('Pulando todas as correções. Prosseguindo com cálculo...', 'info');
+        
+        // Ocultar seção de escolha
+        document.getElementById('cfopOpcaoSection').style.display = 'none';
+        
+        // Prosseguir diretamente com cálculo
+        fomentarData = classifyOperations(registrosCompletos);
+        calculateFomentar();
+    }
+    
     // === FUNÇÕES DE CORREÇÃO DE CÓDIGOS E111 ===
     
-    function analisarCodigosE111(registros, isMultiple = false) {
+    function analisarCodigosE111(registros, isMultiple = false, mostrarInterface = true) {
         codigosEncontrados = [];
         isMultiplePeriods = isMultiple;
         
@@ -2505,7 +2662,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         if (codigosEncontrados.length > 0) {
-            exibirCodigosParaCorrecao();
+            if (mostrarInterface) {
+                exibirCodigosParaCorrecao();
+            }
             return true; // Tem códigos para corrigir
         }
         
@@ -2834,77 +2993,39 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function continuarCalculoFomentar() {
-        addLog('🔄 Iniciando continuarCalculoFomentar...', 'info');
+        // Aplicar correções aos dados se existirem
+        if (Object.keys(codigosCorrecao).length > 0) {
+            aplicarCorrecoesAosRegistros();
+        }
         
-        try {
-            // Aplicar correções aos dados se existirem
-            if (Object.keys(codigosCorrecao).length > 0) {
-                addLog('Aplicando correções E111...', 'info');
-                aplicarCorrecoesAosRegistros();
+        // Prosseguir com classificação e cálculo
+        if (currentImportMode === 'multiple' && multiPeriodData.length > 0) {
+            // Múltiplos períodos - usar função específica
+            continuarCalculoMultiplosPeriodos();
+        } else {
+            // Período único
+            fomentarData = classifyOperations(registrosCompletos);
+            
+            // Validar se há dados suficientes
+            const totalOperacoes = fomentarData.saidasIncentivadas.length + fomentarData.saidasNaoIncentivadas.length + 
+                                  fomentarData.entradasIncentivadas.length + fomentarData.entradasNaoIncentivadas.length;
+            
+            if (totalOperacoes === 0) {
+                throw new Error('SPED não contém operações suficientes para apuração FOMENTAR');
             }
             
-            // Prosseguir com classificação e cálculo
-            if (currentImportMode === 'multiple' && multiPeriodData.length > 0) {
-                // Múltiplos períodos - usar função específica
-                addLog('Processando múltiplos períodos...', 'info');
-                continuarCalculoMultiplosPeriodos();
-            } else {
-                // Período único
-                addLog('Iniciando classificação de operações...', 'info');
-                
-                // Debug: verificar configurações CFOP
-                if (Object.keys(cfopsGenericosConfig).length > 0) {
-                    const configLog = Object.entries(cfopsGenericosConfig)
-                        .map(([cfop, config]) => `${cfop}: ${config}`)
-                        .join(', ');
-                    addLog(`Configurações CFOP aplicadas: ${configLog}`, 'info');
-                }
-                
-                fomentarData = classifyOperations(registrosCompletos);
-                addLog('Classificação de operações concluída', 'success');
-                
-                // Validar se há dados suficientes
-                const totalOperacoes = fomentarData.saidasIncentivadas.length + fomentarData.saidasNaoIncentivadas.length + 
-                                      fomentarData.entradasIncentivadas.length + fomentarData.entradasNaoIncentivadas.length;
-                
-                addLog(`Total de operações classificadas: ${totalOperacoes}`, 'info');
-                addLog(`- Saídas incentivadas: ${fomentarData.saidasIncentivadas.length}`, 'info');
-                addLog(`- Saídas não incentivadas: ${fomentarData.saidasNaoIncentivadas.length}`, 'info');
-                addLog(`- Entradas incentivadas: ${fomentarData.entradasIncentivadas.length}`, 'info');
-                addLog(`- Entradas não incentivadas: ${fomentarData.entradasNaoIncentivadas.length}`, 'info');
-                
-                if (totalOperacoes === 0) {
-                    throw new Error('SPED não contém operações suficientes para apuração FOMENTAR');
-                }
-                
-                addLog('Executando cálculo FOMENTAR...', 'info');
-                calculateFomentar();
-                addLog('Cálculo FOMENTAR executado com sucesso', 'success');
-                
-                // MOSTRAR RESULTADOS NA INTERFACE
-                const fomentarResults = document.getElementById('fomentarResults');
-                if (fomentarResults) {
-                    fomentarResults.style.display = 'block';
-                    addLog('Interface de resultados FOMENTAR exibida', 'success');
-                } else {
-                    addLog('AVISO: Seção fomentarResults não encontrada no HTML', 'warn');
-                }
-                
-                // Atualizar status
-                document.getElementById('fomentarSpedStatus').textContent = 
-                    `Arquivo SPED processado: ${totalOperacoes} operações analisadas (${fomentarData.saidasIncentivadas.length} saídas incentivadas, ${fomentarData.saidasNaoIncentivadas.length} saídas não incentivadas)`;
-                document.getElementById('fomentarSpedStatus').style.color = '#20e3b2';
-                
-                addLog(`Apuração FOMENTAR calculada: ${totalOperacoes} operações analisadas`, 'success');
-                addLog('Revise os valores calculados e ajuste os campos editáveis conforme necessário', 'info');
-                addLog('✅ Processo concluído com sucesso!', 'success');
-            }
-        } catch (error) {
-            addLog(`❌ ERRO em continuarCalculoFomentar: ${error.message}`, 'error');
-            console.error('Erro detalhado:', error);
-            document.getElementById('fomentarSpedStatus').textContent = `Erro: ${error.message}`;
-            document.getElementById('fomentarSpedStatus').style.color = '#f857a6';
+            calculateFomentar();
+            
+            // Atualizar status
+            document.getElementById('fomentarSpedStatus').textContent = 
+                `Arquivo SPED processado: ${totalOperacoes} operações analisadas (${fomentarData.saidasIncentivadas.length} saídas incentivadas, ${fomentarData.saidasNaoIncentivadas.length} saídas não incentivadas)`;
+            document.getElementById('fomentarSpedStatus').style.color = '#20e3b2';
+            
+            addLog(`Apuração FOMENTAR calculada: ${totalOperacoes} operações analisadas`, 'success');
+            addLog('Revise os valores calculados e ajuste os campos editáveis conforme necessário', 'info');
         }
+        
+        // Mostrar resultados
     }
     
     // CLAUDE-CONTEXT: Funções específicas para correção de códigos E111 no ProGoiás
@@ -3354,64 +3475,6 @@ document.addEventListener('DOMContentLoaded', () => {
             valorFinanciamento: icmsFinanciado,
             totalGeral: saldoPagarParcelaNaoFinanciada + saldoPagarNaoIncentivadas
         });
-        
-        // SALVAR VALORES CALCULADOS PARA EXPORTAÇÃO
-        if (!fomentarData.calculatedValues) {
-            fomentarData.calculatedValues = {};
-        }
-        
-        // Salvar todos os valores calculados com nomes descritivos
-        fomentarData.calculatedValues = {
-            // Quadro A - Proporção dos Créditos Apropriados
-            saidasIncentivadas: saidasIncentivadas,
-            totalSaidas: totalSaidas,
-            percentualSaidasIncentivadas: percentualSaidasIncentivadas,
-            creditosEntradas: creditosEntradasIncentivadas + creditosEntradasNaoIncentivadas,
-            outrosCreditos: outrosCreditosIncentivados + outrosCreditosNaoIncentivados,
-            estornoDebitos: estornoDebitos,
-            saldoCredorAnterior: saldoCredorAnterior,
-            totalCreditos: totalCreditos,
-            creditoIncentivadas: creditoIncentivadas,
-            creditoNaoIncentivadas: creditoNaoIncentivadas,
-            
-            // Quadro B - Operações Incentivadas
-            debitoIncentivadas: debitoIncentivadas,
-            outrosDebitosIncentivadas: outrosDebitosIncentivadas,
-            estornoCreditosIncentivadas: estornoCreditosIncentivadas,
-            creditoParaIncentivadas: creditoIncentivadas,
-            deducoesIncentivadas: deducoesIncentivadas,
-            saldoDevedorIncentivadas: saldoDevedorIncentivadas,
-            icmsPorMedia: icmsPorMedia,
-            icmsBaseFomentar: icmsBaseFomentar,
-            percentualFinanciamento: percentualFinanciamento * 100,
-            icmsSujeitoFinanciamento: icmsSujeitoFinanciamento,
-            icmsFinanciado: icmsFinanciado,
-            parcelaNaoFinanciada: parcelaNaoFinanciada,
-            saldoPagarParcelaNaoFinanciada: saldoPagarParcelaNaoFinanciada,
-            
-            // Quadro C - Operações Não Incentivadas
-            debitoNaoIncentivadas: debitoNaoIncentivadas,
-            outrosDebitosNaoIncentivadas: outrosDebitosNaoIncentivadas,
-            estornoCreditosNaoIncentivadas: estornoCreditosNaoIncentivadas,
-            creditoParaNaoIncentivadas: creditoNaoIncentivadas,
-            deducoesNaoIncentivadas: deducoesNaoIncentivadas,
-            saldoDevedorNaoIncentivadas: saldoDevedorNaoIncentivadas,
-            saldoPagarNaoIncentivadas: saldoPagarNaoIncentivadas,
-            
-            // Resumo Final
-            totalIncentivadas: saldoPagarParcelaNaoFinanciada,
-            totalNaoIncentivadas: saldoPagarNaoIncentivadas,
-            valorFinanciamento: icmsFinanciado,
-            totalGeral: saldoPagarParcelaNaoFinanciada + saldoPagarNaoIncentivadas
-        };
-        
-        addLog('Valores calculados salvos para exportação', 'info');
-        
-        // Debug: Mostrar TODOS os valores salvos
-        addLog(`Debug - Quadro A: saidasIncentivadas=${saidasIncentivadas}, totalSaidas=${totalSaidas}, percentualSaidasIncentivadas=${percentualSaidasIncentivadas}`, 'info');
-        addLog(`Debug - Quadro B: debitoIncentivadas=${debitoIncentivadas}, icmsBaseFomentar=${icmsBaseFomentar}, icmsFinanciado=${icmsFinanciado}`, 'info');
-        addLog(`Debug - Quadro C: debitoNaoIncentivadas=${debitoNaoIncentivadas}, saldoPagarNaoIncentivadas=${saldoPagarNaoIncentivadas}`, 'info');
-        addLog(`Debug - Resumo: totalIncentivadas=${saldoPagarParcelaNaoFinanciada}, totalNaoIncentivadas=${saldoPagarNaoIncentivadas}, valorFinanciamento=${icmsFinanciado}`, 'info');
     }
 
     function updateQuadroA(values) {
@@ -3505,20 +3568,12 @@ document.addEventListener('DOMContentLoaded', () => {
             periodo: sharedPeriodo, 
             nomeEmpresa: sharedNomeEmpresa, 
             fomentarData: fomentarData, 
-            calculatedValues: fomentarData.calculatedValues 
+            calculatedValues: fomentarData 
         }];
         
         if (!periodsData.length || (!isMultiplePeriods && !fomentarData)) {
             addLog('Erro: Nenhum dado FOMENTAR disponível para exportação', 'error');
             return;
-        }
-        
-        // Debug: verificar se calculatedValues existe
-        if (!isMultiplePeriods && fomentarData.calculatedValues) {
-            const calcValues = fomentarData.calculatedValues;
-            addLog(`Valores para exportação: saidasIncentivadas=${calcValues.saidasIncentivadas}, debitoIncentivadas=${calcValues.debitoIncentivadas}, debitoNaoIncentivadas=${calcValues.debitoNaoIncentivadas}`, 'info');
-        } else if (!isMultiplePeriods) {
-            addLog('AVISO: calculatedValues não encontrado - valores podem aparecer como zero na exportação', 'warn');
         }
         
         try {
@@ -3652,8 +3707,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 {item: '22', desc: 'Percentagem do Financiamento (%)', field: 'percentualFinanciamento'},
                 {item: '23', desc: 'ICMS Sujeito a Financiamento', field: 'icmsSujeitoFinanciamento'},
                 {item: '25', desc: 'ICMS Financiado', field: 'icmsFinanciado'},
-                {item: '26', desc: 'Saldo do ICMS da Parcela Não Financiada', field: 'parcelaNaoFinanciada'},
-                {item: '28', desc: 'Saldo do ICMS a Pagar da Parcela Não Financiada', field: 'saldoPagarParcelaNaoFinanciada'}
+                {item: '26', desc: 'Saldo do ICMS da Parcela Não Financiada', field: 'saldoNaoFinanciada'},
+                {item: '28', desc: 'Saldo do ICMS a Pagar da Parcela Não Financiada', field: 'saldoPagarNaoFinanciada'}
             ];
             
             currentRow = createQuadroSection('QUADRO B - APURAÇÃO DOS SALDOS DAS OPERAÇÕES INCENTIVADAS', quadroB, currentRow);
@@ -3681,10 +3736,10 @@ document.addEventListener('DOMContentLoaded', () => {
             currentRow++;
             
             const resumoItems = [
-                {desc: 'Total a Pagar - Operações Incentivadas', field: 'totalIncentivadas'},
-                {desc: 'Total a Pagar - Operações Não Incentivadas', field: 'totalNaoIncentivadas'},
+                {desc: 'Total a Pagar - Operações Incentivadas', field: 'totalPagarIncentivadas'},
+                {desc: 'Total a Pagar - Operações Não Incentivadas', field: 'totalPagarNaoIncentivadas'},
                 {desc: 'Valor do Financiamento FOMENTAR', field: 'valorFinanciamento'},
-                {desc: 'Total Geral a Pagar', field: 'totalGeral'}
+                {desc: 'Total Geral a Pagar', field: 'totalGeralPagar'}
             ];
             
             resumoItems.forEach((item, index) => {
@@ -3859,7 +3914,7 @@ document.addEventListener('DOMContentLoaded', () => {
         applyAutomaticSaldoCredorCarryover();
         
         // Analisar códigos E111 para possível correção em múltiplos períodos
-        const temCodigosParaCorrigir = analisarCodigosE111(multiPeriodData, true);
+        const temCodigosParaCorrigir = analisarCodigosE111(multiPeriodData, true, true);
         
         if (temCodigosParaCorrigir) {
             // Mostrar interface de correção e parar aqui
@@ -4120,7 +4175,7 @@ document.addEventListener('DOMContentLoaded', () => {
             saidasIncentivadas,
             saidasNaoIncentivadas,
             totalSaidas,
-            percentualSaidasIncentivadas: percentualSaidas,
+            percentualSaidas,
             creditosEntradas,
             outrosCreditos,
             estornoDebitos,
@@ -4291,7 +4346,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const items = [
             { id: 'saidasIncentivadas', label: 'Saídas Incentivadas' },
             { id: 'totalSaidas', label: 'Total das Saídas' },
-            { id: 'percentualSaidasIncentivadas', label: 'Percentual Saídas Incentivadas (%)' },
+            { id: 'percentualSaidas', label: 'Percentual Saídas Incentivadas (%)' },
             { id: 'creditoIncentivadas', label: 'Crédito para Operações Incentivadas' },
             { id: 'saldoCredorAnterior', label: 'Saldo Credor Anterior' },
             { id: 'valorFinanciamento', label: 'Valor do Financiamento' },
@@ -4409,7 +4464,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const quadroAItems = [
             { id: '1', desc: 'Saídas das Operações Incentivadas', field: 'saidasIncentivadas' },
             { id: '2', desc: 'Total das Saídas', field: 'totalSaidas' },
-            { id: '3', desc: 'Percentual das Saídas das Operações Incentivadas (%)', field: 'percentualSaidasIncentivadas' },
+            { id: '3', desc: 'Percentual das Saídas das Operações Incentivadas (%)', field: 'percentualSaidas' },
             { id: '4', desc: 'Créditos por Entradas', field: 'creditosEntradas' },
             { id: '5', desc: 'Outros Créditos', field: 'outrosCreditos' },
             { id: '6', desc: 'Estorno de Débitos', field: 'estornoDebitos' },
@@ -4557,10 +4612,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Summary items
         const summaryItems = [
-            { desc: 'Total a Pagar - Operações Incentivadas', field: 'totalIncentivadas' },
-            { desc: 'Total a Pagar - Operações Não Incentivadas', field: 'totalNaoIncentivadas' },
+            { desc: 'Total a Pagar - Operações Incentivadas', field: 'totalPagarIncentivadas' },
+            { desc: 'Total a Pagar - Operações Não Incentivadas', field: 'totalPagarNaoIncentivadas' },
             { desc: 'Valor do Financiamento FOMENTAR', field: 'valorFinanciamento' },
-            { desc: 'Total Geral a Pagar', field: 'totalGeral' }
+            { desc: 'Total Geral a Pagar', field: 'totalGeralPagar' }
         ];
         
         summaryItems.forEach(item => {
@@ -4741,7 +4796,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return [
             { id: '1', desc: 'Saídas das Operações Incentivadas', field: 'saidasIncentivadas' },
             { id: '2', desc: 'Total das Saídas', field: 'totalSaidas' },
-            { id: '3', desc: 'Percentual das Saídas das Operações Incentivadas (%)', field: 'percentualSaidasIncentivadas' },
+            { id: '3', desc: 'Percentual das Saídas das Operações Incentivadas (%)', field: 'percentualSaidas' },
             { id: '4', desc: 'Créditos por Entradas', field: 'creditosEntradas' },
             { id: '5', desc: 'Outros Créditos', field: 'outrosCreditos' },
             { id: '6', desc: 'Estorno de Débitos', field: 'estornoDebitos' },
@@ -4784,10 +4839,10 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function getSummaryData() {
         return [
-            { desc: 'Total a Pagar - Operações Incentivadas', field: 'totalIncentivadas' },
-            { desc: 'Total a Pagar - Operações Não Incentivadas', field: 'totalNaoIncentivadas' },
+            { desc: 'Total a Pagar - Operações Incentivadas', field: 'totalPagarIncentivadas' },
+            { desc: 'Total a Pagar - Operações Não Incentivadas', field: 'totalPagarNaoIncentivadas' },
             { desc: 'Valor do Financiamento FOMENTAR', field: 'valorFinanciamento' },
-            { desc: 'Total Geral a Pagar', field: 'totalGeral' }
+            { desc: 'Total Geral a Pagar', field: 'totalGeralPagar' }
         ];
     }
     
