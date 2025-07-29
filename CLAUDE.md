@@ -273,6 +273,31 @@ let isMultiplePeriods = false; // Flag para processamento múltiplo
 
 A implementação foi completamente refeita para seguir rigorosamente o **Demonstrativo versão 3.51**, corrigindo problemas fundamentais na lógica de cálculo:
 
+##### Múltiplos Períodos - Extensão da Lógica Corrigida (2025-07-29)
+
+**IMPORTANTE**: A funcionalidade de múltiplos períodos foi atualizada para usar a mesma lógica corrigida do período único, garantindo que o relatório comparativo apresente todos os 44 itens conforme o demonstrativo oficial.
+
+**Alterações Realizadas:**
+
+1. **Função `calculateFomentarForPeriod()` Atualizada:**
+   - Implementação completa dos 44 itens conforme demonstrativo versão 3.51
+   - Lógica idêntica à função `calculateFomentar()` do período único
+   - Compensação de saldo credor entre quadros B e C
+   - Item 35 com lógica condicional complexa implementada
+
+2. **Relatório Comparativo Corrigido:**
+   - **Quadro B**: Agora inclui TODOS os itens (11, 11.1, 12-31)
+   - **Quadro C**: Agora inclui TODOS os itens (32-44)
+   - Exportação Excel com estrutura completa de 44 itens
+   - Mapeamento correto de campos conforme nova estrutura
+
+3. **Compatibilidade de Campos:**
+   - Campos antigos mantidos para compatibilidade: `totalIncentivadas`, `totalNaoIncentivadas`, `totalGeral`
+   - Campos novos implementados: `saldoPagarParcelaNaoFinanciada`, `saldoPagarNaoIncentivadas`, `totalGeralPagar`
+   - Funções de export (Excel e PDF) atualizadas para usar campos corretos
+
+**CRÍTICO**: O relatório comparativo agora apresenta a mesma estrutura e cálculos do período único, garantindo consistência total entre as duas visualizações.
+
 ##### Itens Implementados Corretamente
 
 **Quadro B - Operações Incentivadas (44 itens completos):**

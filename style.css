@@ -1545,3 +1545,144 @@ body {
         flex-direction: column;
     }
 }
+
+/* === ESTILOS PARA QUADROS COMPARATIVOS OFICIAIS === */
+
+.comparative-quadro {
+    margin: 25px 0;
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    overflow: hidden;
+}
+
+.comparative-quadro h4 {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    margin: 0;
+    padding: 15px 20px;
+    font-size: 1.1em;
+    font-weight: 600;
+    border-bottom: none;
+}
+
+.comparative-quadro .comparative-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+    font-size: 0.9em;
+}
+
+.comparative-quadro .comparative-table th {
+    background: #f8f9fa;
+    color: #495057;
+    font-weight: 600;
+    padding: 12px 8px;
+    text-align: center;
+    border-bottom: 2px solid #dee2e6;
+    font-size: 0.85em;
+}
+
+.comparative-quadro .comparative-table th.item-col {
+    width: 60px;
+    background: #e9ecef;
+}
+
+.comparative-quadro .comparative-table th.description-col {
+    width: 300px;
+    text-align: left;
+    background: #f1f3f4;
+}
+
+.comparative-quadro .comparative-table th.value-col {
+    min-width: 90px;
+    background: #f8f9fa;
+}
+
+.comparative-quadro .comparative-table td {
+    padding: 10px 8px;
+    border-bottom: 1px solid #f1f1f1;
+    vertical-align: middle;
+}
+
+.comparative-quadro .comparative-table td.item-cell {
+    text-align: center;
+    font-weight: 600;
+    background: #f8f9fa;
+    color: #495057;
+}
+
+.comparative-quadro .comparative-table td.description-cell {
+    text-align: left;
+    color: #495057;
+    font-weight: 500;
+}
+
+.comparative-quadro .comparative-table td.value-cell {
+    text-align: right;
+    font-family: 'Consolas', 'Monaco', monospace;
+    color: #2c3e50;
+    font-weight: 500;
+}
+
+.comparative-quadro .comparative-table tr:nth-child(even) {
+    background-color: #fafbfc;
+}
+
+.comparative-quadro .comparative-table tr:hover {
+    background-color: #f1f5f9;
+}
+
+/* Tabela Info no topo */
+.table-info {
+    background: #f8f9fa;
+    padding: 15px 20px;
+    border-bottom: 1px solid #dee2e6;
+    margin-bottom: 0;
+}
+
+.table-info p {
+    margin: 5px 0;
+    color: #495057;
+    font-size: 0.9em;
+}
+
+.table-info p strong {
+    color: #2c3e50;
+}
+
+/* Responsividade para quadros comparativos */
+@media (max-width: 1200px) {
+    .comparative-quadro .comparative-table {
+        font-size: 0.8em;
+    }
+    
+    .comparative-quadro .comparative-table th,
+    .comparative-quadro .comparative-table td {
+        padding: 8px 6px;
+    }
+    
+    .comparative-quadro .comparative-table th.description-col {
+        width: 250px;
+    }
+}
+
+@media (max-width: 768px) {
+    .comparative-quadro .comparative-table {
+        font-size: 0.75em;
+    }
+    
+    .comparative-quadro .comparative-table th.description-col {
+        width: 200px;
+    }
+    
+    .comparative-quadro .comparative-table th.value-col {
+        min-width: 70px;
+    }
+    
+    .comparative-quadro h4 {
+        font-size: 1em;
+        padding: 12px 15px;
+    }
+}
