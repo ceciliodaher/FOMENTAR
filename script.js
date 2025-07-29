@@ -3280,33 +3280,162 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const totalCreditos = creditoIncentivadas + creditoNaoIncentivadas;
         
-        // QUADRO B - Operações Incentivadas (conforme IN 885)
+        // QUADRO B - Operações Incentivadas (conforme Demonstrativo versão 3.51)
+        
+        // 11 - Débito do ICMS das Operações Incentivadas
         const debitoIncentivadas = fomentarData.saidasIncentivadas.reduce((total, op) => total + op.valorIcms, 0);
+        
+        // 11.1 - Débito do ICMS das Saídas a Título de Bonificação ou Semelhante Incentivadas
+        // Identificar operações de bonificação (CFOPs específicos ou natureza da operação)
+        const debitoBonificacaoIncentivadas = fomentarData.saidasIncentivadas
+            .filter(op => {
+                // CFOPs típicos de bonificação: 5910, 5911, 6910, 6911
+                const cfopsBonificacao = ['5910', '5911', '6910', '6911'];
+                return cfopsBonificacao.includes(op.cfop);
+            })
+            .reduce((total, op) => total + op.valorIcms, 0);
+        
+        // 12 - Outros Débitos das Operações Incentivadas  
         const outrosDebitosIncentivadas = fomentarData.outrosDebitosIncentivados || 0;
-        const estornoCreditosIncentivadas = 0;
-        const deducoesIncentivadas = 0;
-        const creditoSaldoCredorNaoIncentivadas = 0;
         
-        const saldoDevedorIncentivadas = (debitoIncentivadas + outrosDebitosIncentivadas + estornoCreditosIncentivadas) - 
-                                       (creditoIncentivadas + deducoesIncentivadas + creditoSaldoCredorNaoIncentivadas);
+        // 13 - Estorno de Créditos das Operações Incentivadas
+        const estornoCreditosIncentivadas = 0; // Configurável
         
-        const icmsBaseFomentar = Math.max(0, saldoDevedorIncentivadas - icmsPorMedia);
-        const icmsSujeitoFinanciamento = icmsBaseFomentar * percentualFinanciamento;
-        const icmsFinanciado = icmsSujeitoFinanciamento;
-        const parcelaNaoFinanciada = icmsBaseFomentar - icmsSujeitoFinanciamento;
-        const saldoPagarParcelaNaoFinanciada = Math.max(0, parcelaNaoFinanciada);
+        // 14 - Crédito para Operações Incentivadas
+        const creditoOperacoesIncentivadas = creditoIncentivadas;
         
-        // QUADRO C - Operações Não Incentivadas (conforme IN 885)
+        // 15 - Deduções das Operações Incentivadas
+        const deducoesIncentivadas = 0; // Configurável
+        
+        // QUADRO C - OPERAÇÕES NÃO INCENTIVADAS (calcular primeiro para obter saldos credores)
+        
+        // Itens básicos do Quadro C
         const debitoNaoIncentivadas = fomentarData.saidasNaoIncentivadas.reduce((total, op) => total + op.valorIcms, 0);
         const outrosDebitosNaoIncentivadas = fomentarData.outrosDebitosNaoIncentivados || 0;
-        const estornoCreditosNaoIncentivadas = 0;
-        const deducoesNaoIncentivadas = 0;
-        const creditoSaldoCredorIncentivadas = 0;
+        const estornoCreditosNaoIncentivadas = 0; // Configurável
+        const icmsExcedenteNaoSujeitoIncentivo = 0; // Será calculado depois (item 35)
+        const creditoOperacoesNaoIncentivadas = creditoNaoIncentivadas;
+        const deducoesNaoIncentivadas = 0; // Configurável
         
-        const saldoDevedorNaoIncentivadas = (debitoNaoIncentivadas + outrosDebitosNaoIncentivadas + estornoCreditosNaoIncentivadas) - 
-                                          (creditoNaoIncentivadas + deducoesNaoIncentivadas + creditoSaldoCredorIncentivadas);
+        // 42 - Saldo Credor do Período das Operações Não Incentivadas [(36+37)-(32+33+34+35)]
+        const saldoCredorPeriodoNaoIncentivadas = Math.max(0, 
+            (creditoOperacoesNaoIncentivadas + deducoesNaoIncentivadas) - 
+            (debitoNaoIncentivadas + outrosDebitosNaoIncentivadas + estornoCreditosNaoIncentivadas + icmsExcedenteNaoSujeitoIncentivo)
+        );
         
-        const saldoPagarNaoIncentivadas = Math.max(0, saldoDevedorNaoIncentivadas);
+        // 43 - Saldo Credor do Período Utilizado nas Operações Incentivadas (vai para o item 16 do Quadro B)
+        const saldoCredorNaoIncentUsadoIncentivadas = saldoCredorPeriodoNaoIncentivadas; // Todo o saldo credor pode ser usado
+        
+        // 44 - Saldo Credor a Transportar para o Período Seguinte (42-43)
+        const saldoCredorTransportarNaoIncentivadas = saldoCredorPeriodoNaoIncentivadas - saldoCredorNaoIncentUsadoIncentivadas;
+        
+        // QUADRO B - OPERAÇÕES INCENTIVADAS
+        
+        // 16 - Crédito Referente a Saldo Credor do Período das Operações Não Incentivadas
+        const creditoSaldoCredorNaoIncentivadas = saldoCredorNaoIncentUsadoIncentivadas;
+        
+        // 17 - Saldo Devedor do ICMS das Operações Incentivadas [(11+11.1+12+13) - (14+15+16)]
+        const saldoDevedorIncentivadas = Math.max(0, 
+            (debitoIncentivadas + debitoBonificacaoIncentivadas + outrosDebitosIncentivadas + estornoCreditosIncentivadas) - 
+            (creditoOperacoesIncentivadas + deducoesIncentivadas + creditoSaldoCredorNaoIncentivadas)
+        );
+        
+        // 18 - ICMS por Média
+        const icmsPorMediaCalc = icmsPorMedia;
+        
+        // 19 - Saldo após dedução do ICMS por Média
+        const saldoAposMedia = Math.max(0, saldoDevedorIncentivadas - icmsPorMediaCalc);
+        
+        // 20 - Outros Abatimentos
+        const outrosAbatimentos = 0; // Configurável
+        
+        // 21 - ICMS Base para FOMENTAR/PRODUZIR
+        const icmsBaseFomentar = Math.max(0, saldoAposMedia - outrosAbatimentos);
+        
+        // 22 - Percentagem do Financiamento
+        const percentualFinanciamentoCalc = percentualFinanciamento * 100;
+        
+        // 23 - ICMS Sujeito a Financiamento
+        const icmsSujeitoFinanciamento = icmsBaseFomentar * percentualFinanciamento;
+        
+        // 24 - Valor do Financiamento Concedido (pode ser limitado por teto)
+        const valorFinanciamentoConcedido = icmsSujeitoFinanciamento; // Sem limitação por ora
+        
+        // 25 - ICMS Financiado
+        const icmsFinanciado = valorFinanciamentoConcedido;
+        
+        // 26 - Saldo do ICMS da Parcela Não Financiada
+        const parcelaNaoFinanciada = icmsBaseFomentar - icmsFinanciado;
+        
+        // 27 - Compensação de Saldo Credor de Período Anterior (Parcela Não Financiada)
+        const compensacaoSaldoCredorAnterior = 0; // Configurável
+        
+        // 28 - Saldo do ICMS a Pagar da Parcela Não Financiada
+        const saldoPagarParcelaNaoFinanciada = Math.max(0, parcelaNaoFinanciada - compensacaoSaldoCredorAnterior);
+        
+        // 29 - Saldo Credor do Período das Operações Incentivadas [(14+15)-(11+11.1+12+13)]
+        const saldoCredorPeriodoIncentivadas = Math.max(0, 
+            (creditoOperacoesIncentivadas + deducoesIncentivadas) - 
+            (debitoIncentivadas + debitoBonificacaoIncentivadas + outrosDebitosIncentivadas + estornoCreditosIncentivadas)
+        );
+        
+        // 30 - Saldo Credor do Período Utilizado nas Operações Não Incentivadas
+        const saldoCredorIncentUsadoNaoIncentivadas = saldoCredorPeriodoIncentivadas; // Todo o saldo credor pode ser usado
+        
+        // 31 - Saldo Credor a Transportar para o Período Seguinte (29-30)
+        const saldoCredorTransportarIncentivadas = saldoCredorPeriodoIncentivadas - saldoCredorIncentUsadoNaoIncentivadas;
+        
+        // QUADRO C - CONTINUAÇÃO DOS CÁLCULOS (já temos os saldos credores calculados)
+        
+        // Agora vou calcular o item 35 - ICMS Excedente Não Sujeito ao Incentivo
+        // Regra complexa conforme instrução de preenchimento
+        let icmsExcedenteNaoSujeitoIncentivoFinal;
+        
+        // Valor base do item 24 (valor transportado)
+        const valorTransportadoItem24 = valorFinanciamentoConcedido;
+        
+        // Calcular ICMS Excedente: (24/22) x 100
+        const icmsExcedente = percentualFinanciamentoCalc > 0 ? (valorTransportadoItem24 / percentualFinanciamentoCalc) * 100 : 0;
+        
+        // Verificar condição: ICMS por Média (18) > [Saldo Devedor (17) - ICMS Excedente]
+        const condicaoEspecial = icmsPorMediaCalc > (saldoDevedorIncentivadas - icmsExcedente);
+        
+        if (condicaoEspecial) {
+            // Usar: ICMS Base FOMENTAR (21) - Parcela Não Financiada (26)
+            icmsExcedenteNaoSujeitoIncentivoFinal = icmsBaseFomentar - parcelaNaoFinanciada;
+        } else {
+            // Usar valor transportado do item 24
+            icmsExcedenteNaoSujeitoIncentivoFinal = valorTransportadoItem24;
+        }
+        
+        // Garantir que não seja negativo
+        icmsExcedenteNaoSujeitoIncentivoFinal = Math.max(0, icmsExcedenteNaoSujeitoIncentivoFinal);
+        
+        // Recalcular o saldo credor período não incentivadas com o item 35 correto
+        const saldoCredorPeriodoNaoIncentivadasFinal = Math.max(0, 
+            (creditoOperacoesNaoIncentivadas + deducoesNaoIncentivadas) - 
+            (debitoNaoIncentivadas + outrosDebitosNaoIncentivadas + estornoCreditosNaoIncentivadas + icmsExcedenteNaoSujeitoIncentivoFinal)
+        );
+        
+        // 38 - Saldo Devedor Bruto das Operações Não Incentivadas (32+33+34+35) - (36+37)
+        const saldoDevedorBrutoNaoIncentivadas = Math.max(0, 
+            (debitoNaoIncentivadas + outrosDebitosNaoIncentivadas + estornoCreditosNaoIncentivadas + icmsExcedenteNaoSujeitoIncentivoFinal) - 
+            (creditoOperacoesNaoIncentivadas + deducoesNaoIncentivadas)
+        );
+        
+        // 39 - Saldo Devedor das Operações Não Incentivadas (após compensação com saldo credor incentivadas)
+        const saldoDevedorNaoIncentivadas = Math.max(0, saldoDevedorBrutoNaoIncentivadas - saldoCredorIncentUsadoNaoIncentivadas);
+        
+        // 40 - Compensação de Saldo Credor de Período Anterior (Não Incentivadas)
+        const compensacaoSaldoCredorAnteriorNaoIncentivadas = 0; // Configurável
+        
+        // 41 - Saldo do ICMS a Pagar das Operações Não Incentivadas
+        const saldoPagarNaoIncentivadas = Math.max(0, saldoDevedorNaoIncentivadas - compensacaoSaldoCredorAnteriorNaoIncentivadas);
+        
+        // RESUMO FINAL
+        const totalGeralPagar = saldoPagarParcelaNaoFinanciada + saldoPagarNaoIncentivadas;
+        const valorFinanciamento = icmsFinanciado;
+        const saldoCredorProximoPeriodo = saldoCredorTransportarIncentivadas + saldoCredorTransportarNaoIncentivadas;
         
         // Atualizar interface
         updateQuadroA({
@@ -3324,35 +3453,51 @@ document.addEventListener('DOMContentLoaded', () => {
         
         updateQuadroB({
             item11: debitoIncentivadas,
-            item12: outrosDebitosIncentivadas,
-            item13: estornoCreditosIncentivadas,
-            item14: creditoIncentivadas,
+            item11_1: debitoBonificacaoIncentivadas, 
+            item12: outrosDebitosIncentivadas, 
+            item13: estornoCreditosIncentivadas, 
+            item14: creditoOperacoesIncentivadas, 
             item15: deducoesIncentivadas,
+            item16: creditoSaldoCredorNaoIncentivadas, 
             item17: saldoDevedorIncentivadas,
-            item18: icmsPorMedia,
+            item18: icmsPorMediaCalc,
+            item19: saldoAposMedia,
+            item20: outrosAbatimentos, 
             item21: icmsBaseFomentar,
-            item22: percentualFinanciamento * 100,
+            item22: percentualFinanciamentoCalc, 
             item23: icmsSujeitoFinanciamento,
+            item24: valorFinanciamentoConcedido, 
             item25: icmsFinanciado,
             item26: parcelaNaoFinanciada,
-            item28: saldoPagarParcelaNaoFinanciada
+            item27: compensacaoSaldoCredorAnterior,
+            item28: saldoPagarParcelaNaoFinanciada,
+            item29: saldoCredorPeriodoIncentivadas,
+            item30: saldoCredorIncentUsadoNaoIncentivadas,
+            item31: saldoCredorTransportarIncentivadas
         });
         
         updateQuadroC({
             item32: debitoNaoIncentivadas,
             item33: outrosDebitosNaoIncentivadas,
             item34: estornoCreditosNaoIncentivadas,
-            item36: creditoNaoIncentivadas,
+            item35: icmsExcedenteNaoSujeitoIncentivoFinal,
+            item36: creditoOperacoesNaoIncentivadas,
             item37: deducoesNaoIncentivadas,
+            item38: saldoDevedorBrutoNaoIncentivadas,
             item39: saldoDevedorNaoIncentivadas,
-            item41: saldoPagarNaoIncentivadas
+            item40: compensacaoSaldoCredorAnteriorNaoIncentivadas,
+            item41: saldoPagarNaoIncentivadas,
+            item42: saldoCredorPeriodoNaoIncentivadasFinal,
+            item43: saldoCredorNaoIncentUsadoIncentivadas,
+            item44: saldoCredorTransportarNaoIncentivadas
         });
         
         updateResumo({
             totalIncentivadas: saldoPagarParcelaNaoFinanciada,
             totalNaoIncentivadas: saldoPagarNaoIncentivadas,
-            valorFinanciamento: icmsFinanciado,
-            totalGeral: saldoPagarParcelaNaoFinanciada + saldoPagarNaoIncentivadas
+            valorFinanciamento: valorFinanciamento,
+            totalGeral: totalGeralPagar,
+            saldoCredorProximoPeriodo: saldoCredorProximoPeriodo
         });
         
         // SALVAR VALORES CALCULADOS PARA EXPORTAÇÃO
@@ -3374,35 +3519,54 @@ document.addEventListener('DOMContentLoaded', () => {
             creditoIncentivadas: creditoIncentivadas,
             creditoNaoIncentivadas: creditoNaoIncentivadas,
             
-            // Quadro B - Operações Incentivadas
+            // Quadro B - Operações Incentivadas (completo conforme demonstrativo versão 3.51)
             debitoIncentivadas: debitoIncentivadas,
+            debitoBonificacaoIncentivadas: debitoBonificacaoIncentivadas,
             outrosDebitosIncentivadas: outrosDebitosIncentivadas,
             estornoCreditosIncentivadas: estornoCreditosIncentivadas,
-            creditoParaIncentivadas: creditoIncentivadas,
+            creditoOperacoesIncentivadas: creditoOperacoesIncentivadas,
             deducoesIncentivadas: deducoesIncentivadas,
+            creditoSaldoCredorNaoIncentivadas: creditoSaldoCredorNaoIncentivadas,
             saldoDevedorIncentivadas: saldoDevedorIncentivadas,
-            icmsPorMedia: icmsPorMedia,
+            icmsPorMedia: icmsPorMediaCalc,
+            saldoAposMedia: saldoAposMedia,
+            outrosAbatimentos: outrosAbatimentos,
             icmsBaseFomentar: icmsBaseFomentar,
-            percentualFinanciamento: percentualFinanciamento * 100,
+            percentualFinanciamento: percentualFinanciamentoCalc,
             icmsSujeitoFinanciamento: icmsSujeitoFinanciamento,
+            valorFinanciamentoConcedido: valorFinanciamentoConcedido,
             icmsFinanciado: icmsFinanciado,
             parcelaNaoFinanciada: parcelaNaoFinanciada,
+            compensacaoSaldoCredorAnterior: compensacaoSaldoCredorAnterior,
             saldoPagarParcelaNaoFinanciada: saldoPagarParcelaNaoFinanciada,
+            saldoCredorPeriodoIncentivadas: saldoCredorPeriodoIncentivadas,
+            saldoCredorIncentUsadoNaoIncentivadas: saldoCredorIncentUsadoNaoIncentivadas,
+            saldoCredorTransportarIncentivadas: saldoCredorTransportarIncentivadas,
             
-            // Quadro C - Operações Não Incentivadas
+            // Quadro C - Operações Não Incentivadas (completo conforme demonstrativo versão 3.51)
             debitoNaoIncentivadas: debitoNaoIncentivadas,
             outrosDebitosNaoIncentivadas: outrosDebitosNaoIncentivadas,
             estornoCreditosNaoIncentivadas: estornoCreditosNaoIncentivadas,
-            creditoParaNaoIncentivadas: creditoNaoIncentivadas,
+            icmsExcedenteNaoSujeitoIncentivo: icmsExcedenteNaoSujeitoIncentivoFinal,
+            creditoOperacoesNaoIncentivadas: creditoOperacoesNaoIncentivadas,
             deducoesNaoIncentivadas: deducoesNaoIncentivadas,
+            saldoDevedorBrutoNaoIncentivadas: saldoDevedorBrutoNaoIncentivadas,
             saldoDevedorNaoIncentivadas: saldoDevedorNaoIncentivadas,
+            compensacaoSaldoCredorAnteriorNaoIncentivadas: compensacaoSaldoCredorAnteriorNaoIncentivadas,
             saldoPagarNaoIncentivadas: saldoPagarNaoIncentivadas,
+            saldoCredorPeriodoNaoIncentivadas: saldoCredorPeriodoNaoIncentivadasFinal,
+            saldoCredorNaoIncentUsadoIncentivadas: saldoCredorNaoIncentUsadoIncentivadas,
+            saldoCredorTransportarNaoIncentivadas: saldoCredorTransportarNaoIncentivadas,
             
             // Resumo Final
+            totalGeralPagar: totalGeralPagar,
+            valorFinanciamento: valorFinanciamento,
+            saldoCredorProximoPeriodo: saldoCredorProximoPeriodo,
+            
+            // Compatibilidade com exportações existentes
             totalIncentivadas: saldoPagarParcelaNaoFinanciada,
             totalNaoIncentivadas: saldoPagarNaoIncentivadas,
-            valorFinanciamento: icmsFinanciado,
-            totalGeral: saldoPagarParcelaNaoFinanciada + saldoPagarNaoIncentivadas
+            totalGeral: totalGeralPagar
         };
         
         addLog('Valores calculados salvos para exportação', 'info');
@@ -3429,28 +3593,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateQuadroB(values) {
         document.getElementById('itemB11').textContent = formatCurrency(values.item11);
+        document.getElementById('itemB11_1').textContent = formatCurrency(values.item11_1);
         document.getElementById('itemB12').textContent = formatCurrency(values.item12);
         document.getElementById('itemB13').textContent = formatCurrency(values.item13);
         document.getElementById('itemB14').textContent = formatCurrency(values.item14);
         document.getElementById('itemB15').textContent = formatCurrency(values.item15);
+        document.getElementById('itemB16').textContent = formatCurrency(values.item16);
         document.getElementById('itemB17').textContent = formatCurrency(values.item17);
         document.getElementById('itemB18').textContent = formatCurrency(values.item18);
+        document.getElementById('itemB19').textContent = formatCurrency(values.item19);
+        document.getElementById('itemB20').textContent = formatCurrency(values.item20);
         document.getElementById('itemB21').textContent = formatCurrency(values.item21);
         document.getElementById('itemB22').textContent = values.item22.toFixed(0) + '%';
         document.getElementById('itemB23').textContent = formatCurrency(values.item23);
+        document.getElementById('itemB24').textContent = formatCurrency(values.item24);
         document.getElementById('itemB25').textContent = formatCurrency(values.item25);
         document.getElementById('itemB26').textContent = formatCurrency(values.item26);
+        document.getElementById('itemB27').textContent = formatCurrency(values.item27);
         document.getElementById('itemB28').textContent = formatCurrency(values.item28);
+        document.getElementById('itemB29').textContent = formatCurrency(values.item29);
+        document.getElementById('itemB30').textContent = formatCurrency(values.item30);
+        document.getElementById('itemB31').textContent = formatCurrency(values.item31);
     }
 
     function updateQuadroC(values) {
         document.getElementById('itemC32').textContent = formatCurrency(values.item32);
         document.getElementById('itemC33').textContent = formatCurrency(values.item33);
         document.getElementById('itemC34').textContent = formatCurrency(values.item34);
+        document.getElementById('itemC35').textContent = formatCurrency(values.item35);
         document.getElementById('itemC36').textContent = formatCurrency(values.item36);
         document.getElementById('itemC37').textContent = formatCurrency(values.item37);
+        document.getElementById('itemC38').textContent = formatCurrency(values.item38);
         document.getElementById('itemC39').textContent = formatCurrency(values.item39);
+        document.getElementById('itemC40').textContent = formatCurrency(values.item40);
         document.getElementById('itemC41').textContent = formatCurrency(values.item41);
+        document.getElementById('itemC42').textContent = formatCurrency(values.item42);
+        document.getElementById('itemC43').textContent = formatCurrency(values.item43);
+        document.getElementById('itemC44').textContent = formatCurrency(values.item44);
     }
 
     function updateResumo(values) {
