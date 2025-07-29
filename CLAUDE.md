@@ -11,7 +11,7 @@ Este é um sistema web completo para conversão de arquivos SPED e apuração de
 ```
 /Users/ceciliodaher/Documents/git/FOMENTAR/
 ├── index.html                   # Interface unificada com 3 abas principais
-├── script.js                    # Sistema unificado (SPED + FOMENTAR + ProGoiás + CFOPs Genéricos)
+├── script.js                    # Sistema unificado (SPED + FOMENTAR + ProGoiás + CFOPs Genéricos + Demonstrativo v3.51)
 ├── script.ori.js                # Versão original antes da implementação CFOPs
 ├── script-cfop.js               # Versão anterior com tentativas de CFOPs (backup)
 ├── style.css                    # Estilos responsivos com sistema de 3 abas
@@ -267,6 +267,77 @@ let isMultiplePeriods = false; // Flag para processamento múltiplo
 4. **Aplicação**: Recalcula apuração com códigos corrigidos
 5. **Documentação**: Log detalhado das alterações realizadas
 
+### Implementação Demonstrativo Versão 3.51 (2025-07-29)
+
+#### Correções Estruturais Críticas
+
+A implementação foi completamente refeita para seguir rigorosamente o **Demonstrativo versão 3.51**, corrigindo problemas fundamentais na lógica de cálculo:
+
+##### Itens Implementados Corretamente
+
+**Quadro B - Operações Incentivadas (44 itens completos):**
+- **Item 11**: Débito do ICMS das Operações Incentivadas
+- **Item 11.1**: Débito do ICMS das Saídas a Título de Bonificação (CFOPs 5910, 5911, 6910, 6911)
+- **Item 16**: Crédito Referente a Saldo Credor do Período das Operações Não Incentivadas
+- **Item 17**: Saldo Devedor = [(11+11.1+12+13) - (14+15+16)]
+- **Itens 19, 20, 24, 27**: Saldo após média, abatimentos, financiamento, compensações
+- **Itens 29, 30, 31**: Saldos credores das operações incentivadas
+
+**Quadro C - Operações Não Incentivadas (44 itens completos):**
+- **Item 35**: ICMS Excedente Não Sujeito ao Incentivo (lógica complexa)
+- **Item 38**: Saldo Devedor Bruto das Operações Não Incentivadas
+- **Item 40**: Compensação de Saldo Credor de Período Anterior
+- **Itens 42, 43, 44**: Saldos credores das operações não incentivadas
+
+##### Lógica de Compensação Fiscal Correta
+
+```javascript
+// SEQUÊNCIA CORRETA DE CÁLCULO:
+
+// 1. Calcular Quadro C primeiro (operações não incentivadas)
+const saldoCredorPeriodoNaoIncentivadas = Math.max(0, 
+    (creditoOperacoesNaoIncentivadas + deducoesNaoIncentivadas) - 
+    (debitoNaoIncentivadas + outrosDebitosNaoIncentivadas + estornoCreditosNaoIncentivadas + icmsExcedenteNaoSujeitoIncentivo)
+);
+
+// 2. Item 43 (Quadro C) transfere para Item 16 (Quadro B)
+const creditoSaldoCredorNaoIncentivadas = saldoCredorNaoIncentUsadoIncentivadas;
+
+// 3. Calcular Quadro B com compensação
+const saldoDevedorIncentivadas = Math.max(0, 
+    (debitoIncentivadas + debitoBonificacaoIncentivadas + outrosDebitosIncentivadas + estornoCreditosIncentivadas) - 
+    (creditoOperacoesIncentivadas + deducoesIncentivadas + creditoSaldoCredorNaoIncentivadas)
+);
+
+// 4. Item 35 - Lógica específica conforme instrução de preenchimento
+if (icmsPorMediaCalc > (saldoDevedorIncentivadas - icmsExcedente)) {
+    icmsExcedenteNaoSujeitoIncentivoFinal = icmsBaseFomentar - parcelaNaoFinanciada;
+} else {
+    icmsExcedenteNaoSujeitoIncentivoFinal = valorTransportadoItem24;
+}
+```
+
+##### Fórmulas Fiscais Específicas
+
+**Item 29 (Quadro B)**: Saldo Credor Período Incentivadas = [(14+15)-(11+11.1+12+13)]  
+**Item 42 (Quadro C)**: Saldo Credor Período Não Incentivadas = [(36+37)-(32+33+34+35)]  
+**Item 17 (Quadro B)**: Saldo Devedor Incentivadas = [(11+11.1+12+13) - (14+15+16)]
+
+##### Interface HTML Atualizada
+
+- **44 itens completos** implementados em `sped-web-fomentar.html`
+- **Nomenclaturas corretas** conforme demonstrativo oficial
+- **Funções updateQuadroB/C** atualizadas para todos os novos itens
+- **Exportação Excel** com mapeamento correto de todos os campos
+
+##### Validação Fiscal
+
+- ✅ **Compensação entre quadros**: Saldos credores de um quadro reduzem saldos devedores do outro
+- ✅ **Item 35 complexo**: Implementada lógica condicional conforme instrução oficial
+- ✅ **Bonificações específicas**: CFOPs 5910, 5911, 6910, 6911 separados no item 11.1
+- ✅ **Saldos credores transportados**: Itens 31 e 44 para períodos seguintes
+- ✅ **Fórmula FOMENTAR**: Base correta após todas as compensações e abatimentos
+
 ### Comandos de Teste e Validação
 
 #### Testes Funcionais
@@ -374,7 +445,21 @@ O código utiliza marcadores específicos para orientar o Claude:
 - [x] Validação contra Anexo III
 - [x] Recálculo automático
 
-**Status Atual**: Manutenção e melhorias (100% funcional)
+#### Fase 6: CFOPs Genéricos (Concluída)
+- [x] Detecção automática de CFOPs genéricos
+- [x] Interface de configuração incentivado/não incentivado
+- [x] Integração com fluxo E111 → Cálculo
+- [x] Correção de mapeamento Excel
+
+#### Fase 7: Demonstrativo v3.51 Completo (Concluída)
+- [x] Implementação dos 44 itens oficiais
+- [x] Lógica de compensação entre quadros
+- [x] Item 35 - ICMS Excedente (lógica complexa)
+- [x] Saldos credores transportados (itens 29-31, 42-44)
+- [x] Interface HTML com todos os campos
+- [x] Exportação Excel corrigida
+
+**Status Atual**: Sistema completo conforme demonstrativo oficial versão 3.51 (100% funcional)
 
 ### Contexto Importante
 
@@ -403,13 +488,16 @@ Ao modificar o sistema:
 1. Manter compatibilidade com layout SPED oficial
 2. Validar cálculos contra planilhas de referência:
    - `demonstrativo-versAo-3_51-unlocked.xlsx` (FOMENTAR)
+   - `instrucao-de-preenchimento-do-demonstrativo-versao-3_5-a87.pdf` (Instruções oficiais)
    - `Comparativo_ProGoias_50_periodos.xlsx` (ProGoiás)
 3. Testar com SPEDs reais de diferentes portes
-4. Documentar mudanças nos códigos CFOP se necessário
-5. Verificar impacto nas exportações Excel e memórias de cálculo
-6. Atualizar `CORRECOES_IMPLEMENTADAS.md` com novas correções
-7. Adicionar marcadores CLAUDE-* em código novo
-8. Validar exclusão de créditos circulares em novos cenários
+4. **CRÍTICO**: Não alterar a lógica de compensação entre quadros sem validação fiscal
+5. **IMPORTANTE**: Item 35 tem lógica complexa - validar contra instrução oficial
+6. Verificar impacto nas exportações Excel e memórias de cálculo
+7. Atualizar `CORRECOES_IMPLEMENTADAS.md` com novas correções
+8. Adicionar marcadores CLAUDE-* em código novo
+9. Validar todos os 44 itens do demonstrativo após mudanças
+10. **Sequência obrigatória**: Quadro C → Saldos Credores → Quadro B → Compensações
 
 ## 🔄 Próxima Sessão
 
