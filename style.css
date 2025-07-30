@@ -1469,6 +1469,86 @@ body {
     font-size: 0.8em;
 }
 
+/* CLAUDE-FISCAL: Estilos para interface detalhada de períodos C197/D197 */
+.checkbox-periodo-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border: 1px solid #E9ECEF;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background-color: #FAFBFC;
+    transition: all 0.2s ease;
+}
+
+.checkbox-periodo-item:hover {
+    background-color: #F1F3F4;
+    border-color: #DEE2E6;
+}
+
+.checkbox-periodo-item input[type="checkbox"] {
+    margin-right: 12px;
+    transform: scale(1.2);
+}
+
+.checkbox-periodo-item .periodo-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.checkbox-periodo-item .periodo-nome {
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.9em;
+}
+
+.checkbox-periodo-item .periodo-data {
+    color: #6C757D;
+    font-size: 0.85em;
+}
+
+.checkbox-periodo-item .periodo-valor {
+    color: #28A745;
+    font-weight: 600;
+    font-size: 0.9em;
+    font-family: 'Courier New', monospace;
+}
+
+.checkbox-periodo-item:has(input:checked) {
+    background-color: rgba(40, 167, 69, 0.1);
+    border-color: #28A745;
+}
+
+.checkbox-periodo-item:has(input:checked) .periodo-nome {
+    color: #28A745;
+}
+
+.periodos-checkboxes {
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+.periodos-checkboxes::-webkit-scrollbar {
+    width: 6px;
+}
+
+.periodos-checkboxes::-webkit-scrollbar-track {
+    background: #F1F3F4;
+    border-radius: 3px;
+}
+
+.periodos-checkboxes::-webkit-scrollbar-thumb {
+    background: #CED4DA;
+    border-radius: 3px;
+}
+
+.periodos-checkboxes::-webkit-scrollbar-thumb:hover {
+    background: #ADB5BD;
+}
+
 .codigo-actions {
     display: flex;
     gap: 10px;

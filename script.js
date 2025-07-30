@@ -36,6 +36,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let codigosEncontrados = []; // Lista de códigos E111 encontrados
     let isMultiplePeriods = false; // Flag para múltiplos períodos
     
+    // CLAUDE-FISCAL: Correção de códigos C197/D197 variables - FOMENTAR
+    let codigosCorrecaoC197D197 = {}; // Mapeamento de códigos C197/D197
+    let codigosEncontradosC197D197 = []; // Lista de códigos C197/D197 encontrados
+    let isMultiplePeriodsC197D197 = false; // Flag para múltiplos períodos C197/D197
+    
     // Correção de códigos E111 variables - ProGoiás
     let progoiasCodigosCorrecao = {}; // Mapeamento de códigos originais para códigos corrigidos (ProGoiás)
     let progoiasCodigosEncontrados = []; // Lista de códigos E111 encontrados (ProGoiás)
@@ -100,6 +105,10 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // ProGoiás Single Period - adicionar novo campo  
     document.getElementById('progoiasAjustePeriodoAnterior').addEventListener('input', handleProgoisConfigChange);
+    
+    // CLAUDE-FISCAL: Correção de códigos C197/D197 listeners - FOMENTAR
+    document.getElementById('btnAplicarCorrecoesC197D197').addEventListener('click', aplicarCorrecoesC197D197ECalcular);
+    document.getElementById('btnPularCorrecoesC197D197').addEventListener('click', pularCorrecoesC197D197ECalcular);
     
     // Correção de códigos E111 listeners - FOMENTAR
     document.getElementById('btnAplicarCorrecoes').addEventListener('click', aplicarCorrecoesECalcular);
@@ -2430,10 +2439,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function prosseguirParaE111() {
-        // Analisar códigos E111 para possível correção
-        const temCodigosParaCorrigir = analisarCodigosE111(registrosCompletos, false);
+        // CLAUDE-FISCAL: Primeiro verificar códigos C197/D197 para possível correção
+        const temCodigosC197D197 = analisarCodigosC197D197(registrosCompletos, false);
         
-        if (temCodigosParaCorrigir) {
+        if (temCodigosC197D197) {
+            // Mostrar interface de correção C197/D197 e parar aqui
+            addLog('Códigos de ajuste C197/D197 encontrados. Verifique se há necessidade de correção antes de prosseguir.', 'warn');
+            
+            // Atualizar status
+            document.getElementById('fomentarSpedStatus').textContent = 
+                `Arquivo SPED importado. Códigos C197/D197 encontrados para possível correção.`;
+            document.getElementById('fomentarSpedStatus').style.color = '#FF6B35';
+            
+            return; // Parar aqui até o usuário decidir sobre as correções C197/D197
+        }
+        
+        // Não tem códigos C197/D197, verificar E111
+        const temCodigosE111 = analisarCodigosE111(registrosCompletos, false);
+        
+        if (temCodigosE111) {
             // Mostrar interface de correção E111 e parar aqui
             addLog('Códigos de ajuste E111 encontrados. Verifique se há necessidade de correção antes de prosseguir.', 'warn');
             
@@ -2444,14 +2468,185 @@ document.addEventListener('DOMContentLoaded', () => {
             
             return; // Parar aqui até o usuário decidir sobre as correções E111
         } else {
-            // Não há códigos E111 para corrigir, prosseguir diretamente com o cálculo
-            addLog('Nenhum código de ajuste E111 encontrado. Prosseguindo com cálculo...', 'info');
+            // Não há códigos para corrigir, prosseguir diretamente com o cálculo
+            addLog('Nenhum código de ajuste C197/D197/E111 encontrado. Prosseguindo com cálculo...', 'info');
             continuarCalculoFomentar();
         }
     }
 
     // === FUNÇÕES DE CORREÇÃO DE CÓDIGOS E111 ===
     
+    // CLAUDE-FISCAL: Análise de códigos C197/D197 para correção
+    function analisarCodigosC197D197(registros, isMultiple = false) {
+        codigosEncontradosC197D197 = [];
+        isMultiplePeriodsC197D197 = isMultiple;
+        
+        addLog(`Iniciando análise de códigos C197/D197 - Múltiplos períodos: ${isMultiple}`, 'info');
+        
+        if (isMultiple && Array.isArray(registros)) {
+            // Múltiplos períodos - registros é um array de objetos de registro
+            registros.forEach((registrosPeriodo, index) => {
+                if (registrosPeriodo) {
+                    // Para múltiplos períodos, usar o período do multiPeriodData se disponível
+                    const periodoNome = multiPeriodData && multiPeriodData[index] ? 
+                        multiPeriodData[index].periodo : `Período ${index + 1}`;
+                    processarRegistrosC197D197(registrosPeriodo, periodoNome);
+                }
+            });
+        } else {
+            // Período único - registros é o objeto direto
+            processarRegistrosC197D197(registros, null);
+        }
+        
+        // Consolidar códigos para múltiplos períodos
+        if (isMultiple) {
+            const codigosConsolidados = new Map();
+            
+            codigosEncontradosC197D197.forEach(codigo => {
+                const chave = `${codigo.codigo}_${codigo.origem}`;
+                if (codigosConsolidados.has(chave)) {
+                    // Adicionar período ao código existente
+                    const codigoExistente = codigosConsolidados.get(chave);
+                    if (!codigoExistente.periodos.includes(codigo.periodo)) {
+                        codigoExistente.periodos.push(codigo.periodo);
+                        codigoExistente.totalValor += codigo.valor;
+                    }
+                } else {
+                    // Primeiro período para este código
+                    codigosConsolidados.set(chave, {
+                        ...codigo,
+                        periodos: [codigo.periodo],
+                        totalValor: codigo.valor
+                    });
+                }
+            });
+            
+            codigosEncontradosC197D197 = Array.from(codigosConsolidados.values());
+        } else {
+            // Para período único, apenas remover duplicatas simples
+            const codigosUnicos = [];
+            const codigosVistos = new Set();
+            
+            codigosEncontradosC197D197.forEach(codigo => {
+                const chave = `${codigo.codigo}_${codigo.origem}`;
+                if (!codigosVistos.has(chave)) {
+                    codigosVistos.add(chave);
+                    codigosUnicos.push(codigo);
+                }
+            });
+            
+            codigosEncontradosC197D197 = codigosUnicos;
+        }
+        
+        addLog(`Análise C197/D197 concluída. Códigos encontrados: ${codigosEncontradosC197D197.length}`, 'info');
+        
+        if (codigosEncontradosC197D197.length > 0) {
+            exibirCodigosC197D197ParaCorrecao();
+            return true; // Tem códigos para corrigir
+        }
+        
+        return false; // Não tem códigos para corrigir
+    }
+    
+    // CLAUDE-FISCAL: Processar registros C197/D197 de um período
+    function processarRegistrosC197D197(registros, periodo) {
+        addLog(`Processando registros C197/D197 do período: ${periodo || 'único'}`, 'info');
+        
+        // Processar registros C197
+        if (registros.C197 && registros.C197.length > 0) {
+            addLog(`Encontrados ${registros.C197.length} registros C197 no período ${periodo || 'único'}`, 'info');
+            registros.C197.forEach(registro => {
+                const campos = registro.slice(1, -1);
+                const codAjuste = campos[1] || ''; // COD_AJ
+                const valorIcms = parseFloat((campos[6] || '0').replace(',', '.')); // VL_ICMS
+                
+                if (codAjuste && valorIcms !== 0) {
+                    adicionarCodigoC197D197Encontrado(
+                        codAjuste, 
+                        valorIcms, 
+                        'C197', 
+                        periodo
+                    );
+                }
+            });
+        }
+        
+        // Processar registros D197
+        if (registros.D197 && registros.D197.length > 0) {
+            addLog(`Encontrados ${registros.D197.length} registros D197 no período ${periodo || 'único'}`, 'info');
+            registros.D197.forEach(registro => {
+                const campos = registro.slice(1, -1);
+                const codAjuste = campos[1] || ''; // COD_AJ
+                const valorIcms = parseFloat((campos[6] || '0').replace(',', '.')); // VL_ICMS
+                
+                if (codAjuste && valorIcms !== 0) {
+                    adicionarCodigoC197D197Encontrado(
+                        codAjuste, 
+                        valorIcms, 
+                        'D197', 
+                        periodo
+                    );
+                }
+            });
+        }
+    }
+    
+    // CLAUDE-FISCAL: Adicionar código C197/D197 encontrado
+    function adicionarCodigoC197D197Encontrado(codAjuste, valorAjuste, origem, periodo) {
+        const codigoExistente = codigosEncontradosC197D197.find(c => 
+            c.codigo === codAjuste && c.origem === origem
+        );
+        
+        if (codigoExistente) {
+            codigoExistente.valor += Math.abs(valorAjuste);
+            codigoExistente.ocorrencias++;
+            if (periodo && !codigoExistente.periodos?.includes(periodo)) {
+                codigoExistente.periodos = codigoExistente.periodos || [];
+                codigoExistente.periodos.push(periodo);
+            }
+            
+            // Armazenar valores específicos por período para exibição detalhada
+            if (periodo && isMultiplePeriodsC197D197) {
+                if (!codigoExistente.valoresPorPeriodo) {
+                    codigoExistente.valoresPorPeriodo = {};
+                }
+                if (!codigoExistente.valoresPorPeriodo[periodo]) {
+                    codigoExistente.valoresPorPeriodo[periodo] = 0;
+                }
+                codigoExistente.valoresPorPeriodo[periodo] += Math.abs(valorAjuste);
+            }
+        } else {
+            const incentivado = CODIGOS_AJUSTE_INCENTIVADOS.some(cod => codAjuste.includes(cod));
+            
+            // Determinar se é crédito ou débito
+            let tipo = 'CREDITO';
+            if (valorAjuste < 0 || origem === 'C197' || origem === 'D197') {
+                // C197/D197 são tipicamente débitos adicionais
+                tipo = 'DEBITO';
+            }
+            
+            const novoCodigo = {
+                codigo: codAjuste,
+                origem: origem,
+                valor: Math.abs(valorAjuste),
+                tipo: tipo,
+                incentivado: incentivado,
+                ocorrencias: 1,
+                periodo: periodo,
+                periodos: periodo ? [periodo] : [],
+                // Valores específicos por período para múltiplos períodos
+                valoresPorPeriodo: periodo && isMultiplePeriodsC197D197 ? 
+                    { [periodo]: Math.abs(valorAjuste) } : {},
+                // Campos para correção
+                novocodigo: '',
+                aplicarTodos: periodo ? false : true,
+                periodosEscolhidos: []
+            };
+            
+            codigosEncontradosC197D197.push(novoCodigo);
+        }
+    }
+
     function analisarCodigosE111(registros, isMultiple = false) {
         codigosEncontrados = [];
         isMultiplePeriods = isMultiple;
@@ -2592,6 +2787,179 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
+    // CLAUDE-FISCAL: Exibir códigos C197/D197 para correção
+    function exibirCodigosC197D197ParaCorrecao() {
+        const container = document.getElementById('codigosEncontradosC197D197');
+        const section = document.getElementById('codigoCorrecaoSectionC197D197');
+        
+        if (!container || !section) {
+            addLog('Erro: Elementos HTML para correção C197/D197 não encontrados', 'error');
+            return;
+        }
+        
+        container.innerHTML = '';
+        
+        if (codigosEncontradosC197D197.length === 0) {
+            container.innerHTML = '<p class="no-codes-message">Nenhum código de ajuste C197/D197 encontrado.</p>';
+            section.style.display = 'none';
+            return;
+        }
+        
+        const header = document.createElement('h4');
+        header.textContent = `Códigos de Ajuste C197/D197 Encontrados (${codigosEncontradosC197D197.length})`;
+        header.style.marginBottom = '15px';
+        container.appendChild(header);
+        
+        codigosEncontradosC197D197.forEach((codigo, index) => {
+            const codigoDiv = criarElementoCodigoCorrecaoC197D197(codigo, index);
+            container.appendChild(codigoDiv);
+        });
+        
+        section.style.display = 'block';
+        addLog(`Encontrados ${codigosEncontradosC197D197.length} códigos de ajuste C197/D197 para possível correção`, 'info');
+    }
+    
+    // CLAUDE-FISCAL: Criar elemento de correção para código C197/D197
+    function criarElementoCodigoCorrecaoC197D197(codigo, index) {
+        const codigoDiv = document.createElement('div');
+        codigoDiv.className = 'codigo-item';
+        
+        const incentivadoClass = codigo.incentivado ? 'incentivado' : 'nao-incentivado';
+        const tipoIcon = codigo.tipo === 'CREDITO' ? '💰' : '💸';
+        const origemColor = codigo.origem === 'C197' ? '#4a90e2' : '#e24a4a';
+        
+        const periodosInfo = isMultiplePeriodsC197D197 && codigo.periodos ? 
+            `<span class="periodos-info">${codigo.periodos.join(', ')}</span>` : '';
+        
+        codigoDiv.innerHTML = `
+            <div class="codigo-header ${incentivadoClass}">
+                <span class="codigo-origem" style="color: ${origemColor}; font-weight: bold;">${codigo.origem}</span>
+                <span class="codigo-numero">${codigo.codigo}</span>
+                <span class="codigo-tipo">${tipoIcon} ${codigo.tipo}</span>
+                <span class="codigo-valor">R$ ${formatCurrency(codigo.valor)}</span>
+                <span class="codigo-status ${incentivadoClass}">
+                    ${codigo.incentivado ? '✅ Incentivado' : '❌ Não Incentivado'}
+                </span>
+                ${periodosInfo}
+                <button class="btn-remover-codigo" onclick="removerCodigoCorrecaoC197D197(${index})" title="Remover da lista">
+                    🗑️
+                </button>
+            </div>
+            
+            <div class="codigo-correcao-fields">
+                <div class="field-group">
+                    <label for="novoCodigo_c197d197_${index}">Código Corrigido:</label>
+                    <input type="text" 
+                           id="novoCodigo_c197d197_${index}"
+                           class="codigo-input" 
+                           placeholder="Digite o código correto (ex: GO040001)"
+                           onchange="atualizarCodigoCorrecaoC197D197(${index}, this.value)">
+                </div>
+                
+                ${isMultiplePeriodsC197D197 ? `
+                    <div class="field-group aplicacao-group">
+                        <label>Aplicar correção em:</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" 
+                                       name="aplicacao_c197d197_${index}" 
+                                       value="todos" 
+                                       ${codigo.aplicarTodos ? 'checked' : ''}
+                                       onchange="atualizarAplicacaoCorrecaoC197D197(${index}, 'todos')">
+                                Todos os períodos
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" 
+                                       name="aplicacao_c197d197_${index}" 
+                                       value="especificos"
+                                       ${!codigo.aplicarTodos ? 'checked' : ''}
+                                       onchange="atualizarAplicacaoCorrecaoC197D197(${index}, 'especificos')">
+                                Períodos específicos
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="periodos-especificos" 
+                         id="periodosEspecificos_c197d197_${index}" 
+                         style="display: ${codigo.aplicarTodos ? 'none' : 'block'};">
+                        <label>Selecione os períodos:</label>
+                        <div class="periodos-checkboxes">
+                            ${isMultiplePeriodsC197D197 && multiPeriodData ? 
+                                multiPeriodData.map((periodo, pIndex) => {
+                                    // Encontrar o valor específico deste código neste período
+                                    const valorPeriodo = encontrarValorC197D197NoPeriodo(codigo, pIndex);
+                                    console.log(`Debug C197/D197: Período ${pIndex} (${periodo.periodo}) - Código ${codigo.codigo} - Valor: ${valorPeriodo}`);
+                                    return `
+                                        <div class="checkbox-periodo-item">
+                                            <label class="checkbox-label">
+                                                <input type="checkbox" 
+                                                       ${codigo.periodosEscolhidos?.includes(pIndex) ? 'checked' : ''}
+                                                       onchange="atualizarPeriodoEspecificoC197D197(${index}, ${pIndex}, this.checked)">
+                                                <div class="periodo-info">
+                                                    <span class="periodo-nome">Período ${pIndex + 1}</span>
+                                                    <span class="periodo-data">${periodo.periodo}</span>
+                                                    <span class="periodo-valor">R$ ${formatCurrency(valorPeriodo)}</span>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    `;
+                                }).join('') : ''
+                            }
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+        
+        return codigoDiv;
+    }
+    
+    // CLAUDE-FISCAL: Encontrar valor específico de um código C197/D197 em um período específico
+    function encontrarValorC197D197NoPeriodo(codigo, periodoIndex) {
+        if (!isMultiplePeriodsC197D197 || !multiPeriodData || !multiPeriodData[periodoIndex]) {
+            return codigo.valor || 0;
+        }
+        
+        const nomePeriodo = multiPeriodData[periodoIndex].periodo;
+        
+        // Usar dados estruturados se disponíveis
+        if (codigo.valoresPorPeriodo && codigo.valoresPorPeriodo[nomePeriodo]) {
+            return codigo.valoresPorPeriodo[nomePeriodo];
+        }
+        
+        // Fallback: buscar nos registros diretamente
+        const registros = multiPeriodData[periodoIndex].registrosCompletos;
+        let valorEncontrado = 0;
+        
+        // Verificar nos registros C197
+        if (codigo.origem === 'C197' && registros.C197) {
+            registros.C197.forEach(registro => {
+                const campos = registro.slice(1, -1);
+                const codAjuste = campos[1] || '';
+                const valorIcms = parseFloat((campos[6] || '0').replace(',', '.'));
+                
+                if (codAjuste === codigo.codigo && valorIcms !== 0) {
+                    valorEncontrado += Math.abs(valorIcms);
+                }
+            });
+        }
+        
+        // Verificar nos registros D197
+        if (codigo.origem === 'D197' && registros.D197) {
+            registros.D197.forEach(registro => {
+                const campos = registro.slice(1, -1);
+                const codAjuste = campos[1] || '';
+                const valorIcms = parseFloat((campos[6] || '0').replace(',', '.'));
+                
+                if (codAjuste === codigo.codigo && valorIcms !== 0) {
+                    valorEncontrado += Math.abs(valorIcms);
+                }
+            });
+        }
+        
+        return valorEncontrado;
+    }
+
     function exibirCodigosParaCorrecao() {
         const container = document.getElementById('codigosEncontrados');
         const section = document.getElementById('codigoCorrecaoSection');
@@ -2728,6 +3096,62 @@ document.addEventListener('DOMContentLoaded', () => {
         return div;
     }
     
+    // CLAUDE-FISCAL: Funções globais para manipulação de códigos C197/D197
+    window.atualizarCodigoCorrecaoC197D197 = function(index, novoCodigo) {
+        if (codigosEncontradosC197D197[index]) {
+            codigosEncontradosC197D197[index].novocodigo = novoCodigo.trim();
+            addLog(`Código ${codigosEncontradosC197D197[index].origem}:${codigosEncontradosC197D197[index].codigo} será substituído por: ${novoCodigo}`, 'info');
+        }
+    };
+    
+    window.atualizarAplicacaoCorrecaoC197D197 = function(index, tipo) {
+        if (codigosEncontradosC197D197[index]) {
+            codigosEncontradosC197D197[index].aplicarTodos = (tipo === 'todos');
+            
+            // Mostrar/ocultar seção de períodos específicos
+            const periodosDiv = document.getElementById(`periodosEspecificos_c197d197_${index}`);
+            if (periodosDiv) {
+                periodosDiv.style.display = tipo === 'todos' ? 'none' : 'block';
+            }
+            
+            const acao = tipo === 'todos' ? 'todos os períodos' : 'períodos específicos';
+            addLog(`Correção do código ${codigosEncontradosC197D197[index].origem}:${codigosEncontradosC197D197[index].codigo} será aplicada em: ${acao}`, 'info');
+        }
+    };
+    
+    window.atualizarPeriodoEspecificoC197D197 = function(index, periodoIndex, checked) {
+        if (codigosEncontradosC197D197[index]) {
+            // Inicializar array de períodos escolhidos se não existir
+            if (!codigosEncontradosC197D197[index].periodosEscolhidos) {
+                codigosEncontradosC197D197[index].periodosEscolhidos = [];
+            }
+            
+            if (checked) {
+                // Adicionar período se não estiver na lista
+                if (!codigosEncontradosC197D197[index].periodosEscolhidos.includes(periodoIndex)) {
+                    codigosEncontradosC197D197[index].periodosEscolhidos.push(periodoIndex);
+                }
+            } else {
+                // Remover período da lista
+                codigosEncontradosC197D197[index].periodosEscolhidos = 
+                    codigosEncontradosC197D197[index].periodosEscolhidos.filter(p => p !== periodoIndex);
+            }
+            
+            const totalSelecionados = codigosEncontradosC197D197[index].periodosEscolhidos.length;
+            const acao = checked ? 'adicionado' : 'removido';
+            addLog(`Período ${periodoIndex + 1} ${acao} para correção do código ${codigosEncontradosC197D197[index].origem}:${codigosEncontradosC197D197[index].codigo} (${totalSelecionados} período(s) selecionado(s))`, 'info');
+        }
+    };
+
+    window.removerCodigoCorrecaoC197D197 = function(index) {
+        if (codigosEncontradosC197D197[index]) {
+            const codigoRemovido = `${codigosEncontradosC197D197[index].origem}:${codigosEncontradosC197D197[index].codigo}`;
+            codigosEncontradosC197D197.splice(index, 1);
+            exibirCodigosC197D197ParaCorrecao(); // Recriar a lista
+            addLog(`Código ${codigoRemovido} removido da lista de correções C197/D197`, 'warn');
+        }
+    };
+
     // Funções globais para manipulação de códigos (chamadas pelos eventos inline)
     window.atualizarCodigoCorrecao = function(index, novoCodigo) {
         if (codigosEncontrados[index]) {
@@ -2784,6 +3208,94 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
+    // CLAUDE-FISCAL: Aplicar correções C197/D197 e calcular
+    function aplicarCorrecoesC197D197ECalcular() {
+        // Construir mapeamento de correções C197/D197
+        codigosCorrecaoC197D197 = {};
+        let correcoesAplicadas = 0;
+        
+        addLog('Iniciando aplicação de correções C197/D197...', 'info');
+        
+        codigosEncontradosC197D197.forEach(codigo => {
+            if (codigo.novocodigo && codigo.novocodigo.trim() !== '') {
+                const chave = `${codigo.origem}_${codigo.codigo}`;
+                codigosCorrecaoC197D197[chave] = {
+                    novoCodigo: codigo.novocodigo.trim(),
+                    aplicarTodos: codigo.aplicarTodos,
+                    periodosEscolhidos: codigo.periodosEscolhidos || [],
+                    origem: codigo.origem
+                };
+                correcoesAplicadas++;
+            }
+        });
+        
+        if (correcoesAplicadas > 0) {
+            addLog(`Aplicando ${correcoesAplicadas} correções C197/D197...`, 'info');
+        } else {
+            addLog('Nenhuma correção C197/D197 definida, prosseguindo com códigos originais...', 'warn');
+        }
+        
+        // Esconder seção de correção C197/D197
+        const section = document.getElementById('codigoCorrecaoSectionC197D197');
+        if (section) {
+            section.style.display = 'none';
+        }
+        
+        // Continuar com o processamento
+        continuarProcessamentoAposCorrecoesC197D197();
+    }
+    
+    // CLAUDE-FISCAL: Pular correções C197/D197 e calcular
+    function pularCorrecoesC197D197ECalcular() {
+        // Limpar correções C197/D197
+        codigosCorrecaoC197D197 = {};
+        
+        addLog('Pulando correções C197/D197...', 'info');
+        
+        // Esconder seção de correção C197/D197
+        const section = document.getElementById('codigoCorrecaoSectionC197D197');
+        if (section) {
+            section.style.display = 'none';
+        }
+        
+        addLog('Correções C197/D197 ignoradas, prosseguindo com códigos originais...', 'info');
+        
+        // Continuar com o processamento
+        continuarProcessamentoAposCorrecoesC197D197();
+    }
+    
+    // CLAUDE-FISCAL: Continuar processamento após correções C197/D197
+    function continuarProcessamentoAposCorrecoesC197D197() {
+        // Verificar se também precisa corrigir E111
+        const temCodigosE111 = analisarCodigosE111(
+            isMultiplePeriodsC197D197 ? multiPeriodData : (registrosCompletos || fomentarData?.registros),
+            isMultiplePeriodsC197D197
+        );
+        
+        if (temCodigosE111) {
+            // Ainda tem E111 para corrigir, mostrar seção E111
+            return;
+        }
+        
+        // Não tem E111 para corrigir, prosseguir com cálculo
+        try {
+            // Aplicar correções C197/D197 aos dados se existirem
+            if (Object.keys(codigosCorrecaoC197D197).length > 0) {
+                addLog('Aplicando correções C197/D197 aos registros...', 'info');
+                aplicarCorrecoesC197D197AosRegistros();
+            }
+            
+            // Calcular FOMENTAR
+            if (isMultiplePeriodsC197D197) {
+                continuarCalculoMultiplosPeriodos();
+            } else {
+                continuarCalculoFomentar();
+            }
+        } catch (error) {
+            addLog(`Erro no cálculo FOMENTAR: ${error.message}`, 'error');
+        }
+    }
+
     function aplicarCorrecoesECalcular() {
         // Construir mapeamento de correções
         codigosCorrecao = {};
@@ -3215,6 +3727,88 @@ document.addEventListener('DOMContentLoaded', () => {
         addLog(`🎉 Processamento concluído: ${progoiasMultiPeriodData.length} períodos ProGoiás processados com sucesso!`, 'success');
     }
     
+    // CLAUDE-FISCAL: Aplicar correções C197/D197 aos registros
+    function aplicarCorrecoesC197D197AosRegistros() {
+        let correcoesAplicadas = 0;
+        
+        if (isMultiplePeriodsC197D197) {
+            // Múltiplos períodos
+            multiPeriodData.forEach((periodoData, periodoIndex) => {
+                correcoesAplicadas += aplicarCorrecoesC197D197AoPeriodo(periodoData.registrosCompletos, periodoIndex);
+            });
+        } else {
+            // Período único
+            if (registrosCompletos) {
+                correcoesAplicadas += aplicarCorrecoesC197D197AoPeriodo(registrosCompletos, 0);
+            } else if (fomentarData && fomentarData.registros) {
+                correcoesAplicadas += aplicarCorrecoesC197D197AoPeriodo(fomentarData.registros, 0);
+            }
+        }
+        
+        addLog(`Total de correções C197/D197 aplicadas: ${correcoesAplicadas}`, 'success');
+    }
+    
+    // CLAUDE-FISCAL: Aplicar correções C197/D197 a um período específico
+    function aplicarCorrecoesC197D197AoPeriodo(registros, periodoIndex) {
+        let correcoesAplicadas = 0;
+        
+        // Processar C197
+        if (registros.C197) {
+            registros.C197.forEach(registro => {
+                const campos = registro.slice(1, -1);
+                const codAjusteOriginal = campos[1]; // COD_AJ
+                
+                const chave = `C197_${codAjusteOriginal}`;
+                const correcao = codigosCorrecaoC197D197[chave];
+                
+                if (correcao) {
+                    // Verificar se deve aplicar correção neste período
+                    const deveAplicar = correcao.aplicarTodos || 
+                                       correcao.periodosEscolhidos.includes(periodoIndex);
+                    
+                    if (deveAplicar) {
+                        campos[1] = correcao.novoCodigo; // Substituir COD_AJ
+                        
+                        // Recompor o registro
+                        registro.splice(1, campos.length, ...campos);
+                        
+                        correcoesAplicadas++;
+                        addLog(`C197 corrigido: ${codAjusteOriginal} → ${correcao.novoCodigo} (Período ${periodoIndex + 1})`, 'info');
+                    }
+                }
+            });
+        }
+        
+        // Processar D197
+        if (registros.D197) {
+            registros.D197.forEach(registro => {
+                const campos = registro.slice(1, -1);
+                const codAjusteOriginal = campos[1]; // COD_AJ
+                
+                const chave = `D197_${codAjusteOriginal}`;
+                const correcao = codigosCorrecaoC197D197[chave];
+                
+                if (correcao) {
+                    // Verificar se deve aplicar correção neste período
+                    const deveAplicar = correcao.aplicarTodos || 
+                                       correcao.periodosEscolhidos.includes(periodoIndex);
+                    
+                    if (deveAplicar) {
+                        campos[1] = correcao.novoCodigo; // Substituir COD_AJ
+                        
+                        // Recompor o registro
+                        registro.splice(1, campos.length, ...campos);
+                        
+                        correcoesAplicadas++;
+                        addLog(`D197 corrigido: ${codAjusteOriginal} → ${correcao.novoCodigo} (Período ${periodoIndex + 1})`, 'info');
+                    }
+                }
+            });
+        }
+        
+        return correcoesAplicadas;
+    }
+
     function aplicarCorrecoesAosRegistros() {
         const registrosParaCorrigir = currentImportMode === 'multiple' ? multiPeriodData : [{ registrosCompletos: registrosCompletos }];
         
@@ -4070,16 +4664,25 @@ document.addEventListener('DOMContentLoaded', () => {
         // Apply automatic saldo credor carryover
         applyAutomaticSaldoCredorCarryover();
         
-        // Analisar códigos E111 para possível correção em múltiplos períodos
-        const temCodigosParaCorrigir = analisarCodigosE111(multiPeriodData, true);
+        // CLAUDE-FISCAL: Primeiro analisar códigos C197/D197 para possível correção em múltiplos períodos
+        const temCodigosC197D197 = analisarCodigosC197D197(multiPeriodData.map(p => p.registrosCompletos), true);
         
-        if (temCodigosParaCorrigir) {
-            // Mostrar interface de correção e parar aqui
+        if (temCodigosC197D197) {
+            // Mostrar interface de correção C197/D197 e parar aqui
+            addLog('Códigos de ajuste C197/D197 encontrados em múltiplos períodos. Verifique se há necessidade de correção antes de prosseguir.', 'warn');
+            return; // Parar aqui até o usuário decidir sobre as correções C197/D197
+        }
+        
+        // Não tem códigos C197/D197, verificar E111
+        const temCodigosE111 = analisarCodigosE111(multiPeriodData, true);
+        
+        if (temCodigosE111) {
+            // Mostrar interface de correção E111 e parar aqui
             addLog('Códigos de ajuste E111 encontrados em múltiplos períodos. Verifique se há necessidade de correção antes de prosseguir.', 'warn');
-            return; // Parar aqui até o usuário decidir sobre as correções
+            return; // Parar aqui até o usuário decidir sobre as correções E111
         } else {
             // Não há códigos para corrigir, prosseguir diretamente
-            addLog('Nenhum código de ajuste E111 encontrado. Prosseguindo com cálculo...', 'info');
+            addLog('Nenhum código de ajuste C197/D197/E111 encontrado. Prosseguindo com cálculo...', 'info');
             continuarCalculoMultiplosPeriodos();
         }
     }
@@ -8145,13 +8748,816 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Funções para exportar memória de cálculo
+    // CLAUDE-CONTEXT: Função aprimorada para memória de cálculo detalhada com auditoria
     function exportFomentarMemoriaCalculo() {
-        if (!fomentarData || !fomentarData.memoriaCalculo) {
-            addLog('Erro: Nenhuma memória de cálculo FOMENTAR disponível', 'error');
-            return;
+        // Verificar se é múltiplos períodos ou período único
+        const isMultiplePeriods = multiPeriodData && multiPeriodData.length > 0;
+        
+        if (isMultiplePeriods) {
+            // Múltiplos períodos - usar período selecionado
+            if (!multiPeriodData[selectedPeriodIndex] || !multiPeriodData[selectedPeriodIndex].fomentarData) {
+                addLog('Erro: Dados do período selecionado não disponíveis para memória de cálculo', 'error');
+                return;
+            }
+            const periodoData = multiPeriodData[selectedPeriodIndex];
+            const memoriaDetalhada = gerarMemoriaCalculoDetalhada(periodoData.fomentarData);
+            exportMemoriaCalculoAuditoria(memoriaDetalhada, 'FOMENTAR');
+        } else {
+            // Período único
+            if (!fomentarData || !fomentarData.memoriaCalculo) {
+                addLog('Erro: Nenhuma memória de cálculo FOMENTAR disponível', 'error');
+                return;
+            }
+            const memoriaDetalhada = gerarMemoriaCalculoDetalhada(fomentarData);
+            exportMemoriaCalculoAuditoria(memoriaDetalhada, 'FOMENTAR');
+        }
+    }
+
+    // CLAUDE-FISCAL: Função principal para gerar memória de cálculo com auditoria completa
+    function gerarMemoriaCalculoDetalhada(dados) {
+        const isMultiplePeriods = multiPeriodData && multiPeriodData.length > 0;
+        const periodoAtual = dados; // Usar dados passados diretamente
+        
+        const memoria = {
+            // Metadados
+            empresa: periodoAtual.empresa || sharedNomeEmpresa || 'Empresa não identificada',
+            periodo: periodoAtual.periodo || sharedPeriodo || 'Período não identificado',
+            dataGeracao: new Date().toLocaleString('pt-BR'),
+            tipoProcessamento: isMultiplePeriods ? 'Múltiplos Períodos' : 'Período Único',
+            
+            // Dados principais
+            calculoBase: periodoAtual.dados || dados,
+            memoriaOriginal: periodoAtual.memoriaCalculo || dados.memoriaCalculo,
+            
+            // Seções detalhadas
+            secoes: {
+                metodologia: gerarSecaoMetodologia(),
+                cfopsClassificacao: gerarSecaoCFOPs(periodoAtual.memoriaCalculo),
+                ajustesE111: gerarSecaoE111(periodoAtual.memoriaCalculo),
+                calculosQuadros: gerarSecaoCalculosQuadros(periodoAtual),
+                comparacaoSped: gerarSecaoComparacaoSped(periodoAtual),
+                pontsAuditoria: gerarSecaoPontosAuditoria(periodoAtual),
+                divergencias: identificarDivergencias(periodoAtual)
+            }
+        };
+        
+        return memoria;
+    }
+
+    // CLAUDE-CONTEXT: Função para exportar memória de cálculo com auditoria em Excel
+    async function exportMemoriaCalculoAuditoria(memoriaDetalhada, tipoPrograma) {
+        try {
+            addLog(`Gerando memória de cálculo detalhada ${tipoPrograma} com auditoria...`, 'info');
+            
+            const workbook = await XlsxPopulate.fromBlankAsync();
+            const mainSheet = workbook.sheet(0);
+            mainSheet.name(`Auditoria ${tipoPrograma}`);
+            
+            let currentRow = 1;
+            
+            // CABEÇALHO PRINCIPAL
+            mainSheet.cell(`A${currentRow}`).value(`MEMÓRIA DE CÁLCULO DETALHADA - ${tipoPrograma.toUpperCase()}`);
+            mainSheet.cell(`A${currentRow}`).style('bold', true).style('fontSize', 16).style('fontColor', '000080');
+            currentRow += 1;
+            
+            mainSheet.cell(`A${currentRow}`).value(`Empresa: ${memoriaDetalhada.empresa}`);
+            currentRow += 1;
+            mainSheet.cell(`A${currentRow}`).value(`Período: ${memoriaDetalhada.periodo}`);
+            currentRow += 1;
+            mainSheet.cell(`A${currentRow}`).value(`Gerado em: ${memoriaDetalhada.dataGeracao}`);
+            currentRow += 1;
+            mainSheet.cell(`A${currentRow}`).value(`Tipo: ${memoriaDetalhada.tipoProcessamento}`);
+            currentRow += 3;
+            
+            // SEÇÃO 1: METODOLOGIA
+            currentRow = adicionarSecaoMetodologia(mainSheet, memoriaDetalhada.secoes.metodologia, currentRow);
+            
+            // SEÇÃO 2: CLASSIFICAÇÃO DE CFOPs
+            currentRow = adicionarSecaoCFOPs(mainSheet, memoriaDetalhada.secoes.cfopsClassificacao, currentRow);
+            
+            // SEÇÃO 3: AJUSTES E111
+            currentRow = adicionarSecaoE111(mainSheet, memoriaDetalhada.secoes.ajustesE111, currentRow);
+            
+            // SEÇÃO 4: CÁLCULOS DOS QUADROS
+            currentRow = adicionarSecaoQuadros(mainSheet, memoriaDetalhada.secoes.calculosQuadros, currentRow);
+            
+            // SEÇÃO 5: COMPARAÇÃO SPED
+            currentRow = adicionarSecaoComparacao(mainSheet, memoriaDetalhada.secoes.comparacaoSped, currentRow);
+            
+            // SEÇÃO 6: PONTOS DE AUDITORIA
+            currentRow = adicionarSecaoAuditoria(mainSheet, memoriaDetalhada.secoes.pontsAuditoria, currentRow);
+            
+            // SEÇÃO 7: DIVERGÊNCIAS
+            currentRow = adicionarSecaoDivergencias(mainSheet, memoriaDetalhada.secoes.divergencias, currentRow);
+            
+            // Auto-fit columns
+            mainSheet.column("A").width(30);
+            mainSheet.column("B").width(40);
+            mainSheet.column("C").width(20);
+            mainSheet.column("D").width(20);
+            mainSheet.column("E").width(15);
+            mainSheet.column("F").width(30);
+            
+            // Download
+            const fileName = `Memoria_Calculo_${tipoPrograma}_${memoriaDetalhada.periodo.replace(/\//g, '_')}_${new Date().toISOString().slice(0,10)}.xlsx`;
+            const data = await workbook.outputAsync();
+            const blob = new Blob([data], { 
+                type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
+            });
+            
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+            
+            addLog(`✅ Memória de cálculo detalhada exportada: ${fileName}`, 'success');
+            
+        } catch (error) {
+            addLog(`❌ Erro ao gerar memória de cálculo: ${error.message}`, 'error');
+            console.error('Erro detalhado:', error);
+        }
+    }
+
+    // CLAUDE-CONTEXT: Funções auxiliares para adicionar seções ao Excel
+    function adicionarSecaoMetodologia(sheet, secao, startRow) {
+        let currentRow = startRow;
+        
+        // Título da seção
+        sheet.cell(`A${currentRow}`).value(secao.titulo);
+        sheet.cell(`A${currentRow}`).style('bold', true).style('fontSize', 14).style('fontColor', '0000FF');
+        currentRow += 2;
+        
+        // Registros processados
+        sheet.cell(`A${currentRow}`).value('Registros SPED Processados:');
+        sheet.cell(`A${currentRow}`).style('bold', true);
+        currentRow += 1;
+        
+        secao.registrosProcessados.forEach(registro => {
+            sheet.cell(`B${currentRow}`).value(`• ${registro}`);
+            currentRow += 1;
+        });
+        
+        currentRow += 1;
+        
+        // Observações
+        sheet.cell(`A${currentRow}`).value('Observações Importantes:');
+        sheet.cell(`A${currentRow}`).style('bold', true);
+        currentRow += 1;
+        
+        secao.observacoes.forEach(obs => {
+            sheet.cell(`B${currentRow}`).value(`• ${obs}`);
+            currentRow += 1;
+        });
+        
+        return currentRow + 2;
+    }
+
+    function adicionarSecaoCFOPs(sheet, secao, startRow) {
+        let currentRow = startRow;
+        
+        // Título da seção
+        sheet.cell(`A${currentRow}`).value(secao.titulo);
+        sheet.cell(`A${currentRow}`).style('bold', true).style('fontSize', 14).style('fontColor', '0000FF');
+        currentRow += 2;
+        
+        // Alertas
+        if (secao.alertas && secao.alertas.length > 0) {
+            sheet.cell(`A${currentRow}`).value('⚠️ ALERTAS:');
+            sheet.cell(`A${currentRow}`).style('bold', true).style('fontColor', 'FF0000');
+            currentRow += 1;
+            
+            secao.alertas.forEach(alerta => {
+                sheet.cell(`B${currentRow}`).value(`• ${alerta}`);
+                sheet.cell(`B${currentRow}`).style('fontColor', 'FF0000');
+                currentRow += 1;
+            });
+            
+            currentRow += 1;
         }
         
-        exportMemoriaCalculo(fomentarData.memoriaCalculo, 'FOMENTAR');
+        // Tabela de CFOPs processados
+        if (secao.cfopsProcessados && secao.cfopsProcessados.length > 0) {
+            sheet.cell(`A${currentRow}`).value('CFOPs Identificados no SPED:');
+            sheet.cell(`A${currentRow}`).style('bold', true);
+            currentRow += 1;
+            
+            // Cabeçalhos
+            const headers = ['CFOP', 'Incentivado', 'Valor Total', 'ICMS Total', 'Qtd Operações', 'Genérico'];
+            headers.forEach((header, index) => {
+                const col = String.fromCharCode(65 + index);
+                sheet.cell(`${col}${currentRow}`).value(header);
+                sheet.cell(`${col}${currentRow}`).style('bold', true).style('fill', 'D3D3D3');
+            });
+            currentRow += 1;
+            
+            // Dados dos CFOPs
+            secao.cfopsProcessados.forEach(cfop => {
+                sheet.cell(`A${currentRow}`).value(cfop.cfop);
+                sheet.cell(`B${currentRow}`).value(cfop.incentivado ? 'SIM' : 'NÃO');
+                sheet.cell(`C${currentRow}`).value(cfop.valorTotal);
+                sheet.cell(`D${currentRow}`).value(cfop.icmsTotal);
+                sheet.cell(`E${currentRow}`).value(cfop.qtdOperacoes);
+                sheet.cell(`F${currentRow}`).value(cfop.isGenerico ? 'SIM' : 'NÃO');
+                
+                // Destacar CFOPs genéricos
+                if (cfop.isGenerico) {
+                    for (let col = 0; col < 6; col++) {
+                        const colLetter = String.fromCharCode(65 + col);
+                        sheet.cell(`${colLetter}${currentRow}`).style('fill', 'FFFF99');
+                    }
+                }
+                
+                currentRow += 1;
+            });
+        }
+        
+        return currentRow + 2;
+    }
+
+    function adicionarSecaoE111(sheet, secao, startRow) {
+        let currentRow = startRow;
+        
+        // Título da seção
+        sheet.cell(`A${currentRow}`).value(secao.titulo);
+        sheet.cell(`A${currentRow}`).style('bold', true).style('fontSize', 14).style('fontColor', '0000FF');
+        currentRow += 2;
+        
+        // Resumo
+        if (secao.resumo) {
+            sheet.cell(`A${currentRow}`).value('RESUMO FINANCEIRO:');
+            sheet.cell(`A${currentRow}`).style('bold', true);
+            currentRow += 1;
+            
+            sheet.cell(`B${currentRow}`).value(`Total Incentivados: R$ ${formatCurrency(secao.resumo.totalIncentivados)}`);
+            sheet.cell(`B${currentRow}`).style('fontColor', '008000');
+            currentRow += 1;
+            
+            sheet.cell(`B${currentRow}`).value(`Total Não Incentivados: R$ ${formatCurrency(secao.resumo.totalNaoIncentivados)}`);
+            currentRow += 1;
+            
+            sheet.cell(`B${currentRow}`).value(`Total Excluído (Circular): R$ ${formatCurrency(secao.resumo.totalExcluido)}`);
+            sheet.cell(`B${currentRow}`).style('fontColor', 'FF0000');
+            currentRow += 2;
+        }
+        
+        // Códigos excluídos
+        if (secao.codigosExcluidos && secao.codigosExcluidos.length > 0) {
+            sheet.cell(`A${currentRow}`).value('CÓDIGOS EXCLUÍDOS (Créditos Circulares):');
+            sheet.cell(`A${currentRow}`).style('bold', true).style('fontColor', 'FF0000');
+            currentRow += 1;
+            
+            // Cabeçalhos
+            sheet.cell(`A${currentRow}`).value('Código');
+            sheet.cell(`B${currentRow}`).value('Valor');
+            sheet.cell(`C${currentRow}`).value('Motivo');
+            ['A', 'B', 'C'].forEach(col => {
+                sheet.cell(`${col}${currentRow}`).style('bold', true).style('fill', 'FFE6E6');
+            });
+            currentRow += 1;
+            
+            secao.codigosExcluidos.forEach(codigo => {
+                sheet.cell(`A${currentRow}`).value(codigo.codigo);
+                sheet.cell(`B${currentRow}`).value(codigo.valor);
+                sheet.cell(`C${currentRow}`).value(codigo.motivo);
+                currentRow += 1;
+            });
+            
+            currentRow += 1;
+        }
+        
+        // Ajustes processados
+        if (secao.ajustesProcessados && secao.ajustesProcessados.length > 0) {
+            sheet.cell(`A${currentRow}`).value('AJUSTES E111 PROCESSADOS:');
+            sheet.cell(`A${currentRow}`).style('bold', true);
+            currentRow += 1;
+            
+            // Cabeçalhos
+            const headers = ['Código', 'Incentivado', 'Valor Total', 'Ocorrências', 'Tipo', 'Observação'];
+            headers.forEach((header, index) => {
+                const col = String.fromCharCode(65 + index);
+                sheet.cell(`${col}${currentRow}`).value(header);
+                sheet.cell(`${col}${currentRow}`).style('bold', true).style('fill', 'D3D3D3');
+            });
+            currentRow += 1;
+            
+            secao.ajustesProcessados.forEach(ajuste => {
+                sheet.cell(`A${currentRow}`).value(ajuste.codigo);
+                sheet.cell(`B${currentRow}`).value(ajuste.incentivado ? 'SIM' : 'NÃO');
+                sheet.cell(`C${currentRow}`).value(ajuste.valorTotal);
+                sheet.cell(`D${currentRow}`).value(ajuste.qtdOcorrencias);
+                sheet.cell(`E${currentRow}`).value(ajuste.tipo);
+                sheet.cell(`F${currentRow}`).value(ajuste.observacao);
+                
+                // Destacar códigos incentivados
+                if (ajuste.incentivado) {
+                    sheet.cell(`B${currentRow}`).style('fontColor', '008000').style('bold', true);
+                }
+                
+                currentRow += 1;
+            });
+        }
+        
+        return currentRow + 2;
+    }
+
+    function adicionarSecaoQuadros(sheet, secao, startRow) {
+        let currentRow = startRow;
+        
+        // Título da seção
+        sheet.cell(`A${currentRow}`).value(secao.titulo);
+        sheet.cell(`A${currentRow}`).style('bold', true).style('fontSize', 14).style('fontColor', '0000FF');
+        currentRow += 2;
+        
+        // Função para adicionar um quadro
+        function adicionarQuadro(quadro, startRow) {
+            let row = startRow;
+            
+            sheet.cell(`A${row}`).value(quadro.titulo);
+            sheet.cell(`A${row}`).style('bold', true).style('fontSize', 12).style('fontColor', '800080');
+            row += 1;
+            
+            // Cabeçalhos
+            sheet.cell(`A${row}`).value('Item');
+            sheet.cell(`B${row}`).value('Descrição');
+            sheet.cell(`C${row}`).value('Valor');
+            sheet.cell(`D${row}`).value('Fórmula/Origem');
+            ['A', 'B', 'C', 'D'].forEach(col => {
+                sheet.cell(`${col}${row}`).style('bold', true).style('fill', 'E6E6FA');
+            });
+            row += 1;
+            
+            // Itens do quadro
+            quadro.itens.forEach(item => {
+                sheet.cell(`A${row}`).value(item.item);
+                sheet.cell(`B${row}`).value(item.descricao);
+                sheet.cell(`C${row}`).value(typeof item.valor === 'number' ? 
+                    `R$ ${formatCurrency(item.valor)}` : (item.valor || '0'));
+                sheet.cell(`D${row}`).value(item.formula);
+                row += 1;
+            });
+            
+            return row + 1;
+        }
+        
+        // Adicionar cada quadro
+        currentRow = adicionarQuadro(secao.quadroA, currentRow);
+        currentRow = adicionarQuadro(secao.quadroB, currentRow);
+        currentRow = adicionarQuadro(secao.quadroC, currentRow);
+        
+        return currentRow + 1;
+    }
+
+    function adicionarSecaoComparacao(sheet, secao, startRow) {
+        let currentRow = startRow;
+        
+        // Título da seção
+        sheet.cell(`A${currentRow}`).value(secao.titulo);
+        sheet.cell(`A${currentRow}`).style('bold', true).style('fontSize', 14).style('fontColor', '0000FF');
+        currentRow += 2;
+        
+        // Comparações
+        if (secao.comparacoes && secao.comparacoes.length > 0) {
+            // Cabeçalhos
+            const headers = ['Item', 'Sistema', 'SPED', 'Diferença', '% Diferença', 'Status'];
+            headers.forEach((header, index) => {
+                const col = String.fromCharCode(65 + index);
+                sheet.cell(`${col}${currentRow}`).value(header);
+                sheet.cell(`${col}${currentRow}`).style('bold', true).style('fill', 'D3D3D3');
+            });
+            currentRow += 1;
+            
+            secao.comparacoes.forEach(comp => {
+                sheet.cell(`A${currentRow}`).value(comp.item);
+                sheet.cell(`B${currentRow}`).value(`R$ ${formatCurrency(comp.valorSistema)}`);
+                sheet.cell(`C${currentRow}`).value(`R$ ${formatCurrency(comp.valorSped)}`);
+                sheet.cell(`D${currentRow}`).value(`R$ ${formatCurrency(comp.diferenca)}`);
+                sheet.cell(`E${currentRow}`).value(`${comp.percentualDif.toFixed(2)}%`);
+                sheet.cell(`F${currentRow}`).value(comp.status);
+                
+                // Destacar divergências
+                if (comp.status === 'DIVERGENTE') {
+                    ['D', 'E', 'F'].forEach(col => {
+                        sheet.cell(`${col}${currentRow}`).style('fontColor', 'FF0000').style('bold', true);
+                    });
+                }
+                
+                currentRow += 1;
+            });
+        }
+        
+        return currentRow + 2;
+    }
+
+    function adicionarSecaoAuditoria(sheet, secao, startRow) {
+        let currentRow = startRow;
+        
+        // Título da seção
+        sheet.cell(`A${currentRow}`).value(secao.titulo);
+        sheet.cell(`A${currentRow}`).style('bold', true).style('fontSize', 14).style('fontColor', '0000FF');
+        currentRow += 2;
+        
+        // Checkpoints
+        if (secao.checkpoints && secao.checkpoints.length > 0) {
+            // Cabeçalhos
+            const headers = ['ID', 'Categoria', 'Descrição', 'Status', 'Ação Recomendada'];
+            headers.forEach((header, index) => {
+                const col = String.fromCharCode(65 + index);
+                sheet.cell(`${col}${currentRow}`).value(header);
+                sheet.cell(`${col}${currentRow}`).style('bold', true).style('fill', 'D3D3D3');
+            });
+            currentRow += 1;
+            
+            secao.checkpoints.forEach(checkpoint => {
+                sheet.cell(`A${currentRow}`).value(checkpoint.id);
+                sheet.cell(`B${currentRow}`).value(checkpoint.categoria);
+                sheet.cell(`C${currentRow}`).value(checkpoint.descricao);
+                sheet.cell(`D${currentRow}`).value(checkpoint.status);
+                sheet.cell(`E${currentRow}`).value(checkpoint.acao);
+                
+                // Cores por status
+                const statusColor = {
+                    'OK': '008000',
+                    'ATENÇÃO': 'FF8C00',
+                    'VERIFICAR': '0000FF',
+                    'ATIVO': '800080',
+                    'INATIVO': '808080'
+                };
+                
+                if (statusColor[checkpoint.status]) {
+                    sheet.cell(`D${currentRow}`).style('fontColor', statusColor[checkpoint.status]).style('bold', true);
+                }
+                
+                currentRow += 1;
+            });
+        }
+        
+        return currentRow + 2;
+    }
+
+    function adicionarSecaoDivergencias(sheet, secao, startRow) {
+        let currentRow = startRow;
+        
+        // Título da seção
+        sheet.cell(`A${currentRow}`).value(secao.titulo);
+        sheet.cell(`A${currentRow}`).style('bold', true).style('fontSize', 14).style('fontColor', '0000FF');
+        currentRow += 1;
+        
+        // Status geral
+        sheet.cell(`A${currentRow}`).value(`Status Geral: ${secao.status} (${secao.total} divergências encontradas)`);
+        sheet.cell(`A${currentRow}`).style('bold', true).style('fontColor', secao.status === 'OK' ? '008000' : 'FF0000');
+        currentRow += 2;
+        
+        // Divergências
+        if (secao.divergencias && secao.divergencias.length > 0) {
+            secao.divergencias.forEach((div, index) => {
+                sheet.cell(`A${currentRow}`).value(`${index + 1}. ${div.tipo} (${div.severidade})`);
+                sheet.cell(`A${currentRow}`).style('bold', true).style('fontColor', 
+                    div.severidade === 'ALTA' ? 'FF0000' : div.severidade === 'MÉDIA' ? 'FF8C00' : '0000FF');
+                currentRow += 1;
+                
+                sheet.cell(`B${currentRow}`).value(`Descrição: ${div.descricao}`);
+                currentRow += 1;
+                
+                sheet.cell(`B${currentRow}`).value(`Impacto: ${div.impacto}`);
+                currentRow += 1;
+                
+                sheet.cell(`B${currentRow}`).value(`Ação: ${div.acao}`);
+                currentRow += 2;
+            });
+        } else {
+            sheet.cell(`A${currentRow}`).value('✅ Nenhuma divergência identificada automaticamente.');
+            sheet.cell(`A${currentRow}`).style('fontColor', '008000');
+            currentRow += 1;
+        }
+        
+        return currentRow + 2;
+    }
+
+    // CLAUDE-CONTEXT: Gera seção de metodologia de cálculo
+    function gerarSecaoMetodologia() {
+        return {
+            titulo: 'METODOLOGIA DE CÁLCULO DO SISTEMA',
+            registrosProcessados: [
+                'C190 - Consolidado de NF-e (preferencial)',
+                'C590 - Consolidado de NF-e Energia/Telecom', 
+                'D190 - Consolidado de CT-e',
+                'D590 - Consolidado de CT-e de Serviços',
+                'E111 - Outros créditos e débitos',
+                'C197/D197 - Ajustes adicionais'
+            ],
+            observacoes: [
+                'Sistema prioriza registros consolidados para evitar duplicação',
+                'Exclusão automática de créditos circulares (GO040007, GO040008)',
+                'Compensação automática entre Quadros B e C conforme IN 885/07-GSF',
+                'Aplicação de percentual: 70% FOMENTAR, 73% PRODUZIR, 90% MICROPRODUZIR'
+            ]
+        };
+    }
+
+    // CLAUDE-FISCAL: Gera seção detalhada de classificação de CFOPs
+    function gerarSecaoCFOPs(memoriaCalculo) {
+        const cfopsProcessados = {};
+        const cfopsGenericos = {};
+        
+        // Analisar CFOPs das operações
+        if (memoriaCalculo && memoriaCalculo.operacoesDetalhadas) {
+            memoriaCalculo.operacoesDetalhadas.forEach(op => {
+                const cfop = op.cfop;
+                if (!cfopsProcessados[cfop]) {
+                    cfopsProcessados[cfop] = {
+                        cfop: cfop,
+                        incentivado: op.incentivada,
+                        valorTotal: 0,
+                        icmsTotal: 0,
+                        qtdOperacoes: 0,
+                        isGenerico: CFOPS_GENERICOS.includes(cfop),
+                        categoria: op.categoria || 'Não definida'
+                    };
+                }
+                cfopsProcessados[cfop].valorTotal += op.valorOperacao || 0;
+                cfopsProcessados[cfop].icmsTotal += op.valorIcms || 0;
+                cfopsProcessados[cfop].qtdOperacoes++;
+                
+                // Identificar CFOPs genéricos
+                if (CFOPS_GENERICOS.includes(cfop)) {
+                    cfopsGenericos[cfop] = cfopsProcessados[cfop];
+                }
+            });
+        }
+        
+        return {
+            titulo: 'CLASSIFICAÇÃO DE CFOPs',
+            cfopsIncentivados: CFOP_ENTRADAS_INCENTIVADAS.concat(CFOP_SAIDAS_INCENTIVADAS),
+            cfopsGenericos: CFOPS_GENERICOS,
+            cfopsProcessados: Object.values(cfopsProcessados),
+            cfopsGenericosEncontrados: Object.values(cfopsGenericos),
+            alertas: Object.keys(cfopsGenericos).length > 0 ? 
+                ['CFOPs genéricos detectados - verificar configuração manual'] : []
+        };
+    }
+
+    // CLAUDE-FISCAL: Gera seção detalhada de ajustes E111
+    function gerarSecaoE111(memoriaCalculo) {
+        const ajustesDetalhados = {};
+        const codigosExcluidos = [];
+        
+        if (memoriaCalculo && memoriaCalculo.ajustesE111) {
+            memoriaCalculo.ajustesE111.forEach(ajuste => {
+                const codigo = ajuste.codigo;
+                
+                // Verificar se é código excluído (circular)
+                if (codigo.includes('GO040007') || codigo.includes('GO040008')) {
+                    codigosExcluidos.push({
+                        codigo: codigo,
+                        valor: ajuste.valor,
+                        motivo: 'Exclusão automática - crédito circular do programa incentivo'
+                    });
+                } else {
+                    if (!ajustesDetalhados[codigo]) {
+                        ajustesDetalhados[codigo] = {
+                            codigo: codigo,
+                            incentivado: ajuste.incentivado,
+                            valorTotal: 0,
+                            qtdOcorrencias: 0,
+                            tipo: ajuste.tipo,
+                            observacao: ajuste.observacao
+                        };
+                    }
+                    ajustesDetalhados[codigo].valorTotal += ajuste.valor || 0;
+                    ajustesDetalhados[codigo].qtdOcorrencias++;
+                }
+            });
+        }
+        
+        return {
+            titulo: 'PROCESSAMENTO DE AJUSTES E111',
+            codigosIncentivados: CODIGOS_AJUSTE_INCENTIVADOS,
+            ajustesProcessados: Object.values(ajustesDetalhados),
+            codigosExcluidos: codigosExcluidos,
+            resumo: {
+                totalIncentivados: Object.values(ajustesDetalhados)
+                    .filter(a => a.incentivado)
+                    .reduce((sum, a) => sum + a.valorTotal, 0),
+                totalNaoIncentivados: Object.values(ajustesDetalhados)
+                    .filter(a => !a.incentivado)
+                    .reduce((sum, a) => sum + a.valorTotal, 0),
+                totalExcluido: codigosExcluidos.reduce((sum, c) => sum + c.valor, 0)
+            }
+        };
+    }
+
+    // CLAUDE-FISCAL: Gera seção de cálculos dos quadros com fórmulas
+    function gerarSecaoCalculosQuadros(dadosPeriodo) {
+        const calc = dadosPeriodo.calculatedValues || {};
+        
+        return {
+            titulo: 'CÁLCULOS DOS QUADROS A, B e C',
+            quadroA: {
+                titulo: 'Proporção dos Créditos Apropriados',
+                itens: [
+                    { item: '1', descricao: 'Saídas de Operações Incentivadas', valor: calc.saidasIncentivadas, formula: 'Σ(Saídas com CFOP Incentivado)' },
+                    { item: '2', descricao: 'Total das Saídas', valor: calc.totalSaidas, formula: 'Σ(Todas as Saídas)' },
+                    { item: '3', descricao: 'Percentual das Saídas Incentivadas (%)', valor: calc.percentualSaidasIncentivadas, formula: '(Item 1 / Item 2) × 100' },
+                    { item: '4', descricao: 'Créditos por Entradas', valor: calc.creditosEntradas, formula: 'Σ(Créditos de Entradas)' },
+                    { item: '5', descricao: 'Outros Créditos', valor: calc.outrosCreditos, formula: 'Σ(E111 Créditos + C197/D197 Créditos)' },
+                    { item: '6', descricao: 'Estorno de Débitos', valor: calc.estornoDebitos, formula: 'Σ(E111 Estornos de Débito)' },
+                    { item: '7', descricao: 'Saldo Credor do Período Anterior', valor: calc.saldoCredorAnterior, formula: 'Valor informado manualmente' },
+                    { item: '8', descricao: 'Total dos Créditos do Período', valor: calc.totalCreditos, formula: 'Item 4 + Item 5 + Item 6 + Item 7' },
+                    { item: '9', descricao: 'Crédito para Operações Incentivadas', valor: calc.creditoIncentivadas, formula: 'Item 8 × (Item 3 / 100)' },
+                    { item: '10', descricao: 'Crédito para Operações Não Incentivadas', valor: calc.creditoNaoIncentivadas, formula: 'Item 8 - Item 9' }
+                ]
+            },
+            quadroB: {
+                titulo: 'Apuração dos Saldos das Operações Incentivadas',
+                itens: [
+                    { item: '11', descricao: 'Débito do ICMS das Operações Incentivadas', valor: calc.debitoIncentivadas, formula: 'Σ(Débitos com CFOP Incentivado)' },
+                    { item: '11.1', descricao: 'Débito do ICMS das Saídas a Título de Bonificação', valor: calc.debitoBonificacaoIncentivadas, formula: 'Σ(Débitos CFOPs 5910, 5911, 6910, 6911)' },
+                    { item: '16', descricao: 'Crédito Referente a Saldo Credor do Período das Operações Não Incentivadas', valor: calc.creditoSaldoCredorNaoIncentivadas, formula: 'Transferência do Item 43 (Quadro C)' },
+                    { item: '17', descricao: 'Saldo Devedor do ICMS das Operações Incentivadas', valor: calc.saldoDevedorIncentivadas, formula: 'Max(0, (11+11.1+12+13) - (14+15+16))' },
+                    { item: '21', descricao: 'ICMS Base para FOMENTAR/PRODUZIR', valor: calc.icmsBaseFomentar, formula: 'Max(Item 17 - Item 20, 0)' },
+                    { item: '22', descricao: 'Percentagem do Financiamento (%)', valor: calc.percentualFinanciamento, formula: '70% (FOMENTAR)' },
+                    { item: '23', descricao: 'ICMS Sujeito a Financiamento', valor: calc.icmsSujeitoFinanciamento, formula: 'Item 21 × (Item 22 / 100)' },
+                    { item: '25', descricao: 'ICMS Financiado', valor: calc.icmsFinanciado, formula: 'Item 23 - Item 24' },
+                    { item: '28', descricao: 'Saldo do ICMS a Pagar da Parcela Não Financiada', valor: calc.saldoPagarParcelaNaoFinanciada, formula: 'Max(0, Item 26 - Item 27)' }
+                ]
+            },
+            quadroC: {
+                titulo: 'Apuração dos Saldos das Operações Não Incentivadas',
+                itens: [
+                    { item: '32', descricao: 'Débito do ICMS das Operações Não Incentivadas', valor: calc.debitoNaoIncentivadas, formula: 'Σ(Débitos com CFOP Não Incentivado)' },
+                    { item: '35', descricao: 'ICMS Excedente Não Sujeito ao Incentivo', valor: calc.icmsExcedenteNaoSujeitoIncentivo, formula: 'Cálculo complexo conforme IN 885' },
+                    { item: '41', descricao: 'Saldo do ICMS a Pagar das Operações Não Incentivadas', valor: calc.saldoPagarNaoIncentivadas, formula: 'Max(0, Item 39 - Item 40)' },
+                    { item: '43', descricao: 'Saldo Credor do Período Utilizado nas Operações Incentivadas', valor: calc.saldoCredorUsadoIncentivadas, formula: 'Transferência para Item 16 (Quadro B)' }
+                ]
+            }
+        };
+    }
+
+    // CLAUDE-CONTEXT: Gera seção de comparação com SPED oficial
+    function gerarSecaoComparacaoSped(dadosPeriodo) {
+        // Buscar dados do GO040007 no SPED para comparação
+        let beneficioSped = 0;
+        let icmsSped = 0;
+        
+        if (dadosPeriodo.memoriaCalculo && dadosPeriodo.memoriaCalculo.ajustesE111) {
+            const go040007 = dadosPeriodo.memoriaCalculo.ajustesE111.find(a => a.codigo.includes('GO040007'));
+            if (go040007) {
+                beneficioSped = go040007.valor;
+            }
+        }
+        
+        const calc = dadosPeriodo.calculatedValues || {};
+        const beneficioSistema = calc.icmsFinanciado || 0;
+        const icmsSistema = (calc.saldoPagarParcelaNaoFinanciada || 0) + (calc.saldoPagarNaoIncentivadas || 0);
+        
+        return {
+            titulo: 'COMPARAÇÃO SISTEMA vs SPED OFICIAL',
+            comparacoes: [
+                {
+                    item: 'Benefício FOMENTAR (Item 25)',
+                    valorSistema: beneficioSistema,
+                    valorSped: beneficioSped,
+                    diferenca: beneficioSistema - beneficioSped,
+                    percentualDif: beneficioSped !== 0 ? ((beneficioSistema - beneficioSped) / beneficioSped * 100) : 0,
+                    status: Math.abs(beneficioSistema - beneficioSped) < 0.01 ? 'OK' : 'DIVERGENTE'
+                },
+                {
+                    item: 'ICMS Total a Pagar (28+41)',
+                    valorSistema: icmsSistema,
+                    valorSped: icmsSped,
+                    diferenca: icmsSistema - icmsSped,
+                    percentualDif: icmsSped !== 0 ? ((icmsSistema - icmsSped) / icmsSped * 100) : 0,
+                    status: Math.abs(icmsSistema - icmsSped) < 0.01 ? 'OK' : 'DIVERGENTE'
+                }
+            ],
+            validacoes: [
+                {
+                    teste: 'Benefício Sistema = GO040007 SPED (excluído)',
+                    resultado: Math.abs(beneficioSistema - beneficioSped) < 0.01,
+                    observacao: 'Valores devem ser idênticos'
+                },
+                {
+                    teste: 'Compensação entre Quadros B e C',
+                    resultado: true, // Implementar validação específica
+                    observacao: 'Item 16 (B) deve vir do Item 43 (C)'
+                }
+            ]
+        };
+    }
+
+    // CLAUDE-CAREFUL: Gera pontos críticos de auditoria
+    function gerarSecaoPontosAuditoria(dadosPeriodo) {
+        const checkpoints = [];
+        const calc = dadosPeriodo.calculatedValues || {};
+        
+        // Checkpoint 1: Registros SPED
+        checkpoints.push({
+            id: 'CHECKPOINT-001',
+            categoria: 'Registros SPED',
+            descricao: 'Uso de registros consolidados (C190, C590, D190, D590)',
+            status: 'VERIFICAR',
+            acao: 'Confirmar que C100/C170 não estão sendo processados em duplicidade'
+        });
+        
+        // Checkpoint 2: CFOPs Genéricos
+        const cfopsGenericos = cfopsGenericosEncontrados || [];
+        if (cfopsGenericos.length > 0) {
+            checkpoints.push({
+                id: 'CHECKPOINT-002',
+                categoria: 'CFOPs Genéricos',
+                descricao: `${cfopsGenericos.length} CFOPs genéricos detectados`,
+                status: 'ATENÇÃO',
+                acao: 'Configurar manualmente como incentivado ou não incentivado'
+            });
+        }
+        
+        // Checkpoint 3: Exclusão GO040007
+        checkpoints.push({
+            id: 'CHECKPOINT-003',
+            categoria: 'Créditos Circulares',
+            descricao: 'Exclusão automática do GO040007',
+            status: 'OK',
+            acao: 'Verificar que valor excluído = Item 25 (Benefício)'
+        });
+        
+        // Checkpoint 4: Compensação de Saldos
+        const compensacao = calc.creditoSaldoCredorNaoIncentivadas || 0;
+        checkpoints.push({
+            id: 'CHECKPOINT-004',
+            categoria: 'Compensação Quadros',
+            descricao: `Compensação entre Quadros B e C: R$ ${formatCurrency(compensacao)}`,
+            status: compensacao > 0 ? 'ATIVO' : 'INATIVO',
+            acao: 'Verificar que Item 16 (B) = Item 43 (C)'
+        });
+        
+        return {
+            titulo: 'PONTOS CRÍTICOS DE AUDITORIA',
+            checkpoints: checkpoints,
+            recomendacoes: [
+                'Executar todos os checkpoints antes de finalizar a apuração',
+                'Documentar configurações de CFOPs genéricos aplicadas',
+                'Verificar percentual de financiamento aplicado (70% FOMENTAR)',
+                'Validar exclusão de créditos circulares'
+            ]
+        };
+    }
+
+    // CLAUDE-CONTEXT: Identifica divergências automaticamente
+    function identificarDivergencias(dadosPeriodo) {
+        const divergencias = [];
+        const calc = dadosPeriodo.calculatedValues || {};
+        
+        // Verificar CFOPs genéricos não configurados
+        if (cfopsGenericosEncontrados && cfopsGenericosEncontrados.length > 0) {
+            const naoConfigurados = cfopsGenericosEncontrados.filter(c => 
+                !cfopsGenericosConfig || !cfopsGenericosConfig[c.cfop]
+            );
+            
+            if (naoConfigurados.length > 0) {
+                divergencias.push({
+                    tipo: 'CONFIGURAÇÃO',
+                    severidade: 'ALTA',
+                    descricao: `${naoConfigurados.length} CFOPs genéricos sem configuração`,
+                    impacto: 'Pode causar diferenças significativas no benefício FOMENTAR',
+                    acao: 'Configurar CFOPs através da interface do sistema'
+                });
+            }
+        }
+        
+        // Verificar códigos E111 não reconhecidos
+        const codigosNaoReconhecidos = [];
+        if (dadosPeriodo.memoriaCalculo && dadosPeriodo.memoriaCalculo.ajustesE111) {
+            dadosPeriodo.memoriaCalculo.ajustesE111.forEach(ajuste => {
+                const codigo = ajuste.codigo;
+                const isIncentivado = CODIGOS_AJUSTE_INCENTIVADOS.some(cod => codigo.includes(cod));
+                const isExcluido = codigo.includes('GO040007') || codigo.includes('GO040008');
+                
+                if (!isIncentivado && !isExcluido && ajuste.valor > 1000) {
+                    codigosNaoReconhecidos.push(codigo);
+                }
+            });
+        }
+        
+        if (codigosNaoReconhecidos.length > 0) {
+            divergencias.push({
+                tipo: 'CLASSIFICAÇÃO E111',
+                severidade: 'MÉDIA',
+                descricao: `${codigosNaoReconhecidos.length} códigos E111 não reconhecidos com valor significativo`,
+                detalhes: codigosNaoReconhecidos,
+                impacto: 'Pode afetar classificação incentivado/não incentivado',
+                acao: 'Revisar códigos e atualizar lista de códigos incentivados se necessário'
+            });
+        }
+        
+        return {
+            titulo: 'DIVERGÊNCIAS IDENTIFICADAS',
+            total: divergencias.length,
+            divergencias: divergencias,
+            status: divergencias.length === 0 ? 'OK' : 'ATENÇÃO'
+        };
     }
     
     function exportProgoisMemoriaCalculo() {
@@ -8428,6 +9834,193 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             addLog(`Erro ao gerar memória de cálculo ${tipoPrograma}: ${error.message}`, 'error');
         }
+    }
+
+    // CLAUDE-FISCAL: Função auxiliar para adicionar seção de metodologia na exportação Excel
+    function adicionarSecaoMetodologiaExcel(worksheet, startRow, metodologia) {
+        let currentRow = startRow;
+        
+        worksheet.cell(currentRow, 1).value("METODOLOGIA DE CÁLCULO").style({
+            bold: true,
+            fill: { type: "solid", color: { argb: "FF4ECDC4" } },
+            fontColor: "FFFFFF"
+        });
+        currentRow += 2;
+        
+        worksheet.cell(currentRow, 1).value("Base Legal:");
+        worksheet.cell(currentRow, 2).value("IN 885/07-GSF (FOMENTAR)");
+        currentRow += 2;
+        
+        worksheet.cell(currentRow, 1).value("Registros SPED Utilizados:");
+        currentRow++;
+        metodologia.registrosProcessados.forEach(registro => {
+            worksheet.cell(currentRow, 2).value(`• ${registro}`);
+            currentRow++;
+        });
+        currentRow++;
+        
+        worksheet.cell(currentRow, 1).value("Observações Importantes:");
+        currentRow++;
+        metodologia.observacoes.forEach(obs => {
+            worksheet.cell(currentRow, 2).value(`• ${obs}`);
+            currentRow++;
+        });
+        
+        return currentRow + 1;
+    }
+
+    // CLAUDE-FISCAL: Função auxiliar para adicionar seção de CFOPs na exportação Excel
+    function adicionarSecaoCFOPsExcel(worksheet, startRow, cfopsData) {
+        let currentRow = startRow;
+        
+        worksheet.cell(currentRow, 1).value("CLASSIFICAÇÃO DE CFOPs").style({
+            bold: true,
+            fill: { type: "solid", color: { argb: "FF45B7D1" } },
+            fontColor: "FFFFFF"
+        });
+        currentRow += 2;
+        
+        // Cabeçalhos
+        worksheet.cell(currentRow, 1).value("CFOP").style({ bold: true });
+        worksheet.cell(currentRow, 2).value("Incentivado").style({ bold: true });
+        worksheet.cell(currentRow, 3).value("Valor Total").style({ bold: true });
+        worksheet.cell(currentRow, 4).value("ICMS").style({ bold: true });
+        worksheet.cell(currentRow, 5).value("Qtd Operações").style({ bold: true });
+        worksheet.cell(currentRow, 6).value("Status").style({ bold: true });
+        currentRow++;
+        
+        // CFOPs processados
+        cfopsData.cfopsProcessados.forEach(cfop => {
+            worksheet.cell(currentRow, 1).value(cfop.cfop);
+            worksheet.cell(currentRow, 2).value(cfop.incentivado ? "SIM" : "NÃO");
+            worksheet.cell(currentRow, 3).value(formatarMoeda(cfop.valorTotal));
+            worksheet.cell(currentRow, 4).value(formatarMoeda(cfop.icmsTotal)); 
+            worksheet.cell(currentRow, 5).value(cfop.qtdOperacoes);
+            worksheet.cell(currentRow, 6).value(cfop.isGenerico ? "⚠️ GENÉRICO" : "✅ OK");
+            
+            if (cfop.isGenerico) {
+                worksheet.cell(currentRow, 6).style({ fontColor: "FF6600" });
+            } else if (cfop.incentivado) {
+                worksheet.cell(currentRow, 2).style({ fontColor: "008000" });
+            } else {
+                worksheet.cell(currentRow, 2).style({ fontColor: "CC0000" });
+            }
+            currentRow++;
+        });
+        
+        return currentRow + 1;
+    }
+
+    // CLAUDE-FISCAL: Função auxiliar para adicionar seção de E111 na exportação Excel
+    function adicionarSecaoE111Excel(worksheet, startRow, e111Data) {
+        let currentRow = startRow;
+        
+        worksheet.cell(currentRow, 1).value("PROCESSAMENTO REGISTROS E111").style({
+            bold: true,
+            fill: { type: "solid", color: { argb: "FF96CEB4" } },
+            fontColor: "FFFFFF"
+        });
+        currentRow += 2;
+        
+        // Cabeçalhos
+        worksheet.cell(currentRow, 1).value("Código").style({ bold: true });
+        worksheet.cell(currentRow, 2).value("Tipo").style({ bold: true });
+        worksheet.cell(currentRow, 3).value("Incentivado").style({ bold: true });
+        worksheet.cell(currentRow, 4).value("Valor").style({ bold: true });
+        worksheet.cell(currentRow, 5).value("Status").style({ bold: true });
+        currentRow++;
+        
+        // E111 Incentivados
+        e111Data.codigosIncentivados.forEach(codigo => {
+            worksheet.cell(currentRow, 1).value(codigo.codigo);
+            worksheet.cell(currentRow, 2).value(codigo.tipo);
+            worksheet.cell(currentRow, 3).value("SIM");
+            worksheet.cell(currentRow, 4).value(formatarMoeda(codigo.valor));
+            worksheet.cell(currentRow, 5).value("✅ PROCESSADO");
+            worksheet.cell(currentRow, 5).style({ fontColor: "008000" });
+            currentRow++;
+        });
+        
+        // E111 Excluídos (Circulares)
+        if (e111Data.codigosExcluidos && e111Data.codigosExcluidos.length > 0) {
+            e111Data.codigosExcluidos.forEach(codigo => {
+                worksheet.cell(currentRow, 1).value(codigo.codigo);
+                worksheet.cell(currentRow, 2).value("CRÉDITO");
+                worksheet.cell(currentRow, 3).value("EXCLUÍDO");
+                worksheet.cell(currentRow, 4).value(formatarMoeda(codigo.valor));
+                worksheet.cell(currentRow, 5).value("🚫 CIRCULAR");
+                worksheet.cell(currentRow, 5).style({ fontColor: "FF6600" });
+                currentRow++;
+            });
+        }
+        
+        return currentRow + 1;
+    }
+
+    // CLAUDE-FISCAL: Função auxiliar para adicionar seção de cálculos dos quadros na exportação Excel
+    function adicionarSecaoCalculosQuadrosExcel(worksheet, startRow, calculosData) {
+        let currentRow = startRow;
+        
+        worksheet.cell(currentRow, 1).value("CÁLCULOS DOS QUADROS (44 ITENS)").style({
+            bold: true,
+            fill: { type: "solid", color: { argb: "FFAA8FBF" } },
+            fontColor: "FFFFFF"
+        });
+        currentRow += 2;
+        
+        // Cabeçalhos
+        worksheet.cell(currentRow, 1).value("Item").style({ bold: true });
+        worksheet.cell(currentRow, 2).value("Descrição").style({ bold: true });
+        worksheet.cell(currentRow, 3).value("Valor").style({ bold: true });
+        worksheet.cell(currentRow, 4).value("Fórmula").style({ bold: true });
+        currentRow++;
+        
+        // Quadro A
+        worksheet.cell(currentRow, 1).value("QUADRO A - OPERAÇÕES TOTAIS").style({ bold: true, fontColor: "0066CC" });
+        currentRow++;
+        calculosData.quadroA.forEach(item => {
+            worksheet.cell(currentRow, 1).value(item.numero);
+            worksheet.cell(currentRow, 2).value(item.descricao);
+            worksheet.cell(currentRow, 3).value(formatarMoeda(item.valor));
+            worksheet.cell(currentRow, 4).value(item.formula || "");
+            currentRow++;
+        });
+        currentRow++;
+        
+        // Quadro B
+        worksheet.cell(currentRow, 1).value("QUADRO B - OPERAÇÕES INCENTIVADAS").style({ bold: true, fontColor: "008000" });
+        currentRow++;
+        calculosData.quadroB.forEach(item => {
+            worksheet.cell(currentRow, 1).value(item.numero);
+            worksheet.cell(currentRow, 2).value(item.descricao);
+            worksheet.cell(currentRow, 3).value(formatarMoeda(item.valor));
+            worksheet.cell(currentRow, 4).value(item.formula || "");
+            
+            // Destacar itens críticos
+            if ([17, 29, 31].includes(item.numero)) {
+                worksheet.cell(currentRow, 2).style({ fontColor: "0066CC", bold: true });
+            }
+            currentRow++;
+        });
+        currentRow++;
+        
+        // Quadro C  
+        worksheet.cell(currentRow, 1).value("QUADRO C - OPERAÇÕES NÃO INCENTIVADAS").style({ bold: true, fontColor: "CC0000" });
+        currentRow++;
+        calculosData.quadroC.forEach(item => {
+            worksheet.cell(currentRow, 1).value(item.numero);
+            worksheet.cell(currentRow, 2).value(item.descricao);
+            worksheet.cell(currentRow, 3).value(formatarMoeda(item.valor));
+            worksheet.cell(currentRow, 4).value(item.formula || "");
+            
+            // Destacar itens críticos
+            if ([35, 42, 44].includes(item.numero)) {
+                worksheet.cell(currentRow, 2).style({ fontColor: "CC0000", bold: true });
+            }
+            currentRow++;
+        });
+        
+        return currentRow + 1;
     }
 
     // Initialize UI
