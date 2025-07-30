@@ -273,12 +273,12 @@
                                     <tr><td>16</td><td>Crédito Referente a Saldo Credor do Período das Operações Não Incentivadas</td><td id="itemB16">0,00</td></tr>
                                     <tr><td>17</td><td>Saldo Devedor do ICMS das Operações Incentivadas</td><td id="itemB17">0,00</td></tr>
                                     <tr><td>18</td><td>ICMS por Média</td><td id="itemB18">0,00</td></tr>
-                                    <tr><td>19</td><td>Saldo após dedução do ICMS por Média</td><td id="itemB19">0,00</td></tr>
-                                    <tr><td>20</td><td>Outros Abatimentos</td><td id="itemB20">0,00</td></tr>
+                                    <tr><td>19</td><td>Deduções/Compensações</td><td id="itemB19">0,00</td></tr>
+                                    <tr><td>20</td><td>Saldo do ICMS a Pagar por Média</td><td id="itemB20">0,00</td></tr>
                                     <tr><td>21</td><td>ICMS Base para FOMENTAR/PRODUZIR</td><td id="itemB21">0,00</td></tr>
                                     <tr><td>22</td><td>Percentagem do Financiamento (%)</td><td id="itemB22">0,00</td></tr>
                                     <tr><td>23</td><td>ICMS Sujeito a Financiamento</td><td id="itemB23">0,00</td></tr>
-                                    <tr><td>24</td><td>Valor do Financiamento Concedido</td><td id="itemB24">0,00</td></tr>
+                                    <tr><td>24</td><td>ICMS Excedente Não Sujeito ao Incentivo</td><td id="itemB24_excedente">0,00</td></tr>
                                     <tr><td>25</td><td>ICMS Financiado</td><td id="itemB25">0,00</td></tr>
                                     <tr><td>26</td><td>Saldo do ICMS da Parcela Não Financiada</td><td id="itemB26">0,00</td></tr>
                                     <tr><td>27</td><td>Compensação de Saldo Credor de Período Anterior</td><td id="itemB27">0,00</td></tr>
@@ -353,6 +353,9 @@
                         <button id="exportFomentarMemoria" class="btn-style btn-export">
                             <span class="btn-icon">🔍</span> Exportar Memória de Cálculo
                         </button>
+                        <button id="exportValidationReport" class="btn-style btn-export">
+                            <span class="btn-icon">⚖️</span> Relatório de Confronto SPED
+                        </button>
                         <button id="exportComparative" class="btn-style btn-export" style="display: none;">
                             <span class="btn-icon">📈</span> Exportar Relatório Comparativo
                         </button>
@@ -361,6 +364,22 @@
                         </button>
                         <button id="printFomentar" class="btn-style btn-secondary">
                             <span class="btn-icon">🖨️</span> Imprimir
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Seção do Relatório de Confronto -->
+                <div id="validationReportSection" class="validation-section" style="display: none;">
+                    <div id="validationReportContainer"></div>
+                    <div class="validation-actions">
+                        <button id="exportValidationExcel" class="btn-style btn-export">
+                            <span class="btn-icon">📊</span> Exportar Excel
+                        </button>
+                        <button id="exportValidationPDF" class="btn-style btn-export">
+                            <span class="btn-icon">📄</span> Exportar PDF
+                        </button>
+                        <button id="closeValidationReport" class="btn-style btn-secondary">
+                            <span class="btn-icon">❌</span> Fechar
                         </button>
                     </div>
                 </div>

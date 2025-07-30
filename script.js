@@ -63,6 +63,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('importSpedFomentar').addEventListener('click', importSpedForFomentar);
     document.getElementById('exportFomentar').addEventListener('click', exportFomentarReport);
     document.getElementById('exportFomentarMemoria').addEventListener('click', exportFomentarMemoriaCalculo);
+    document.getElementById('exportValidationReport').addEventListener('click', showValidationReport);
+    document.getElementById('closeValidationReport').addEventListener('click', hideValidationReport);
+    document.getElementById('exportValidationExcel').addEventListener('click', exportValidationExcel);
+    document.getElementById('exportValidationPDF').addEventListener('click', exportValidationPDF);
     document.getElementById('printFomentar').addEventListener('click', printFomentarReport);
     
     // ProGoiás listeners
@@ -3282,9 +3286,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // QUADRO B - Operações Incentivadas (conforme Demonstrativo versão 3.51)
         
-        // 11 - Débito do ICMS das Operações Incentivadas
-        const debitoIncentivadas = fomentarData.saidasIncentivadas.reduce((total, op) => total + op.valorIcms, 0);
-        
         // 11.1 - Débito do ICMS das Saídas a Título de Bonificação ou Semelhante Incentivadas
         // Identificar operações de bonificação (CFOPs específicos ou natureza da operação)
         const debitoBonificacaoIncentivadas = fomentarData.saidasIncentivadas
@@ -3295,13 +3296,22 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .reduce((total, op) => total + op.valorIcms, 0);
         
+        // 11 - Débito do ICMS das Operações Incentivadas (EXCETO item 11.1)
+        const debitoIncentivadas = fomentarData.saidasIncentivadas
+            .filter(op => {
+                // Excluir CFOPs de bonificação que já estão no item 11.1
+                const cfopsBonificacao = ['5910', '5911', '6910', '6911'];
+                return !cfopsBonificacao.includes(op.cfop);
+            })
+            .reduce((total, op) => total + op.valorIcms, 0);
+        
         // 12 - Outros Débitos das Operações Incentivadas  
         const outrosDebitosIncentivadas = fomentarData.outrosDebitosIncentivados || 0;
         
         // 13 - Estorno de Créditos das Operações Incentivadas
         const estornoCreditosIncentivadas = 0; // Configurável
         
-        // 14 - Crédito para Operações Incentivadas
+        // 14 - Crédito para Operações Incentivadas (mantido cálculo atual conforme IN 885)
         const creditoOperacoesIncentivadas = creditoIncentivadas;
         
         // 15 - Deduções das Operações Incentivadas
@@ -3343,29 +3353,29 @@ document.addEventListener('DOMContentLoaded', () => {
         // 18 - ICMS por Média
         const icmsPorMediaCalc = icmsPorMedia;
         
-        // 19 - Saldo após dedução do ICMS por Média
-        const saldoAposMedia = Math.max(0, saldoDevedorIncentivadas - icmsPorMediaCalc);
+        // 19 - Deduções/Compensações (64) - conforme instrução oficial
+        const deducoesCompensacoes = 0; // Configurável - valores que a legislação permite sejam deduzidos da média
         
-        // 20 - Outros Abatimentos
-        const outrosAbatimentos = 0; // Configurável
+        // 20 - Saldo do ICMS a Pagar por Média - resultado da expressão (18-19)
+        const saldoIcmsPagarPorMedia = Math.max(0, icmsPorMediaCalc - deducoesCompensacoes);
         
-        // 21 - ICMS Base para FOMENTAR/PRODUZIR
-        const icmsBaseFomentar = Math.max(0, saldoAposMedia - outrosAbatimentos);
+        // 21 - ICMS Base para Fomentar/Produzir - resultado da expressão (17-18) - INSTRUÇÃO OFICIAL
+        const icmsBaseFomentar = Math.max(0, saldoDevedorIncentivadas - icmsPorMediaCalc);
         
         // 22 - Percentagem do Financiamento
         const percentualFinanciamentoCalc = percentualFinanciamento * 100;
         
-        // 23 - ICMS Sujeito a Financiamento
+        // 23 - ICMS Sujeito a Financiamento - resultado da expressão [(21x22)/100]
         const icmsSujeitoFinanciamento = icmsBaseFomentar * percentualFinanciamento;
         
-        // 24 - Valor do Financiamento Concedido (pode ser limitado por teto)
-        const valorFinanciamentoConcedido = icmsSujeitoFinanciamento; // Sem limitação por ora
+        // 24 - ICMS Excedente Não Sujeito ao Incentivo - conforme instrução oficial
+        // icmsExcedenteNaoSujeitoIncentivo = 0; // Já declarado anteriormente, pode ser alterado conforme necessário
         
-        // 25 - ICMS Financiado
-        const icmsFinanciado = valorFinanciamentoConcedido;
+        // 25 - ICMS Financiado - resultado da expressão (23-24) - conforme instrução oficial
+        const icmsFinanciado = icmsSujeitoFinanciamento - icmsExcedenteNaoSujeitoIncentivo;
         
-        // 26 - Saldo do ICMS da Parcela Não Financiada
-        const parcelaNaoFinanciada = icmsBaseFomentar - icmsFinanciado;
+        // 26 - Saldo do ICMS da Parcela Não Financiada - resultado da expressão (21-23)
+        const parcelaNaoFinanciada = icmsBaseFomentar - icmsSujeitoFinanciamento;
         
         // 27 - Compensação de Saldo Credor de Período Anterior (Parcela Não Financiada)
         const compensacaoSaldoCredorAnterior = 0; // Configurável
@@ -3392,7 +3402,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let icmsExcedenteNaoSujeitoIncentivoFinal;
         
         // Valor base do item 24 (valor transportado)
-        const valorTransportadoItem24 = valorFinanciamentoConcedido;
+        const valorTransportadoItem24 = icmsFinanciado;
         
         // Calcular ICMS Excedente: (24/22) x 100
         const icmsExcedente = percentualFinanciamentoCalc > 0 ? (valorTransportadoItem24 / percentualFinanciamentoCalc) * 100 : 0;
@@ -3461,12 +3471,12 @@ document.addEventListener('DOMContentLoaded', () => {
             item16: creditoSaldoCredorNaoIncentivadas, 
             item17: saldoDevedorIncentivadas,
             item18: icmsPorMediaCalc,
-            item19: saldoAposMedia,
-            item20: outrosAbatimentos, 
+            item19: deducoesCompensacoes, // Item 19 - Deduções/Compensações
+            item20: saldoIcmsPagarPorMedia, // Item 20 - Saldo do ICMS a Pagar por Média 
             item21: icmsBaseFomentar,
             item22: percentualFinanciamentoCalc, 
             item23: icmsSujeitoFinanciamento,
-            item24: valorFinanciamentoConcedido, 
+            item24: icmsExcedenteNaoSujeitoIncentivo, // Item 24 é ICMS Excedente, não Valor Financiado 
             item25: icmsFinanciado,
             item26: parcelaNaoFinanciada,
             item27: compensacaoSaldoCredorAnterior,
@@ -3505,6 +3515,14 @@ document.addEventListener('DOMContentLoaded', () => {
             fomentarData.calculatedValues = {};
         }
         
+        // Extrair dados do SPED para validação (mover para depois dos calculatedValues)
+        let spedValidationData = null;
+        let validationReport = null;
+        if (registrosCompletos) {
+            addLog('Extraindo dados SPED para validação...', 'info');
+            spedValidationData = extractSpedValidationData(registrosCompletos);
+        }
+        
         // Salvar todos os valores calculados com nomes descritivos
         fomentarData.calculatedValues = {
             // Quadro A - Proporção dos Créditos Apropriados
@@ -3529,12 +3547,15 @@ document.addEventListener('DOMContentLoaded', () => {
             creditoSaldoCredorNaoIncentivadas: creditoSaldoCredorNaoIncentivadas,
             saldoDevedorIncentivadas: saldoDevedorIncentivadas,
             icmsPorMedia: icmsPorMediaCalc,
-            saldoAposMedia: saldoAposMedia,
-            outrosAbatimentos: outrosAbatimentos,
+            deducoesCompensacoes: deducoesCompensacoes, // Item 19 - Deduções/Compensações
+            saldoIcmsPagarPorMedia: saldoIcmsPagarPorMedia, // Item 20 - Saldo do ICMS a Pagar por Média
+            // Campos antigos para compatibilidade:
+            saldoAposMedia: deducoesCompensacoes, 
+            outrosAbatimentos: saldoIcmsPagarPorMedia,
             icmsBaseFomentar: icmsBaseFomentar,
             percentualFinanciamento: percentualFinanciamentoCalc,
             icmsSujeitoFinanciamento: icmsSujeitoFinanciamento,
-            valorFinanciamentoConcedido: valorFinanciamentoConcedido,
+            valorFinanciamentoConcedido: icmsFinanciado, // Compatibilidade - usar icmsFinanciado
             icmsFinanciado: icmsFinanciado,
             parcelaNaoFinanciada: parcelaNaoFinanciada,
             compensacaoSaldoCredorAnterior: compensacaoSaldoCredorAnterior,
@@ -3568,6 +3589,18 @@ document.addEventListener('DOMContentLoaded', () => {
             totalNaoIncentivadas: saldoPagarNaoIncentivadas,
             totalGeral: totalGeralPagar
         };
+        
+        // Criar relatório de validação após calculatedValues estar completo
+        if (spedValidationData) {
+            fomentarData.spedValidationData = spedValidationData;
+            fomentarData.validationReport = createValidationReport(
+                fomentarData.calculatedValues,
+                spedValidationData,
+                sharedPeriodo,
+                sharedNomeEmpresa
+            );
+            addLog('Relatório de confronto gerado', 'success');
+        }
         
         addLog('Valores calculados salvos para exportação', 'info');
         
@@ -3606,7 +3639,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('itemB21').textContent = formatCurrency(values.item21);
         document.getElementById('itemB22').textContent = values.item22.toFixed(0) + '%';
         document.getElementById('itemB23').textContent = formatCurrency(values.item23);
-        document.getElementById('itemB24').textContent = formatCurrency(values.item24);
+        document.getElementById('itemB24_excedente').textContent = formatCurrency(values.item24);
         document.getElementById('itemB25').textContent = formatCurrency(values.item25);
         document.getElementById('itemB26').textContent = formatCurrency(values.item26);
         document.getElementById('itemB27').textContent = formatCurrency(values.item27);
@@ -4064,6 +4097,8 @@ document.addEventListener('DOMContentLoaded', () => {
         addLog('Classificando operações para cada período...', 'info');
         multiPeriodData.forEach((periodo, index) => {
             periodo.fomentarData = classifyOperations(periodo.registrosCompletos);
+            // Preservar registros para validação SPED
+            periodo.fomentarData.registros = periodo.registrosCompletos;
             addLog(`Período ${index + 1}: ${periodo.fomentarData.saidasIncentivadas.length} saídas incentivadas classificadas`, 'info');
         });
         
@@ -4109,6 +4144,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 saldoCredorCarryOver, 
                 configPeriodo
             );
+            
+            // Criar relatório de validação para o período
+            if (periodo.calculatedValues.spedValidationData) {
+                periodo.validationReport = createValidationReport(
+                    periodo.calculatedValues,
+                    periodo.calculatedValues.spedValidationData,
+                    periodo.periodo,
+                    periodo.nomeEmpresa
+                );
+            }
             
             // Atualizar saldo credor para o próximo período
             saldoCredorCarryOver = periodo.calculatedValues.saldoCredorFinal || 0;
@@ -4254,9 +4299,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // QUADRO B - Operações Incentivadas (conforme Demonstrativo versão 3.51)
         
-        // 11 - Débito do ICMS das Operações Incentivadas
-        const debitoIncentivadas = fomentarData.saidasIncentivadas.reduce((total, op) => total + op.valorIcms, 0);
-        
         // 11.1 - Débito do ICMS das Saídas a Título de Bonificação ou Semelhante Incentivadas
         // Identificar operações de bonificação (CFOPs específicos ou natureza da operação)
         const debitoBonificacaoIncentivadas = fomentarData.saidasIncentivadas
@@ -4264,6 +4306,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 // CFOPs típicos de bonificação: 5910, 5911, 6910, 6911
                 const cfopsBonificacao = ['5910', '5911', '6910', '6911'];
                 return cfopsBonificacao.includes(op.cfop);
+            })
+            .reduce((total, op) => total + op.valorIcms, 0);
+        
+        // 11 - Débito do ICMS das Operações Incentivadas (EXCETO item 11.1)
+        const debitoIncentivadas = fomentarData.saidasIncentivadas
+            .filter(op => {
+                // Excluir CFOPs de bonificação que já estão no item 11.1
+                const cfopsBonificacao = ['5910', '5911', '6910', '6911'];
+                return !cfopsBonificacao.includes(op.cfop);
             })
             .reduce((total, op) => total + op.valorIcms, 0);
         
@@ -4315,29 +4366,29 @@ document.addEventListener('DOMContentLoaded', () => {
         // 18 - ICMS por Média
         const icmsPorMediaCalc = icmsPorMedia;
         
-        // 19 - Saldo após dedução do ICMS por Média
-        const saldoAposMedia = Math.max(0, saldoDevedorIncentivadas - icmsPorMediaCalc);
+        // 19 - Deduções/Compensações (64) - conforme instrução oficial
+        const deducoesCompensacoes = 0; // Configurável - valores que a legislação permite sejam deduzidos da média
         
-        // 20 - Outros Abatimentos
-        const outrosAbatimentos = 0; // Configurável
+        // 20 - Saldo do ICMS a Pagar por Média - resultado da expressão (18-19)
+        const saldoIcmsPagarPorMedia = Math.max(0, icmsPorMediaCalc - deducoesCompensacoes);
         
-        // 21 - ICMS Base para FOMENTAR/PRODUZIR
-        const icmsBaseFomentar = Math.max(0, saldoAposMedia - outrosAbatimentos);
+        // 21 - ICMS Base para Fomentar/Produzir - resultado da expressão (17-18) - INSTRUÇÃO OFICIAL
+        const icmsBaseFomentar = Math.max(0, saldoDevedorIncentivadas - icmsPorMediaCalc);
         
         // 22 - Percentagem do Financiamento
         const percentualFinanciamentoCalc = percentualFinanciamento * 100;
         
-        // 23 - ICMS Sujeito a Financiamento
+        // 23 - ICMS Sujeito a Financiamento - resultado da expressão [(21x22)/100]
         const icmsSujeitoFinanciamento = icmsBaseFomentar * percentualFinanciamento;
         
-        // 24 - Valor do Financiamento Concedido (pode ser limitado por teto)
-        const valorFinanciamentoConcedido = icmsSujeitoFinanciamento; // Sem limitação por ora
+        // 24 - ICMS Excedente Não Sujeito ao Incentivo - conforme instrução oficial
+        // icmsExcedenteNaoSujeitoIncentivo = 0; // Já declarado anteriormente, pode ser alterado conforme necessário
         
-        // 25 - ICMS Financiado
-        const icmsFinanciado = valorFinanciamentoConcedido;
+        // 25 - ICMS Financiado - resultado da expressão (23-24) - conforme instrução oficial
+        const icmsFinanciado = icmsSujeitoFinanciamento - icmsExcedenteNaoSujeitoIncentivo;
         
-        // 26 - Saldo do ICMS da Parcela Não Financiada
-        const parcelaNaoFinanciada = icmsBaseFomentar - icmsFinanciado;
+        // 26 - Saldo do ICMS da Parcela Não Financiada - resultado da expressão (21-23)
+        const parcelaNaoFinanciada = icmsBaseFomentar - icmsSujeitoFinanciamento;
         
         // 27 - Compensação de Saldo Credor de Período Anterior (Parcela Não Financiada)
         const compensacaoSaldoCredorAnterior = 0; // Configurável
@@ -4364,7 +4415,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let icmsExcedenteNaoSujeitoIncentivoFinal;
         
         // Valor base do item 24 (valor transportado)
-        const valorTransportadoItem24 = valorFinanciamentoConcedido;
+        const valorTransportadoItem24 = icmsFinanciado;
         
         // Calcular ICMS Excedente: (24/22) x 100
         const icmsExcedente = percentualFinanciamentoCalc > 0 ? (valorTransportadoItem24 / percentualFinanciamentoCalc) * 100 : 0;
@@ -4432,12 +4483,15 @@ document.addEventListener('DOMContentLoaded', () => {
             creditoSaldoCredorNaoIncentivadas: creditoSaldoCredorNaoIncentivadas,
             saldoDevedorIncentivadas: saldoDevedorIncentivadas,
             icmsPorMedia: icmsPorMediaCalc,
-            saldoAposMedia: saldoAposMedia,
-            outrosAbatimentos: outrosAbatimentos,
+            deducoesCompensacoes: deducoesCompensacoes, // Item 19 - Deduções/Compensações
+            saldoIcmsPagarPorMedia: saldoIcmsPagarPorMedia, // Item 20 - Saldo do ICMS a Pagar por Média
+            // Campos antigos para compatibilidade:
+            saldoAposMedia: deducoesCompensacoes, 
+            outrosAbatimentos: saldoIcmsPagarPorMedia,
             icmsBaseFomentar: icmsBaseFomentar,
             percentualFinanciamento: percentualFinanciamentoCalc,
             icmsSujeitoFinanciamento: icmsSujeitoFinanciamento,
-            valorFinanciamentoConcedido: valorFinanciamentoConcedido,
+            valorFinanciamentoConcedido: icmsFinanciado, // Compatibilidade - usar icmsFinanciado
             icmsFinanciado: icmsFinanciado,
             parcelaNaoFinanciada: parcelaNaoFinanciada,
             compensacaoSaldoCredorAnterior: compensacaoSaldoCredorAnterior,
@@ -4464,7 +4518,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Resumo Final
             totalGeralPagar: totalGeralPagar,
             valorFinanciamento: valorFinanciamento,
-            saldoCredorFinal: saldoCredorProximoPeriodo
+            saldoCredorFinal: saldoCredorProximoPeriodo,
+            
+            // Dados de validação SPED (se disponíveis)
+            spedValidationData: fomentarData.registros ? extractSpedValidationData(fomentarData.registros) : null
         };
     }
     
@@ -4779,6 +4836,579 @@ document.addEventListener('DOMContentLoaded', () => {
         return html;
     }
     
+    // === RELATÓRIO DE CONFRONTO SPED vs SISTEMA ===
+    
+    function extractSpedValidationData(registros) {
+        const validationData = {
+            e110: null,
+            e111: [],
+            e115: [],
+            icmsApurado: 0,
+            icmsRecolher: 0,
+            saldoCredorAnterior: 0,
+            saldoCredorTransportar: 0,
+            beneficiosFomentar: 0,
+            beneficiosProgoias: 0,
+            totalDebitos: 0,
+            totalCreditos: 0
+        };
+        
+        try {
+            // Extrair dados do E110 (Apuração do ICMS)
+            if (registros.E110 && registros.E110.length > 0) {
+                const registroE110 = registros.E110[0]; // Primeiro registro E110
+                const campos = registroE110.slice(1, -1);
+                const layout = ['REG', 'VL_TOT_DEBITOS', 'VL_AJ_DEBITOS', 'VL_TOT_AJ_DEBITOS',
+                               'VL_ESTORNOS_CRED', 'VL_TOT_CREDITOS', 'VL_AJ_CREDITOS',
+                               'VL_TOT_AJ_CREDITOS', 'VL_ESTORNOS_DEB', 'VL_SLD_CREDOR_ANT',
+                               'VL_SLD_APURADO', 'VL_TOT_DED', 'VL_ICMS_RECOLHER',
+                               'VL_SLD_CREDOR_TRANSPORTAR', 'DEB_ESP'];
+                
+                validationData.e110 = {
+                    totalDebitos: parseFloat((campos[layout.indexOf('VL_TOT_DEBITOS')] || '0').replace(',', '.')),
+                    ajustesDebitos: parseFloat((campos[layout.indexOf('VL_AJ_DEBITOS')] || '0').replace(',', '.')),
+                    totalCreditos: parseFloat((campos[layout.indexOf('VL_TOT_CREDITOS')] || '0').replace(',', '.')),
+                    ajustesCreditos: parseFloat((campos[layout.indexOf('VL_AJ_CREDITOS')] || '0').replace(',', '.')),
+                    saldoCredorAnterior: parseFloat((campos[layout.indexOf('VL_SLD_CREDOR_ANT')] || '0').replace(',', '.')),
+                    saldoApurado: parseFloat((campos[layout.indexOf('VL_SLD_APURADO')] || '0').replace(',', '.')),
+                    icmsRecolher: parseFloat((campos[layout.indexOf('VL_ICMS_RECOLHER')] || '0').replace(',', '.')),
+                    saldoCredorTransportar: parseFloat((campos[layout.indexOf('VL_SLD_CREDOR_TRANSPORTAR')] || '0').replace(',', '.'))
+                };
+                
+                validationData.icmsApurado = validationData.e110.saldoApurado;
+                validationData.icmsRecolher = validationData.e110.icmsRecolher;
+                validationData.saldoCredorAnterior = validationData.e110.saldoCredorAnterior;
+                validationData.saldoCredorTransportar = validationData.e110.saldoCredorTransportar;
+                validationData.totalDebitos = validationData.e110.totalDebitos;
+                validationData.totalCreditos = validationData.e110.totalCreditos;
+            }
+            
+            // Extrair dados do E111 (Ajustes)
+            if (registros.E111 && registros.E111.length > 0) {
+                const layout = ['REG', 'COD_AJ_APUR', 'DESCR_COMPL_AJ', 'VL_AJ_APUR'];
+                
+                registros.E111.forEach(registro => {
+                    const campos = registro.slice(1, -1);
+                    const codigo = campos[layout.indexOf('COD_AJ_APUR')] || '';
+                    const valor = parseFloat((campos[layout.indexOf('VL_AJ_APUR')] || '0').replace(',', '.'));
+                    const descricao = campos[layout.indexOf('DESCR_COMPL_AJ')] || '';
+                    
+                    validationData.e111.push({
+                        codigo: codigo,
+                        valor: valor,
+                        descricao: descricao
+                    });
+                    
+                    // Identificar benefícios FOMENTAR (créditos)
+                    if (codigo.includes('GO040007') || codigo.includes('GO040008') || 
+                        codigo.includes('GO040009') || codigo.includes('GO040010')) {
+                        validationData.beneficiosFomentar += Math.abs(valor);
+                        
+                        // Log para debug
+                        console.log(`FOMENTAR encontrado no SPED: ${codigo} = R$ ${Math.abs(valor).toFixed(2)}`);
+                    }
+                    
+                    // Identificar benefícios ProGoiás  
+                    if (codigo.includes('GO020158')) {
+                        validationData.beneficiosProgoias += Math.abs(valor);
+                    }
+                });
+            }
+            
+            // Extrair dados do E115 (Demonstrativo ProGoiás) se existir
+            if (registros.E115 && registros.E115.length > 0) {
+                registros.E115.forEach(registro => {
+                    const campos = registro.slice(1, -1);
+                    // Layout do E115 pode variar, mas normalmente contém informações do ProGoiás
+                    validationData.e115.push({
+                        registro: campos.join('|')
+                    });
+                });
+            }
+            
+        } catch (error) {
+            addLog(`Erro ao extrair dados de validação do SPED: ${error.message}`, 'error');
+        }
+        
+        // Log para debug
+        console.log('Dados de validação SPED extraídos:', {
+            icmsRecolher: validationData.icmsRecolher,
+            beneficiosFomentar: validationData.beneficiosFomentar,
+            totalE111: validationData.e111.length
+        });
+        
+        return validationData;
+    }
+    
+    function createValidationReport(calculatedValues, spedValidationData, periodo, nomeEmpresa) {
+        const report = {
+            periodo: periodo,
+            empresa: nomeEmpresa,
+            sistema: calculatedValues,
+            sped: spedValidationData,
+            diferencas: {},
+            status: 'OK'
+        };
+        
+        // Confrontar ICMS Apurado
+        // Sistema: Item 28 (saldoPagarParcelaNaoFinanciada) + Item 41 (saldoPagarNaoIncentivadas)
+        // Se for saldo credor: Item 31 (saldoCredorTransportarIncentivadas) + Item 44 (saldoCredorTransportarNaoIncentivadas)
+        
+        const item28 = calculatedValues.saldoPagarParcelaNaoFinanciada || 0;
+        const item41 = calculatedValues.saldoPagarNaoIncentivadas || 0;
+        const item31 = calculatedValues.saldoCredorTransportarIncentivadas || 0;
+        const item44 = calculatedValues.saldoCredorTransportarNaoIncentivadas || 0;
+        
+        // Se há saldo a pagar, usar itens 28 + 41; se há saldo credor, usar itens 31 + 44
+        const temSaldoPagar = (item28 + item41) > 0;
+        const icmsApuradoSistema = temSaldoPagar ? (item28 + item41) : -(item31 + item44);
+        
+        // CORREÇÃO: VL_ICMS_RECOLHER já tem benefícios deduzidos, vamos usar VL_SLD_APURADO
+        const icmsApuradoSped = spedValidationData.e110?.saldoApurado || spedValidationData.icmsRecolher || 0;
+        const diferencaIcms = Math.abs(icmsApuradoSistema - icmsApuradoSped);
+        
+        report.diferencas.icmsApurado = {
+            sistema: icmsApuradoSistema,
+            sped: icmsApuradoSped,
+            diferenca: diferencaIcms,
+            percentual: icmsApuradoSped > 0 ? (diferencaIcms / icmsApuradoSped * 100) : 0,
+            status: diferencaIcms < 0.01 ? 'OK' : 'DIVERGENTE',
+            detalhes: {
+                item28: item28,
+                item41: item41,
+                item31: item31,
+                item44: item44,
+                tipoSaldo: temSaldoPagar ? 'DEVEDOR' : 'CREDOR'
+            }
+        };
+        
+        // Confrontar Benefício FOMENTAR  
+        // Sistema: Item 24 (Valor do Financiamento Concedido)
+        const beneficioSistema = calculatedValues.icmsFinanciado || 0;
+        const beneficioSped = spedValidationData.beneficiosFomentar || 0;
+        const diferencaBeneficio = Math.abs(beneficioSistema - beneficioSped);
+        
+        report.diferencas.beneficioFomentar = {
+            sistema: beneficioSistema,
+            sped: beneficioSped,
+            diferenca: diferencaBeneficio,
+            percentual: beneficioSped > 0 ? (diferencaBeneficio / beneficioSped * 100) : 0,
+            status: diferencaBeneficio < 0.01 ? 'OK' : 'DIVERGENTE',
+            detalhes: {
+                item24: beneficioSistema,
+                codigoSped: 'GO040007'
+            }
+        };
+        
+        // Status geral do relatório
+        if (report.diferencas.icmsApurado.status === 'DIVERGENTE' || 
+            report.diferencas.beneficioFomentar.status === 'DIVERGENTE') {
+            report.status = 'DIVERGENTE';
+        }
+        
+        // Log para debug
+        console.log(`Relatório de validação criado para ${periodo}:`, {
+            icmsCalculado: icmsApuradoSistema,
+            icmsSped: icmsApuradoSped,
+            beneficioCalculado: beneficioSistema,
+            beneficioSped: beneficioSped,
+            status: report.status
+        });
+        
+        return report;
+    }
+    
+    function generateValidationHTML(validationReport) {
+        let html = '<div class="validation-report">';
+        html += `<h3>🔍 Relatório de Confronto - ${validationReport.periodo}</h3>`;
+        html += `<p><strong>Empresa:</strong> ${validationReport.empresa}</p>`;
+        html += `<p><strong>Status Geral:</strong> <span class="status-${validationReport.status.toLowerCase()}">${validationReport.status}</span></p>`;
+        
+        // Tabela de confronto
+        html += '<table class="validation-table">';
+        html += '<thead>';
+        html += '<tr>';
+        html += '<th>Item</th>';
+        html += '<th>Sistema FOMENTAR</th>';
+        html += '<th>SPED Oficial</th>';
+        html += '<th>Diferença</th>';
+        html += '<th>% Diferença</th>';
+        html += '<th>Status</th>';
+        html += '</tr>';
+        html += '</thead>';
+        html += '<tbody>';
+        
+        // ICMS Apurado
+        const icms = validationReport.diferencas.icmsApurado;
+        const tipoSaldo = icms.detalhes ? icms.detalhes.tipoSaldo : 'DEVEDOR';
+        const descricaoIcms = tipoSaldo === 'DEVEDOR' 
+            ? 'ICMS a Pagar (Itens 28+41)' 
+            : 'Saldo Credor (Itens 31+44)';
+        
+        html += '<tr>';
+        html += `<td><strong>${descricaoIcms}</strong></td>`;
+        html += `<td>R$ ${formatCurrency(Math.abs(icms.sistema))}</td>`;
+        html += `<td>R$ ${formatCurrency(Math.abs(icms.sped))}</td>`;
+        html += `<td>R$ ${formatCurrency(icms.diferenca)}</td>`;
+        html += `<td>${icms.percentual.toFixed(2)}%</td>`;
+        html += `<td><span class="status-${icms.status.toLowerCase()}">${icms.status}</span></td>`;
+        html += '</tr>';
+        
+        // Benefício FOMENTAR
+        const beneficio = validationReport.diferencas.beneficioFomentar;
+        html += '<tr>';
+        html += '<td><strong>Benefício FOMENTAR (Item 24)</strong></td>';
+        html += `<td>R$ ${formatCurrency(beneficio.sistema)}</td>`;
+        html += `<td>R$ ${formatCurrency(beneficio.sped)}</td>`;
+        html += `<td>R$ ${formatCurrency(beneficio.diferenca)}</td>`;
+        html += `<td>${beneficio.percentual.toFixed(2)}%</td>`;
+        html += `<td><span class="status-${beneficio.status.toLowerCase()}">${beneficio.status}</span></td>`;
+        html += '</tr>';
+        
+        html += '</tbody>';
+        html += '</table>';
+        
+        // Detalhes dos Itens do Demonstrativo
+        html += '<h4>📋 Detalhes dos Itens do Demonstrativo</h4>';
+        html += '<table class="sped-details-table">';
+        
+        if (icms.detalhes) {
+            html += '<tr><td><strong>Item 28 - Saldo a Pagar Parcela Não Financiada:</strong></td><td>R$ ' + formatCurrency(icms.detalhes.item28) + '</td></tr>';
+            html += '<tr><td><strong>Item 41 - Saldo a Pagar Operações Não Incentivadas:</strong></td><td>R$ ' + formatCurrency(icms.detalhes.item41) + '</td></tr>';
+            html += '<tr><td><strong>Item 31 - Saldo Credor Transportar Incentivadas:</strong></td><td>R$ ' + formatCurrency(icms.detalhes.item31) + '</td></tr>';
+            html += '<tr><td><strong>Item 44 - Saldo Credor Transportar Não Incentivadas:</strong></td><td>R$ ' + formatCurrency(icms.detalhes.item44) + '</td></tr>';
+            html += '<tr><td><strong>Tipo de Saldo:</strong></td><td>' + icms.detalhes.tipoSaldo + '</td></tr>';
+        }
+        
+        if (beneficio.detalhes) {
+            html += '<tr><td><strong>Item 24 - Valor do Financiamento Concedido:</strong></td><td>R$ ' + formatCurrency(beneficio.detalhes.item24) + '</td></tr>';
+            html += '<tr><td><strong>Código SPED Esperado:</strong></td><td>' + beneficio.detalhes.codigoSped + '</td></tr>';
+        }
+        
+        html += '</table>';
+        
+        // Detalhes adicionais do SPED
+        if (validationReport.sped.e110) {
+            html += '<h4>📋 Detalhes da Apuração SPED (E110)</h4>';
+            html += '<table class="sped-details-table">';
+            html += '<tr><td>Total Débitos:</td><td>R$ ' + formatCurrency(validationReport.sped.e110.totalDebitos) + '</td></tr>';
+            html += '<tr><td>Total Créditos:</td><td>R$ ' + formatCurrency(validationReport.sped.e110.totalCreditos) + '</td></tr>';
+            html += '<tr><td>Saldo Apurado:</td><td>R$ ' + formatCurrency(validationReport.sped.e110.saldoApurado) + '</td></tr>';
+            html += '<tr><td>ICMS a Recolher:</td><td>R$ ' + formatCurrency(validationReport.sped.e110.icmsRecolher) + '</td></tr>';
+            html += '<tr><td>Saldo Credor Anterior:</td><td>R$ ' + formatCurrency(validationReport.sped.e110.saldoCredorAnterior) + '</td></tr>';
+            html += '</table>';
+        }
+        
+        // Ajustes E111 relevantes
+        if (validationReport.sped.e111.length > 0) {
+            html += '<h4>⚖️ Ajustes Relevantes (E111)</h4>';
+            html += '<table class="e111-table">';
+            html += '<thead><tr><th>Código</th><th>Valor</th><th>Descrição</th></tr></thead>';
+            html += '<tbody>';
+            
+            validationReport.sped.e111.forEach(ajuste => {
+                if (Math.abs(ajuste.valor) > 0.01) { // Mostrar apenas ajustes significativos
+                    html += '<tr>';
+                    html += `<td>${ajuste.codigo}</td>`;
+                    html += `<td>R$ ${formatCurrency(Math.abs(ajuste.valor))}</td>`;
+                    html += `<td>${ajuste.descricao}</td>`;
+                    html += '</tr>';
+                }
+            });
+            
+            html += '</tbody></table>';
+        }
+        
+        html += '</div>';
+        return html;
+    }
+    
+    // === FUNÇÕES DO RELATÓRIO DE CONFRONTO ===
+    
+    function showValidationReport() {
+        const isMultiplePeriods = multiPeriodData.length > 1;
+        
+        if (isMultiplePeriods) {
+            showMultiPeriodValidationReport();
+        } else {
+            showSinglePeriodValidationReport();
+        }
+    }
+    
+    function showSinglePeriodValidationReport() {
+        if (!fomentarData) {
+            addLog('Erro: Nenhum dado FOMENTAR disponível. Execute o cálculo primeiro.', 'error');
+            return;
+        }
+        
+        if (!fomentarData.validationReport) {
+            addLog('Erro: Relatório de confronto não foi gerado. Verifique se o SPED contém registros E110/E111.', 'error');
+            console.log('Debug fomentarData:', {
+                hasSpedValidationData: !!fomentarData.spedValidationData,
+                hasCalculatedValues: !!fomentarData.calculatedValues,
+                hasValidationReport: !!fomentarData.validationReport
+            });
+            return;
+        }
+        
+        const container = document.getElementById('validationReportContainer');
+        const section = document.getElementById('validationReportSection');
+        
+        container.innerHTML = generateValidationHTML(fomentarData.validationReport);
+        section.style.display = 'block';
+        
+        // Scroll para a seção do relatório
+        section.scrollIntoView({ behavior: 'smooth' });
+        
+        addLog('Relatório de confronto SPED exibido', 'success');
+    }
+    
+    function showMultiPeriodValidationReport() {
+        if (multiPeriodData.length === 0) {
+            addLog('Erro: Nenhum período processado para confronto', 'error');
+            return;
+        }
+        
+        const container = document.getElementById('validationReportContainer');
+        const section = document.getElementById('validationReportSection');
+        
+        let html = '<div class="multi-validation-report">';
+        html += '<h3>🔍 Relatório de Confronto Multi-Período</h3>';
+        html += `<p><strong>Períodos analisados:</strong> ${multiPeriodData.map(p => p.periodo).join(', ')}</p>`;
+        html += `<p><strong>Empresa:</strong> ${multiPeriodData[0].nomeEmpresa}</p>`;
+        
+        // Resumo geral
+        let totalDivergencias = 0;
+        let statusGeral = 'OK';
+        
+        multiPeriodData.forEach(period => {
+            if (period.validationReport && period.validationReport.status === 'DIVERGENTE') {
+                totalDivergencias++;
+                statusGeral = 'DIVERGENTE';
+            }
+        });
+        
+        html += `<p><strong>Status Geral:</strong> <span class="status-${statusGeral.toLowerCase()}">${statusGeral}</span></p>`;
+        html += `<p><strong>Períodos com Divergências:</strong> ${totalDivergencias} de ${multiPeriodData.length}</p>`;
+        
+        // Tabela comparativa multi-período
+        html += '<table class="multi-validation-table">';
+        html += '<thead>';
+        html += '<tr>';
+        html += '<th>Período</th>';
+        html += '<th>ICMS Sistema</th>';
+        html += '<th>ICMS SPED</th>';
+        html += '<th>Dif. ICMS</th>';
+        html += '<th>Benefício Sistema</th>';
+        html += '<th>Benefício SPED</th>';
+        html += '<th>Dif. Benefício</th>';
+        html += '<th>Status</th>';
+        html += '</tr>';
+        html += '</thead>';
+        html += '<tbody>';
+        
+        multiPeriodData.forEach(period => {
+            if (period.validationReport) {
+                const report = period.validationReport;
+                const icms = report.diferencas.icmsApurado;
+                const beneficio = report.diferencas.beneficioFomentar;
+                
+                html += '<tr>';
+                html += `<td><strong>${period.periodo}</strong></td>`;
+                html += `<td>R$ ${formatCurrency(icms.sistema)}</td>`;
+                html += `<td>R$ ${formatCurrency(icms.sped)}</td>`;
+                html += `<td class="${icms.status.toLowerCase()}">R$ ${formatCurrency(icms.diferenca)}</td>`;
+                html += `<td>R$ ${formatCurrency(beneficio.sistema)}</td>`;
+                html += `<td>R$ ${formatCurrency(beneficio.sped)}</td>`;
+                html += `<td class="${beneficio.status.toLowerCase()}">R$ ${formatCurrency(beneficio.diferenca)}</td>`;
+                html += `<td><span class="status-${report.status.toLowerCase()}">${report.status}</span></td>`;
+                html += '</tr>';
+            }
+        });
+        
+        html += '</tbody>';
+        html += '</table>';
+        
+        // Detalhes por período (apenas períodos com divergências)
+        multiPeriodData.forEach(period => {
+            if (period.validationReport && period.validationReport.status === 'DIVERGENTE') {
+                html += `<div class="period-validation-details">`;
+                html += `<h4>📋 Detalhes - ${period.periodo}</h4>`;
+                html += generateValidationHTML(period.validationReport);
+                html += `</div>`;
+            }
+        });
+        
+        html += '</div>';
+        
+        container.innerHTML = html;
+        section.style.display = 'block';
+        
+        // Scroll para a seção do relatório
+        section.scrollIntoView({ behavior: 'smooth' });
+        
+        addLog('Relatório de confronto multi-período exibido', 'success');
+    }
+    
+    function hideValidationReport() {
+        document.getElementById('validationReportSection').style.display = 'none';
+        addLog('Relatório de confronto fechado', 'info');
+    }
+    
+    async function exportValidationExcel() {
+        const isMultiplePeriods = multiPeriodData.length > 1;
+        
+        try {
+            const workbook = await XlsxPopulate.fromBlankAsync();
+            const worksheet = workbook.sheet(0);
+            worksheet.name('Confronto SPED vs Sistema');
+            
+            if (isMultiplePeriods) {
+                await createMultiPeriodValidationExcel(worksheet);
+            } else {
+                await createSinglePeriodValidationExcel(worksheet);
+            }
+            
+            const buffer = await workbook.outputAsync();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            
+            const fileName = isMultiplePeriods 
+                ? `Confronto_SPED_MultiPeriodo_${new Date().toISOString().slice(0, 10)}.xlsx`
+                : `Confronto_SPED_${sharedPeriodo.replace('/', '')}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = fileName;
+            link.click();
+            
+            addLog(`Relatório de confronto exportado: ${fileName}`, 'success');
+            
+        } catch (error) {
+            addLog(`Erro ao exportar relatório de confronto: ${error.message}`, 'error');
+        }
+    }
+    
+    async function exportValidationPDF() {
+        addLog('Função de exportação PDF em desenvolvimento', 'info');
+    }
+    
+    async function createSinglePeriodValidationExcel(worksheet) {
+        if (!fomentarData || !fomentarData.validationReport) {
+            throw new Error('Nenhum relatório de confronto disponível');
+        }
+        
+        const report = fomentarData.validationReport;
+        
+        // Cabeçalho
+        worksheet.cell("A1").value("RELATÓRIO DE CONFRONTO SPED vs SISTEMA");
+        worksheet.cell("A1").style('bold', true).style('fontSize', 14);
+        
+        worksheet.cell("A2").value(`Empresa: ${report.empresa}`);
+        worksheet.cell("A3").value(`Período: ${report.periodo}`);
+        worksheet.cell("A4").value(`Status: ${report.status}`);
+        
+        // Tabela de confronto
+        worksheet.cell("A6").value("Item");
+        worksheet.cell("B6").value("Sistema FOMENTAR");
+        worksheet.cell("C6").value("SPED Oficial");
+        worksheet.cell("D6").value("Diferença");
+        worksheet.cell("E6").value("% Diferença");
+        worksheet.cell("F6").value("Status");
+        
+        // Estilo do cabeçalho
+        for (let col = 1; col <= 6; col++) {
+            worksheet.cell(6, col).style('bold', true).style('fill', 'D7E4BC');
+        }
+        
+        // Dados ICMS
+        const icms = report.diferencas.icmsApurado;
+        worksheet.cell("A7").value("ICMS Total a Recolher");
+        worksheet.cell("B7").value(icms.sistema);
+        worksheet.cell("C7").value(icms.sped);
+        worksheet.cell("D7").value(icms.diferenca);
+        worksheet.cell("E7").value(icms.percentual / 100); // Excel percentual format
+        worksheet.cell("F7").value(icms.status);
+        
+        // Dados Benefício
+        const beneficio = report.diferencas.beneficioFomentar;
+        worksheet.cell("A8").value("Benefício FOMENTAR");
+        worksheet.cell("B8").value(beneficio.sistema);
+        worksheet.cell("C8").value(beneficio.sped);
+        worksheet.cell("D8").value(beneficio.diferenca);
+        worksheet.cell("E8").value(beneficio.percentual / 100);
+        worksheet.cell("F8").value(beneficio.status);
+        
+        // Formatação de valores
+        for (let row = 7; row <= 8; row++) {
+            for (let col = 2; col <= 4; col++) {
+                worksheet.cell(row, col).style('numberFormat', '#,##0.00');
+            }
+            worksheet.cell(row, 5).style('numberFormat', '0.00%');
+        }
+        
+        // Detalhes do SPED
+        if (report.sped.e110) {
+            worksheet.cell("A11").value("DETALHES DA APURAÇÃO SPED (E110)");
+            worksheet.cell("A11").style('bold', true);
+            
+            const e110 = report.sped.e110;
+            worksheet.cell("A12").value("Total Débitos:");
+            worksheet.cell("B12").value(e110.totalDebitos);
+            worksheet.cell("A13").value("Total Créditos:");
+            worksheet.cell("B13").value(e110.totalCreditos);
+            worksheet.cell("A14").value("Saldo Apurado:");
+            worksheet.cell("B14").value(e110.saldoApurado);
+            worksheet.cell("A15").value("ICMS a Recolher:");
+            worksheet.cell("B15").value(e110.icmsRecolher);
+            
+            for (let row = 12; row <= 15; row++) {
+                worksheet.cell(row, 2).style('numberFormat', '#,##0.00');
+            }
+        }
+    }
+    
+    async function createMultiPeriodValidationExcel(worksheet) {
+        // Implementação da planilha multi-período
+        worksheet.cell("A1").value("RELATÓRIO DE CONFRONTO MULTI-PERÍODO");
+        worksheet.cell("A1").style('bold', true).style('fontSize', 14);
+        
+        worksheet.cell("A2").value(`Períodos: ${multiPeriodData.map(p => p.periodo).join(', ')}`);
+        worksheet.cell("A3").value(`Empresa: ${multiPeriodData[0].nomeEmpresa}`);
+        
+        // Cabeçalhos da tabela
+        const headers = ['Período', 'ICMS Sistema', 'ICMS SPED', 'Dif. ICMS', 'Benefício Sistema', 'Benefício SPED', 'Dif. Benefício', 'Status'];
+        headers.forEach((header, index) => {
+            worksheet.cell(5, index + 1).value(header);
+            worksheet.cell(5, index + 1).style('bold', true).style('fill', 'D7E4BC');
+        });
+        
+        // Dados de cada período
+        multiPeriodData.forEach((period, index) => {
+            const row = 6 + index;
+            
+            worksheet.cell(row, 1).value(period.periodo);
+            
+            if (period.validationReport) {
+                const report = period.validationReport;
+                const icms = report.diferencas.icmsApurado;
+                const beneficio = report.diferencas.beneficioFomentar;
+                
+                worksheet.cell(row, 2).value(icms.sistema);
+                worksheet.cell(row, 3).value(icms.sped);
+                worksheet.cell(row, 4).value(icms.diferenca);
+                worksheet.cell(row, 5).value(beneficio.sistema);
+                worksheet.cell(row, 6).value(beneficio.sped);
+                worksheet.cell(row, 7).value(beneficio.diferenca);
+                worksheet.cell(row, 8).value(report.status);
+                
+                // Formatação
+                for (let col = 2; col <= 7; col++) {
+                    worksheet.cell(row, col).style('numberFormat', '#,##0.00');
+                }
+            }
+        });
+    }
+    
     async function exportComparativeReport() {
         if (multiPeriodData.length === 0) {
             addLog('Erro: Nenhum período processado para exportação comparativa', 'error');
@@ -4933,12 +5563,12 @@ document.addEventListener('DOMContentLoaded', () => {
             { id: '16', desc: 'Crédito Referente a Saldo Credor do Período das Operações Não Incentivadas', field: 'creditoSaldoCredorNaoIncentivadas' },
             { id: '17', desc: 'Saldo Devedor do ICMS das Operações Incentivadas', field: 'saldoDevedorIncentivadas' },
             { id: '18', desc: 'ICMS por Média', field: 'icmsPorMedia' },
-            { id: '19', desc: 'Saldo após dedução do ICMS por Média', field: 'saldoAposMedia' },
-            { id: '20', desc: 'Outros Abatimentos', field: 'outrosAbatimentos' },
+            { id: '19', desc: 'Deduções/Compensações (64)', field: 'deducoesCompensacoes' },
+            { id: '20', desc: 'Saldo do ICMS a Pagar por Média', field: 'saldoIcmsPagarPorMedia' },
             { id: '21', desc: 'ICMS Base para FOMENTAR/PRODUZIR', field: 'icmsBaseFomentar' },
             { id: '22', desc: 'Percentagem do Financiamento (%)', field: 'percentualFinanciamento' },
             { id: '23', desc: 'ICMS Sujeito a Financiamento', field: 'icmsSujeitoFinanciamento' },
-            { id: '24', desc: 'Valor do Financiamento Concedido', field: 'valorFinanciamentoConcedido' },
+            { id: '24', desc: 'ICMS Excedente Não Sujeito ao Incentivo', field: 'icmsExcedenteNaoSujeitoIncentivo' },
             { id: '25', desc: 'ICMS Financiado', field: 'icmsFinanciado' },
             { id: '26', desc: 'Saldo do ICMS da Parcela Não Financiada', field: 'parcelaNaoFinanciada' },
             { id: '27', desc: 'Compensação de Saldo Credor de Período Anterior (Parcela Não Financiada)', field: 'compensacaoSaldoCredorAnterior' },

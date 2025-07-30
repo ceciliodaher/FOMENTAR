@@ -1686,3 +1686,165 @@ body {
         padding: 12px 15px;
     }
 }
+
+/* === ESTILOS PARA RELATÓRIO DE CONFRONTO SPED === */
+
+.validation-section {
+    margin-top: 30px;
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.validation-report h3 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #f8f9fa;
+}
+
+.validation-table,
+.multi-validation-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 0.9em;
+}
+
+.validation-table th,
+.validation-table td,
+.multi-validation-table th,
+.multi-validation-table td {
+    padding: 12px 8px;
+    text-align: left;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.validation-table th,
+.multi-validation-table th {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-weight: 600;
+    text-align: center;
+}
+
+.validation-table td:nth-child(2),
+.validation-table td:nth-child(3),
+.validation-table td:nth-child(4) {
+    text-align: right;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.validation-table td:nth-child(5) {
+    text-align: center;
+}
+
+.sped-details-table,
+.e111-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+    font-size: 0.85em;
+}
+
+.sped-details-table td,
+.e111-table td,
+.e111-table th {
+    padding: 8px 12px;
+    border-bottom: 1px solid #f1f1f1;
+}
+
+.sped-details-table td:first-child {
+    font-weight: 600;
+    color: #495057;
+    width: 200px;
+}
+
+.sped-details-table td:last-child {
+    text-align: right;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.e111-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #495057;
+}
+
+.e111-table td:nth-child(2) {
+    text-align: right;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+/* Status indicators */
+.status-ok {
+    color: #28a745;
+    font-weight: 600;
+}
+
+.status-divergente {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.ok {
+    background-color: #d4edda !important;
+    color: #155724;
+}
+
+.divergente {
+    background-color: #f8d7da !important;
+    color: #721c24;
+}
+
+/* Multi-period validation styles */
+.multi-validation-report {
+    margin: 20px 0;
+}
+
+.period-validation-details {
+    margin: 30px 0;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+}
+
+.validation-actions {
+    margin-top: 20px;
+    text-align: center;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.validation-actions .btn-style {
+    margin: 0 10px;
+}
+
+/* Responsividade para relatórios de confronto */
+@media (max-width: 768px) {
+    .validation-table,
+    .multi-validation-table {
+        font-size: 0.75em;
+    }
+    
+    .validation-table th,
+    .validation-table td,
+    .multi-validation-table th,
+    .multi-validation-table td {
+        padding: 8px 4px;
+    }
+    
+    .validation-section {
+        padding: 15px;
+        margin-top: 20px;
+    }
+    
+    .validation-actions .btn-style {
+        margin: 5px;
+        font-size: 0.85em;
+    }
+}
