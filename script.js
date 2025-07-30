@@ -10755,4 +10755,145 @@ document.addEventListener('DOMContentLoaded', () => {
     excelFileNameInput.placeholder = "NomeDoArquivoModerno.xlsx"; // From new HTML
     clearLogs(); // Initialize log area and set initial status message via addLog
 
+    // CLAUDE-CONTEXT: Inicializar sistema de controle de usuário
+    initializeUserControlSystem();
+
 }); // End DOMContentLoaded
+
+// CLAUDE-CONTEXT: Sistema de Controle de Usuário - Interface e Eventos
+function initializeUserControlSystem() {
+    const configUserButton = document.getElementById('configUserButton');
+    const userConfigModal = document.getElementById('userConfigModal');
+    const closeUserConfigModal = document.getElementById('closeUserConfigModal');
+    const cancelUserConfig = document.getElementById('cancelUserConfig');
+    const applyUserConfig = document.getElementById('applyUserConfig');
+    const currentProfileDisplay = document.getElementById('currentProfileDisplay');
+    const currentProfileInfo = document.getElementById('currentProfileInfo');
+
+    // Atualizar display do perfil atual
+    function updateProfileDisplay() {
+        // Atualizar informações do usuário logado
+        const currentUserDisplay = document.getElementById('currentUserDisplay');
+        const currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+        
+        if (currentUserDisplay && currentUser) {
+            currentUserDisplay.textContent = currentUser.name || currentUser.username;
+        }
+        
+        if (currentProfileDisplay && permissionManager) {
+            const profileNames = {
+                admin: 'Admin',
+                fomentarBasico: 'FOMENTAR Básico',
+                fomentarCompleto: 'FOMENTAR Completo',
+                converterApenas: 'Conversor',
+                progoiasBasico: 'ProGoiás Básico',
+                progoiasCompleto: 'ProGoiás Completo'
+            };
+            currentProfileDisplay.textContent = profileNames[permissionManager.currentProfile] || 'Admin';
+        }
+        
+        if (currentProfileInfo && permissionManager) {
+            currentProfileInfo.textContent = permissionManager.getCurrentProfileDescription();
+        }
+        
+        // Mostrar/ocultar botão de configuração (apenas para admin)
+        const configUserButton = document.getElementById('configUserButton');
+        if (configUserButton && currentUser) {
+            configUserButton.style.display = currentUser.profile === 'admin' ? 'flex' : 'none';
+        }
+    }
+
+    // Abrir modal
+    if (configUserButton) {
+        configUserButton.addEventListener('click', () => {
+            updateProfileDisplay();
+            
+            // Marcar perfil atual
+            const currentRadio = document.querySelector(`input[name="profileSelect"][value="${permissionManager.currentProfile}"]`);
+            if (currentRadio) {
+                currentRadio.checked = true;
+            }
+            
+            userConfigModal.style.display = 'flex';
+        });
+    }
+
+    // Fechar modal
+    function closeModal() {
+        if (userConfigModal) {
+            userConfigModal.style.display = 'none';
+        }
+    }
+
+    if (closeUserConfigModal) {
+        closeUserConfigModal.addEventListener('click', closeModal);
+    }
+
+    if (cancelUserConfig) {
+        cancelUserConfig.addEventListener('click', closeModal);
+    }
+
+    // Fechar modal ao clicar no overlay
+    if (userConfigModal) {
+        userConfigModal.addEventListener('click', (e) => {
+            if (e.target === userConfigModal) {
+                closeModal();
+            }
+        });
+    }
+
+    // Aplicar novo perfil
+    if (applyUserConfig) {
+        applyUserConfig.addEventListener('click', () => {
+            const selectedProfile = document.querySelector('input[name="profileSelect"]:checked');
+            
+            if (selectedProfile && permissionManager) {
+                const newProfile = selectedProfile.value;
+                const success = permissionManager.setUserProfile(newProfile);
+                
+                if (success) {
+                    updateProfileDisplay();
+                    closeModal();
+                    addLog(`✅ Perfil alterado com sucesso: ${permissionManager.getCurrentProfileDescription()}`, 'success');
+                    
+                    // Recarregar página se necessário (para garantir que todas as permissões sejam aplicadas)
+                    setTimeout(() => {
+                        if (confirm('Deseja recarregar a página para aplicar todas as mudanças?')) {
+                            window.location.reload();
+                        }
+                    }, 1000);
+                } else {
+                    addLog('❌ Erro ao alterar perfil. Tente novamente.', 'error');
+                }
+            } else {
+                addLog('⚠️ Selecione um perfil antes de aplicar.', 'warning');
+            }
+        });
+    }
+
+    // Adicionar evento de logout
+    const logoutButton = document.getElementById('logoutButton');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', () => {
+            if (confirm('Deseja realmente sair do sistema?')) {
+                if (typeof logout === 'function') {
+                    logout();
+                } else {
+                    // Fallback caso função não esteja disponível
+                    localStorage.removeItem('fomentar_session');
+                    window.location.reload();
+                }
+            }
+        });
+    }
+
+    // Inicializar display
+    updateProfileDisplay();
+    
+    // Aplicar permissões após pequeno delay
+    setTimeout(() => {
+        if (permissionManager) {
+            permissionManager.applyPermissions();
+        }
+    }, 500);
+}

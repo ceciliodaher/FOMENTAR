@@ -27,6 +27,463 @@ body {
     text-align: center;
 }
 
+/* --- Sistema de Controle de Usuário --- */
+.user-profile-section {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-left: auto;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    color: white;
+}
+
+.user-name {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.user-profile {
+    font-size: 12px;
+    opacity: 0.8;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.user-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-config-user {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-config-user:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+}
+
+.btn-logout {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 8px 15px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-logout:hover {
+    background: rgba(255, 42, 42, 0.3);
+    border-color: rgba(255, 42, 42, 0.5);
+    transform: translateY(-1px);
+}
+
+/* --- Modal de Configuração de Usuário --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+}
+
+.user-config-modal {
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 25px 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.modal-header h3 {
+    color: #333;
+    font-size: 20px;
+    margin: 0;
+}
+
+.btn-close-modal {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #999;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.btn-close-modal:hover {
+    background: #f5f5f5;
+    color: #333;
+}
+
+.modal-body {
+    padding: 20px 25px;
+}
+
+.profile-info {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.profile-info p {
+    margin: 0;
+    color: #666;
+}
+
+.profile-selector h4 {
+    color: #333;
+    margin-bottom: 15px;
+    text-align: left;
+    font-size: 16px;
+}
+
+.profile-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 15px;
+}
+
+.profile-option {
+    cursor: pointer;
+    display: block;
+}
+
+.profile-option input[type="radio"] {
+    display: none;
+}
+
+.profile-card {
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 15px;
+    transition: all 0.2s ease;
+    text-align: left;
+    background: white;
+}
+
+.profile-option:hover .profile-card {
+    border-color: #4CAF50;
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
+}
+
+.profile-option input[type="radio"]:checked + .profile-card {
+    border-color: #4CAF50;
+    background: linear-gradient(135deg, #f8fff8 0%, #e8f5e8 100%);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.profile-card h5 {
+    color: #333;
+    font-size: 16px;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.profile-card p {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+.profile-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.profile-card ul li {
+    font-size: 13px;
+    padding: 3px 0;
+    color: #555;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 15px 25px 20px;
+    border-top: 1px solid #eee;
+}
+
+.btn-secondary {
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    color: #666;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+    background: #e9e9e9;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+/* --- Sistema de Login --- */
+.login-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background: linear-gradient(135deg, #FF2A2A 0%, #1B1B3B 50%, #2A2A5B 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10001;
+}
+
+.login-container {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    max-width: 450px;
+    width: 90%;
+    text-align: center;
+    backdrop-filter: blur(10px);
+}
+
+.login-header {
+    margin-bottom: 30px;
+}
+
+.logo-expertzy-login {
+    width: 120px;
+    height: auto;
+    margin-bottom: 15px;
+}
+
+.login-header h1 {
+    color: #333;
+    font-size: 24px;
+    margin: 15px 0 5px 0;
+    font-weight: 600;
+}
+
+.login-subtitle {
+    color: #666;
+    font-size: 14px;
+    margin: 0;
+}
+
+.login-form {
+    text-align: left;
+}
+
+.login-form h2 {
+    color: #333;
+    font-size: 20px;
+    margin-bottom: 25px;
+    text-align: center;
+    font-weight: 500;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    color: #555;
+    font-weight: 500;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.form-input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 16px;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+.btn-login {
+    width: 100%;
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+    border: none;
+    color: white;
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin: 20px 0;
+}
+
+.btn-login:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+}
+
+.btn-login:active {
+    transform: translateY(0);
+}
+
+.login-message {
+    padding: 12px;
+    border-radius: 6px;
+    margin: 15px 0;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+    display: none;
+}
+
+.login-message.success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.login-message.error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.login-help {
+    margin-top: 25px;
+    border-top: 1px solid #eee;
+    padding-top: 20px;
+}
+
+.login-help details {
+    cursor: pointer;
+}
+
+.login-help summary {
+    color: #666;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    user-select: none;
+}
+
+.login-help summary:hover {
+    background: #e9ecef;
+}
+
+.users-list {
+    margin-top: 15px;
+    padding: 15px;
+    background: #f1f3f4;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.users-list p {
+    margin: 8px 0;
+    color: #555;
+}
+
+.users-list p strong {
+    color: #333;
+    font-weight: 600;
+}
+
+/* Ocultar aplicação principal quando login está ativo */
+.login-active .app-container {
+    display: none !important;
+}
+
+/* Responsividade da tela de login */
+@media (max-width: 500px) {
+    .login-container {
+        padding: 30px 20px;
+        margin: 20px;
+    }
+    
+    .login-header h1 {
+        font-size: 20px;
+    }
+    
+    .logo-expertzy-login {
+        width: 100px;
+    }
+}
+
 .app-header {
     margin-bottom: 30px;
 }

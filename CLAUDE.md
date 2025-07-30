@@ -11,12 +11,16 @@ Este é um sistema web completo para conversão de arquivos SPED e apuração de
 ```
 /Users/ceciliodaher/Documents/git/FOMENTAR/
 ├── index.html                   # Interface unificada com 3 abas principais
+├── sped-web-fomentar.html       # Interface principal com sistema de autenticação
 ├── script.js                    # Sistema unificado (SPED + FOMENTAR + ProGoiás + CFOPs Genéricos + Demonstrativo v3.51)
 ├── script.ori.js                # Versão original antes da implementação CFOPs
 ├── script-cfop.js               # Versão anterior com tentativas de CFOPs (backup)
-├── style.css                    # Estilos responsivos com sistema de 3 abas
-├── sped-web-fomentar.html       # Versão alternativa focada em FOMENTAR
+├── style.css                    # Estilos responsivos com sistema de 3 abas + tela de login
+├── auth.js                      # Sistema de autenticação com login/senha (2025-07-30)
+├── permissions.js               # Sistema de controle de permissões por usuário (2025-07-30)
 ├── CORRECOES_IMPLEMENTADAS.md   # Documentação de correções recentes
+├── SISTEMA_AUTENTICACAO.md      # Documentação completa do sistema de login (2025-07-30)
+├── CONFIGURACAO_USUARIOS.md     # Guia de configuração de perfis de usuário (2025-07-30)
 ├── Comparativo_ProGoias_50_periodos.xlsx # Planilha de teste ProGoiás
 └── normativas/                  # Documentação normativa expandida
     ├── INSTRUÇÃO NORMATIVA Nº 885_07-GSF.pdf
@@ -33,10 +37,17 @@ Este é um sistema web completo para conversão de arquivos SPED e apuração de
 
 #### Desenvolvimento Local
 
-- Abrir `index.html` diretamente no navegador (versão principal)
-- Alternativa: `sped-web-fomentar.html` (versão focada em FOMENTAR)
+- **PRINCIPAL**: Abrir `sped-web-fomentar.html` (versão com autenticação - RECOMENDADO)
+- Alternativa: `index.html` (versão sem autenticação - apenas para desenvolvimento)
 - Não requer servidor web específico (aplicação client-side)
 - Usar ferramentas de desenvolvedor do navegador para debug
+
+#### Sistema de Autenticação (2025-07-30)
+
+- **Login obrigatório** na interface principal
+- **Usuários pré-configurados** para teste (ver `SISTEMA_AUTENTICACAO.md`)
+- **Controle automático** de permissões por perfil
+- **Sessão de 4 horas** com renovação automática
 
 #### Dependências
 
@@ -48,6 +59,77 @@ Este é um sistema web completo para conversão de arquivos SPED e apuração de
 
 - **📋 Gerar Registro E115**: Exporta arquivo .txt no formato SPED com 54 códigos
 - **🔍 Confronto E115 vs SPED**: Planilha Excel comparativa calculado vs declarado
+
+### Sistema de Autenticação e Controle de Acesso (2025-07-30)
+
+#### Arquivos do Sistema de Autenticação
+
+- **`auth.js`**: Gerenciamento completo de login/senha, sessões e validação
+- **`permissions.js`**: Sistema de controle de permissões integrado com autenticação
+- **`SISTEMA_AUTENTICACAO.md`**: Documentação completa do sistema
+- **`CONFIGURACAO_USUARIOS.md`**: Guia de configuração de perfis
+
+#### Usuários Pré-configurados
+
+**Administradores:**
+- `admin / admin0000` - Acesso completo
+- `supervisor / super123` - Acesso completo
+
+**FOMENTAR:**
+- `fomentar.basico / fom123` - Apenas período único
+- `fomentar.completo / fomc123` - Período único + múltiplo
+
+**ProGoiás:**
+- `progoias.basico / pro123` - Apenas período único  
+- `progoias.completo / proc123` - Período único + múltiplo
+
+**Conversor:**
+- `conversor / conv123` - Apenas conversão SPED
+
+**Usuários Personalizados:**
+- `contador1 / cont123` - João Silva (FOMENTAR Básico)
+- `contador2 / cont456` - Maria Santos (ProGoiás Completo)
+
+#### Funcionalidades de Autenticação
+
+1. **Tela de Login Obrigatória**
+   - Design moderno com gradiente Expertzy
+   - Validação de credenciais
+   - Lista de usuários para teste
+   - Mensagens de erro/sucesso
+
+2. **Controle de Sessão**
+   - Sessão de 4 horas com renovação automática
+   - Logout manual ou automático por expiração
+   - Armazenamento local (localStorage)
+   - Timer de renovação em atividade
+
+3. **Aplicação Automática de Permissões**
+   - Perfil aplicado automaticamente após login
+   - Interface adaptada conforme permissões
+   - Ocultação/desabilitação de funcionalidades
+   - Redirecionamento para abas permitidas
+
+4. **Interface de Usuário**
+   - Cabeçalho com nome do usuário e perfil
+   - Botão de logout com confirmação
+   - Botão de configuração (apenas admin)
+   - Indicadores visuais de permissões
+
+#### Perfis de Acesso Disponíveis
+
+1. **Admin** - Acesso completo a todas as funcionalidades
+2. **FOMENTAR Básico** - Apenas FOMENTAR período único (sem múltiplos períodos, sem E115, sem correções)
+3. **FOMENTAR Completo** - Todas as funcionalidades FOMENTAR (múltiplos períodos, E115, correções)
+4. **ProGoiás Básico** - Apenas ProGoiás período único (sem múltiplos períodos)
+5. **ProGoiás Completo** - Todas as funcionalidades ProGoiás (múltiplos períodos)
+6. **Conversor Apenas** - Apenas conversão SPED para Excel
+
+#### Segurança
+
+- **Client-side**: Controle apenas visual/interface (não é segurança real)
+- **Para organização**: Simplifica interface e evita confusão de usuários
+- **Recomendação**: Para segurança real, implementar controle server-side
 
 ### Arquitetura do Sistema
 
@@ -181,6 +263,38 @@ O sistema implementa rigorosamente:
 - Console do navegador: logs técnicos detalhados
 - Interface de usuário: feedback visual no painel de logs
 - Estados de erro: styling visual diferenciado
+
+#### Comandos de Debug para Autenticação
+
+**Console do Navegador (F12):**
+```javascript
+// Ver informações da sessão atual
+showSessionInfo()
+
+// Verificar usuário logado
+getCurrentUser()
+
+// Ver permissões do usuário atual
+getCurrentPermissions()
+
+// Listar todos os usuários (apenas admin)
+authManager.getUsersList()
+
+// Forçar logout
+logout()
+
+// Verificar se está logado
+isLoggedIn()
+
+// Ver perfil atual
+getCurrentProfile()
+```
+
+#### Estados do Sistema de Autenticação
+
+- **Não logado**: Tela de login visível, aplicação oculta
+- **Logado**: Aplicação principal visível, tela de login oculta
+- **Sessão expirada**: Logout automático + alerta + tela de login
 
 #### Pontos de Breakpoint Recomendados
 
@@ -681,7 +795,19 @@ periodoCodigoDiv.style.display = checked ? 'block' : 'none';
 - [x] **Cores visuais**: concordante/divergente/sem SPED/adicional
 - [x] **Conformidade SECON** (FAQ 20801) implementada
 
-**Status Atual**: Sistema completo com geração e confronto E115 (100% funcional)
+#### Fase 10: Sistema de Autenticação e Controle de Acesso (Concluída - 2025-07-30)
+- [x] **Sistema de login/senha** completo com tela moderna
+- [x] **Base de usuários** pré-configurada com diferentes perfis
+- [x] **Controle automático** de permissões por usuário
+- [x] **Sessões de 4 horas** com renovação automática
+- [x] **Interface integrada** com nome do usuário e logout
+- [x] **6 perfis diferentes**: Admin, FOMENTAR Básico/Completo, ProGoiás Básico/Completo, Conversor
+- [x] **Aplicação automática** de permissões após login
+- [x] **Ocultação/desabilitação** de funcionalidades conforme perfil
+- [x] **Documentação completa** (`SISTEMA_AUTENTICACAO.md`)
+- [x] **Comandos de debug** para gerenciamento de sessão
+
+**Status Atual**: Sistema completo com autenticação, controle de acesso e geração E115 (100% funcional)
 
 ### Contexto Importante
 
@@ -724,10 +850,12 @@ Ao modificar o sistema:
 ## 🔄 Próxima Sessão
 
 ### Setup Inicial
-1. Abrir `index.html` no navegador para testar interface
-2. Verificar console para erros JavaScript
-3. Testar com arquivo SPED real (se disponível)
-4. Validar cálculos contra planilhas de referência
+1. **Abrir `sped-web-fomentar.html`** no navegador (versão com autenticação)
+2. **Fazer login** com usuário de teste (ex: `admin / admin0000`)
+3. **Verificar console** para erros JavaScript e logs de autenticação
+4. **Testar diferentes perfis** para validar controle de acesso
+5. **Testar com arquivo SPED real** (se disponível)
+6. **Validar cálculos** contra planilhas de referência
 
 ### Tarefas Pendentes
 - [ ] Otimização de performance para SPEDs muito grandes (>200MB)
@@ -736,25 +864,29 @@ Ao modificar o sistema:
 - [ ] Melhorias na UX de navegação entre períodos
 
 ### Funcionalidades Recentes (2025-07-30)
+- ✅ **Sistema de Autenticação Completo**: Login/senha obrigatório com 6 perfis diferentes
+- ✅ **Controle Automático de Acesso**: Aplicação automática de permissões por usuário
+- ✅ **Base de Usuários Pré-configurada**: 10 usuários de teste para diferentes cenários
+- ✅ **Sessões de 4 Horas**: Renovação automática e logout por expiração
+- ✅ **Interface Moderna de Login**: Design Expertzy com lista de usuários
 - ✅ **Sistema de Geração E115**: 54 códigos oficiais GO200001-GO200054 implementados
 - ✅ **Confronto E115 vs SPED**: Comparação inteligente código/valor (ignora descrições)
 - ✅ **Exportação Dupla**: Arquivo .txt SPED + planilha Excel comparativa
 - ✅ **Múltiplos Períodos E115**: Estrutura tabular (códigos×períodos) funcional
-- ✅ **Interface E115**: 2 novos botões na aba FOMENTAR
-- ✅ **Conformidade SECON**: FAQ 20801 totalmente implementada
 - ✅ **Sistema de Correção Avançado**: Códigos específicos por período implementado
-- ✅ **Interface Expansível**: Barra de rolagem e campos dinâmicos funcionando
-- ✅ **Compatibilidade Total**: E111, C197 e D197 com mesma funcionalidade
-- ✅ **Logs Inteligentes**: Diferenciação entre correções específicas e globais
+- ✅ **Documentação Completa**: Guias de autenticação e configuração de usuários
 
 ### Cuidados Especiais
+- **Sistema de Autenticação**: Sempre usar `sped-web-fomentar.html` (versão com login)
+- **Perfis de Usuário**: Verificar se permissões estão sendo aplicadas corretamente após login
+- **Sessões**: Sistema expira em 4 horas, usuários devem fazer logout ao final
 - **Créditos Circulares**: Sempre verificar exclusão automática de GO040007, GO040008, etc.
 - **Registros Consolidados**: Não reverter para C100/C170 sem justificativa técnica
 - **Percentuais**: FOMENTAR = 70%, não 73%
 - **ProGoiás**: Fórmula exata conforme Decreto 9.724/2020
-- **NOVO - Registro E115**: Geração automática após cada cálculo FOMENTAR
-- **NOVO - Confronto E115**: Foco em código/valor, ignora diferenças de descrição
-- **NOVO - Múltiplos Períodos E115**: Estrutura tabular evita problemas de nome de aba
+- **Registro E115**: Geração automática após cada cálculo FOMENTAR
+- **Confronto E115**: Foco em código/valor, ignora diferenças de descrição
+- **Múltiplos Períodos E115**: Estrutura tabular evita problemas de nome de aba
 - **Correções Específicas**: Verificar se códigos específicos por período estão sendo aplicados corretamente
 
 ### Como Usar o Sistema E115 (NOVO)
@@ -776,6 +908,66 @@ Ao modificar o sistema:
 - 🔴 **Vermelho**: Valores divergentes
 - 🔵 **Azul claro**: Sem dados no SPED (apenas calculado)
 - 🟡 **Amarelo**: Códigos adicionais no SPED
+
+### Como Usar o Sistema de Autenticação
+
+#### Acesso Inicial
+1. **Abrir sistema** → `sped-web-fomentar.html`
+2. **Tela de login** aparece automaticamente
+3. **Escolher usuário/senha** da lista pré-configurada
+4. **Login** → Sistema aplica automaticamente o perfil correto
+
+#### Para Diferentes Cenários de Uso
+
+**Contador Iniciante (FOMENTAR básico):**
+- Usuário: `fomentar.basico`
+- Senha: `fom123`
+- Acesso: Apenas FOMENTAR período único
+
+**Contador Experiente (FOMENTAR completo):**
+- Usuário: `fomentar.completo` 
+- Senha: `fomc123`
+- Acesso: FOMENTAR completo com múltiplos períodos
+
+**Empresa ProGoiás (básico):**
+- Usuário: `progoias.basico`
+- Senha: `pro123`
+- Acesso: Apenas ProGoiás período único
+
+**Administrador do Sistema:**
+- Usuário: `admin`
+- Senha: `admin0000`
+- Acesso: Todas as funcionalidades
+
+#### Configuração de Novos Usuários
+
+**1. Editar arquivo `auth.js`:**
+```javascript
+// Adicionar no objeto USERS_DATABASE
+'novoUsuario': {
+    password: 'senha123',
+    profile: 'fomentarBasico',  // Perfil desejado
+    name: 'Nome do Usuário',
+    description: 'Descrição do usuário'
+}
+```
+
+**2. Perfis disponíveis:**
+- `admin` - Acesso completo
+- `fomentarBasico` - FOMENTAR período único
+- `fomentarCompleto` - FOMENTAR completo
+- `progoiasBasico` - ProGoiás período único
+- `progoiasCompleto` - ProGoiás completo
+- `converterApenas` - Só conversor SPED
+
+**3. Reiniciar navegador** para aplicar mudanças
+
+#### Gerenciamento de Sessão
+
+- **Duração**: 4 horas por padrão
+- **Renovação**: Automática em atividade
+- **Logout**: Manual (botão) ou automático (expiração)
+- **Persistência**: localStorage (dados locais)
 
 ### Como Usar o Sistema de Correção Avançado
 

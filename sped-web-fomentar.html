@@ -17,6 +17,20 @@
                     <h1>Conversor SPED para Excel <span class="title-version">Moderno</span></h1>
                     <p class="subtitle">Expertzy Inteligência Tributária</p>
                 </div>
+                <div class="user-profile-section">
+                    <div class="user-info">
+                        <span id="currentUserDisplay" class="user-name">Usuário</span>
+                        <span id="currentProfileDisplay" class="user-profile">Admin</span>
+                    </div>
+                    <div class="user-actions">
+                        <button id="configUserButton" class="btn-config-user" title="Configurar Perfil de Usuário" style="display: none;">
+                            ⚙️
+                        </button>
+                        <button id="logoutButton" class="btn-logout" title="Sair do Sistema">
+                            🚪 Sair
+                        </button>
+                    </div>
+                </div>
             </div>
         </header>
 
@@ -767,9 +781,120 @@
         </footer>
     </div>
 
+    <!-- Modal de Configuração de Usuário -->
+    <div id="userConfigModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content user-config-modal">
+            <div class="modal-header">
+                <h3>⚙️ Configuração de Perfil de Usuário</h3>
+                <button id="closeUserConfigModal" class="btn-close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="profile-info">
+                    <p><strong>Perfil Atual:</strong> <span id="currentProfileInfo"></span></p>
+                </div>
+                
+                <div class="profile-selector">
+                    <h4>Selecionar Novo Perfil:</h4>
+                    <div class="profile-options">
+                        <label class="profile-option">
+                            <input type="radio" name="profileSelect" value="admin">
+                            <div class="profile-card">
+                                <h5>👑 Administrador</h5>
+                                <p>Acesso completo a todas as funcionalidades</p>
+                                <ul>
+                                    <li>✅ Conversor SPED</li>
+                                    <li>✅ FOMENTAR (período único e múltiplo)</li>
+                                    <li>✅ ProGoiás (período único e múltiplo)</li>
+                                    <li>✅ Todas as funcionalidades avançadas</li>
+                                </ul>
+                            </div>
+                        </label>
+                        
+                        <label class="profile-option">
+                            <input type="radio" name="profileSelect" value="fomentarBasico">
+                            <div class="profile-card">
+                                <h5>📊 FOMENTAR Básico</h5>
+                                <p>Apenas FOMENTAR período único</p>
+                                <ul>
+                                    <li>🚫 Conversor SPED</li>
+                                    <li>✅ FOMENTAR período único</li>
+                                    <li>🚫 FOMENTAR múltiplos períodos</li>
+                                    <li>🚫 ProGoiás</li>
+                                    <li>🚫 Funcionalidades avançadas</li>
+                                </ul>
+                            </div>
+                        </label>
+                        
+                        <label class="profile-option">
+                            <input type="radio" name="profileSelect" value="fomentarCompleto">
+                            <div class="profile-card">
+                                <h5>📈 FOMENTAR Completo</h5>
+                                <p>Todas as funcionalidades FOMENTAR</p>
+                                <ul>
+                                    <li>🚫 Conversor SPED</li>
+                                    <li>✅ FOMENTAR (período único e múltiplo)</li>
+                                    <li>✅ Registro E115 e Confrontos</li>
+                                    <li>🚫 ProGoiás</li>
+                                </ul>
+                            </div>
+                        </label>
+                        
+                        <label class="profile-option">
+                            <input type="radio" name="profileSelect" value="converterApenas">
+                            <div class="profile-card">
+                                <h5>🔄 Conversor Apenas</h5>
+                                <p>Apenas conversão SPED para Excel</p>
+                                <ul>
+                                    <li>✅ Conversor SPED</li>
+                                    <li>🚫 FOMENTAR</li>
+                                    <li>🚫 ProGoiás</li>
+                                </ul>
+                            </div>
+                        </label>
+                        
+                        <label class="profile-option">
+                            <input type="radio" name="profileSelect" value="progoiasBasico">
+                            <div class="profile-card">
+                                <h5>🏢 ProGoiás Básico</h5>
+                                <p>Apenas ProGoiás período único</p>
+                                <ul>
+                                    <li>🚫 Conversor SPED</li>
+                                    <li>🚫 FOMENTAR</li>
+                                    <li>✅ ProGoiás período único</li>
+                                    <li>🚫 ProGoiás múltiplos períodos</li>
+                                </ul>
+                            </div>
+                        </label>
+                        
+                        <label class="profile-option">
+                            <input type="radio" name="profileSelect" value="progoiasCompleto">
+                            <div class="profile-card">
+                                <h5>🏭 ProGoiás Completo</h5>
+                                <p>Todas as funcionalidades ProGoiás</p>
+                                <ul>
+                                    <li>🚫 Conversor SPED</li>
+                                    <li>🚫 FOMENTAR</li>
+                                    <li>✅ ProGoiás (período único e múltiplo)</li>
+                                    <li>✅ Todas as exportações</li>
+                                </ul>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelUserConfig" class="btn-secondary">Cancelar</button>
+                <button id="applyUserConfig" class="btn-primary">Aplicar Perfil</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/xlsx-populate/browser/xlsx-populate.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <!-- Sistema de Autenticação e Permissões -->
+    <script src="auth.js"></script>
+    <script src="permissions.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
