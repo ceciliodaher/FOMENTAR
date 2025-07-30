@@ -1404,6 +1404,29 @@ body {
     background-color: white;
     border-radius: 6px;
     border: 1px solid #DEE2E6;
+    max-height: 400px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #CED4DA #F1F3F4;
+}
+
+/* Estilização da barra de rolagem para navegadores Webkit */
+.periodos-especificos::-webkit-scrollbar {
+    width: 8px;
+}
+
+.periodos-especificos::-webkit-scrollbar-track {
+    background: #F1F3F4;
+    border-radius: 4px;
+}
+
+.periodos-especificos::-webkit-scrollbar-thumb {
+    background: #CED4DA;
+    border-radius: 4px;
+}
+
+.periodos-especificos::-webkit-scrollbar-thumb:hover {
+    background: #ADB5BD;
 }
 
 .periodos-especificos h5 {
@@ -1547,6 +1570,89 @@ body {
 
 .periodos-checkboxes::-webkit-scrollbar-thumb:hover {
     background: #ADB5BD;
+}
+
+/* Estilos para nova estrutura de períodos expandidos */
+.periodos-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.periodo-item-expandido {
+    border: 1px solid #E9ECEF;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.periodo-header {
+    background: #F8F9FA;
+    padding: 12px;
+    border-bottom: 1px solid #E9ECEF;
+}
+
+.periodo-codigo {
+    padding: 15px;
+    background: white;
+    border-top: 1px solid #E9ECEF;
+}
+
+.periodo-codigo label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.9em;
+}
+
+.periodo-codigo input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #CED4DA;
+    border-radius: 6px;
+    font-size: 0.9em;
+    transition: border-color 0.3s;
+}
+
+.periodo-codigo input[type="text"]:focus {
+    outline: none;
+    border-color: #80BDFF;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.periodo-codigo .ajuda-codigo {
+    display: block;
+    margin-top: 5px;
+    font-size: 0.8em;
+    color: #6C757D;
+    font-style: italic;
+}
+
+.correcao-global {
+    margin-bottom: 15px;
+}
+
+.correcao-global label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #495057;
+}
+
+.correcao-global input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #CED4DA;
+    border-radius: 6px;
+    font-size: 0.9em;
+    transition: border-color 0.3s;
+}
+
+.correcao-global input[type="text"]:focus {
+    outline: none;
+    border-color: #80BDFF;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
 .codigo-actions {

@@ -63,6 +63,8 @@ Este é um sistema web completo para conversão de arquivos SPED e apuração de
    - Configuração de programas (FOMENTAR/PRODUZIR/MICROPRODUZIR)
    - Processamento de múltiplos períodos
    - Correção automática de códigos E111 inconsistentes
+   - Correção de códigos C197/D197 (débitos adicionais)
+   - Sistema de memória de cálculo com auditoria completa
 
 3. **Apuração ProGoiás** (Aba 3)
    
@@ -243,29 +245,118 @@ let progoiasCurrentImportMode = 'single';
 4. **Acumulação**: Soma de valores para totais gerais
 5. **Visualização**: Interface de navegação entre períodos
 
-### Correção de Códigos E111
+### Sistema de Correção de Códigos Avançado (2025-07-30)
+
+#### Funcionalidade Completa para E111, C197 e D197
+
+O sistema agora oferece **máxima flexibilidade** na correção de códigos fiscais, permitindo configurações específicas por período em múltiplos cenários.
 
 #### Problemática
 
-- Códigos E111 podem estar inconsistentes no SPED
+- Códigos E111, C197 e D197 podem estar inconsistentes no SPED
 - Necessidade de correção manual para conformidade fiscal
+- **NOVO**: Códigos diferentes podem ser necessários para períodos específicos
 - Distinção entre débitos e créditos conforme legislação
 
-#### Interface de Correção
+#### Estrutura de Dados Atualizada
 
 ```javascript
+// E111 (FOMENTAR)
 let codigosCorrecao = {}; // Mapeamento: código original -> código corrigido
 let codigosEncontrados = []; // Lista de códigos E111 encontrados no SPED
 let isMultiplePeriods = false; // Flag para processamento múltiplo
+
+// C197/D197 (FOMENTAR) 
+let codigosCorrecaoC197D197 = {}; // Mapeamento de códigos C197/D197
+let codigosEncontradosC197D197 = []; // Lista de códigos C197/D197 encontrados
+let isMultiplePeriodsC197D197 = false; // Flag para múltiplos períodos C197/D197
+
+// Estrutura expandida para cada código
+const codigo = {
+    codigo: 'GO020999',
+    novocodigo: 'GO040001', // Código global padrão
+    aplicarTodos: false,
+    periodosEscolhidos: [0, 1, 2], // Períodos selecionados
+    codigosPorPeriodo: { // NOVO: Códigos específicos por período
+        0: '', // Período 1: usar código global
+        1: 'GO040002', // Período 2: código específico
+        2: 'GO040003'  // Período 3: código específico
+    }
+};
 ```
 
-#### Fluxo de Correção
+#### Interface Modernizada - Códigos Específicos por Período
 
-1. **Detecção**: Identificação automática de códigos inconsistentes
-2. **Interface**: Apresentação de tabela para correção manual
-3. **Validação**: Verificação de conformidade com Anexo III
-4. **Aplicação**: Recalcula apuração com códigos corrigidos
-5. **Documentação**: Log detalhado das alterações realizadas
+**Recursos Implementados:**
+
+1. **Código Global**: Campo principal aplicado a todos os períodos selecionados
+2. **Códigos Específicos**: Input individual para cada período com possibilidade de sobrescrever o global
+3. **Interface Expansível**: 
+   - Estrutura `.periodo-item-expandido` com header e campo de código
+   - Campos aparecem/desaparecem dinamicamente conforme seleção
+   - Barra de rolagem automática para muitos períodos (`max-height: 400px`)
+4. **Modo Híbrido**: Combina código global + específicos conforme necessidade
+
+#### Fluxo de Correção Avançado
+
+1. **Detecção**: Identificação automática de códigos inconsistentes (E111, C197, D197)
+2. **Interface Inteligente**: 
+   - Apresentação de interface expansível para correção
+   - Suporte a código global + códigos específicos por período
+   - Texto explicativo e placeholders intuitivos
+3. **Configuração Flexível**:
+   - **Todos os períodos**: Aplicar código global em todos
+   - **Períodos específicos**: Selecionar períodos individuais
+   - **Códigos específicos**: Definir código diferente para período específico
+4. **Validação**: Verificação de conformidade com legislação
+5. **Aplicação Inteligente**: 
+   - Prioriza código específico do período quando disponível
+   - Fallback para código global quando não há específico
+6. **Logs Detalhados**: Indica se foi aplicado código "específico" ou "global"
+
+#### Lógica de Aplicação
+
+```javascript
+// CLAUDE-FISCAL: Lógica de correção inteligente
+function aplicarCorrecao(codigoOriginal, periodoIndex, correcao) {
+    let codigoFinal;
+    
+    // 1. Verificar se existe código específico para este período
+    if (correcao.codigosPorPeriodo && correcao.codigosPorPeriodo[periodoIndex]) {
+        codigoFinal = correcao.codigosPorPeriodo[periodoIndex];
+        addLog(`Código corrigido: ${codigoOriginal} → ${codigoFinal} (específico)`, 'success');
+    } 
+    // 2. Usar código global como fallback
+    else if (correcao.novoCodigo) {
+        codigoFinal = correcao.novoCodigo;
+        addLog(`Código corrigido: ${codigoOriginal} → ${codigoFinal} (global)`, 'success');
+    }
+    
+    return codigoFinal;
+}
+```
+
+#### Cenários de Uso
+
+**Exemplo Prático**: Código E111 "GO020999" encontrado em 5 períodos:
+- **Períodos 1-3**: Usar código global "GO040001"
+- **Período 4**: Código específico "GO040002" (legislação mudou)
+- **Período 5**: Código específico "GO040003" (caso especial)
+
+**Interface permite:**
+1. Definir "GO040001" como código global
+2. Selecionar todos os 5 períodos
+3. Para período 4: inserir "GO040002" no campo específico
+4. Para período 5: inserir "GO040003" no campo específico
+5. Períodos 1-3 usarão automaticamente o código global
+
+#### Compatibilidade
+
+- ✅ **Período único**: Comportamento inalterado (código global)
+- ✅ **Múltiplos períodos**: Suporte completo a códigos específicos
+- ✅ **Modo híbrido**: Combinação de global + específicos
+- ✅ **E111, C197, D197**: Funcionalidade idêntica em todos os tipos
+- ✅ **Retrocompatibilidade**: Sistemas existentes continuam funcionando
 
 ### Implementação Demonstrativo Versão 3.51 (2025-07-29)
 
@@ -412,6 +503,49 @@ O código utiliza marcadores específicos para orientar o Claude:
 // CLAUDE-CAREFUL: Exclusão de créditos circulares - crítico para conformidade
 ```
 
+### Funções JavaScript Principais (2025-07-30)
+
+#### Sistema de Correção Avançado - E111
+```javascript
+// Gerenciamento de códigos específicos por período
+window.atualizarCodigoPorPeriodo(index, periodoIndex, novoCodigo)
+window.atualizarPeriodoEspecifico(index, periodoIndex, checked)
+
+// Estrutura de dados expandida
+const codigo = {
+    codigosPorPeriodo: {}, // NOVO: códigos específicos por período
+    periodosEscolhidos: [], // períodos selecionados
+    novocodigo: '' // código global padrão
+};
+```
+
+#### Sistema de Correção Avançado - C197/D197
+```javascript
+// Funções específicas para C197/D197
+window.atualizarCodigoPorPeriodoC197D197(index, periodoIndex, novoCodigo)
+window.atualizarPeriodoEspecificoC197D197(index, periodoIndex, checked)
+
+// Aplicação inteligente com priorização
+if (correcao.codigosPorPeriodo[periodoIndex]) {
+    codigoFinal = correcao.codigosPorPeriodo[periodoIndex]; // Específico
+} else {
+    codigoFinal = correcao.novoCodigo; // Global
+}
+```
+
+#### Interface Dinâmica
+```javascript
+// Controle de visibilidade de campos específicos
+const periodoCodigoDiv = document.getElementById(`periodoCodigo_${index}_${periodoIndex}`);
+periodoCodigoDiv.style.display = checked ? 'block' : 'none';
+
+// Estrutura HTML expansível
+<div class="periodo-item-expandido">
+    <div class="periodo-header">/* Checkbox + info */</div>
+    <div class="periodo-codigo">/* Campo específico */</div>
+</div>
+```
+
 ### Decisões Arquiteturais
 
 #### 2025-07-02: Migração para Registros Consolidados
@@ -484,7 +618,17 @@ O código utiliza marcadores específicos para orientar o Claude:
 - [x] Interface HTML com todos os campos
 - [x] Exportação Excel corrigida
 
-**Status Atual**: Sistema completo conforme demonstrativo oficial versão 3.51 (100% funcional)
+#### Fase 8: Sistema de Correção Avançado (Concluída - 2025-07-30)
+- [x] **Códigos específicos por período** para E111, C197 e D197
+- [x] **Interface expansível** com campos individuais por período
+- [x] **Modo híbrido**: código global + específicos conforme necessidade
+- [x] **Barra de rolagem** para muitos períodos (max-height: 400px)
+- [x] **Lógica inteligente**: prioriza específico → fallback global
+- [x] **Logs detalhados** indicando origem da correção (específico/global)
+- [x] **Compatibilidade total** com sistemas existentes
+- [x] **Máxima flexibilidade** para cenários fiscais complexos
+
+**Status Atual**: Sistema completo com correção avançada de códigos fiscais (100% funcional)
 
 ### Contexto Importante
 
@@ -535,18 +679,50 @@ Ao modificar o sistema:
 ### Tarefas Pendentes
 - [ ] Otimização de performance para SPEDs muito grandes (>200MB)
 - [ ] Implementação de mais códigos E111 conforme demanda
-- [ ] Melhorias na interface de múltiplos períodos
 - [ ] Validação adicional de consistência entre períodos
+- [ ] Melhorias na UX de navegação entre períodos
+
+### Funcionalidades Recentes (2025-07-30)
+- ✅ **Sistema de Correção Avançado**: Códigos específicos por período implementado
+- ✅ **Interface Expansível**: Barra de rolagem e campos dinâmicos funcionando
+- ✅ **Compatibilidade Total**: E111, C197 e D197 com mesma funcionalidade
+- ✅ **Logs Inteligentes**: Diferenciação entre correções específicas e globais
 
 ### Cuidados Especiais
 - **Créditos Circulares**: Sempre verificar exclusão automática de GO040007, GO040008, etc.
 - **Registros Consolidados**: Não reverter para C100/C170 sem justificativa técnica
 - **Percentuais**: FOMENTAR = 70%, não 73%
 - **ProGoiás**: Fórmula exata conforme Decreto 9.724/2020
+- **NOVO - Correções Específicas**: Verificar se códigos específicos por período estão sendo aplicados corretamente
+
+### Como Usar o Sistema de Correção Avançado
+
+#### Cenário 1: Código Global para Todos os Períodos
+1. Importar múltiplos SPEDs
+2. Identificar código inconsistente (ex: "GO020999")
+3. Campo "Código Corrigido (global)": inserir "GO040001"
+4. Selecionar "Todos os períodos"
+5. Aplicar correção → Todos usarão "GO040001"
+
+#### Cenário 2: Códigos Específicos por Período
+1. Importar múltiplos SPEDs  
+2. Identificar código inconsistente
+3. Selecionar "Períodos específicos"
+4. Marcar períodos desejados
+5. Para cada período: inserir código específico no campo que aparece
+6. Deixar vazio = usar código global | Preencher = usar específico
+
+#### Cenário 3: Modo Híbrido (Recomendado)
+1. Definir código global como padrão
+2. Selecionar todos os períodos necessários
+3. Sobrescrever apenas períodos que precisam de código diferente
+4. Sistema aplicará específico onde definido, global nos demais
 
 ### Em Caso de Problemas
 1. Verificar logs detalhados no console
 2. Comparar com `CORRECOES_IMPLEMENTADAS.md`
 3. Testar com SPED menor para isolamento
 4. Validar estrutura do arquivo SPED
-7. Validar exclusão de créditos circulares em novos cénarios
+5. **NOVO**: Verificar se campos específicos por período estão sendo salvos
+6. **NOVO**: Confirmar nos logs se está aplicando código "específico" ou "global"
+7. Validar exclusão de créditos circulares em novos cenários

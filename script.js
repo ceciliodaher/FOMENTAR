@@ -2640,7 +2640,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Campos para correção
                 novocodigo: '',
                 aplicarTodos: periodo ? false : true,
-                periodosEscolhidos: []
+                periodosEscolhidos: [],
+                codigosPorPeriodo: {} // NOVO: códigos específicos por período
             };
             
             codigosEncontradosC197D197.push(novoCodigo);
@@ -2750,6 +2751,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }];
                     novoCodigo.aplicarTodos = false; // Padrão para períodos específicos
                     novoCodigo.periodosEscolhidos = []; // Inicializar vazio
+                    novoCodigo.codigosPorPeriodo = {}; // Códigos específicos por período
                 }
                 
                 codigosEncontrados.push(novoCodigo);
@@ -2847,14 +2849,27 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             
             <div class="codigo-correcao-fields">
-                <div class="field-group">
-                    <label for="novoCodigo_c197d197_${index}">Código Corrigido:</label>
-                    <input type="text" 
-                           id="novoCodigo_c197d197_${index}"
-                           class="codigo-input" 
-                           placeholder="Digite o código correto (ex: GO040001)"
-                           onchange="atualizarCodigoCorrecaoC197D197(${index}, this.value)">
-                </div>
+                ${isMultiplePeriodsC197D197 ? `
+                    <div class="correcao-global">
+                        <label for="novoCodigo_c197d197_${index}">Código Corrigido (global):</label>
+                        <input type="text" 
+                               id="novoCodigo_c197d197_${index}"
+                               class="codigo-input" 
+                               placeholder="Ex: GO040001 (aplicado a todos os períodos selecionados)"
+                               value="${codigo.novocodigo || ''}"
+                               onchange="atualizarCodigoCorrecaoC197D197(${index}, this.value)">
+                    </div>
+                ` : `
+                    <div class="field-group">
+                        <label for="novoCodigo_c197d197_${index}">Código Corrigido:</label>
+                        <input type="text" 
+                               id="novoCodigo_c197d197_${index}"
+                               class="codigo-input" 
+                               placeholder="Digite o código correto (ex: GO040001)"
+                               value="${codigo.novocodigo || ''}"
+                               onchange="atualizarCodigoCorrecaoC197D197(${index}, this.value)">
+                    </div>
+                `}
                 
                 ${isMultiplePeriodsC197D197 ? `
                     <div class="field-group aplicacao-group">
@@ -2882,25 +2897,39 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="periodos-especificos" 
                          id="periodosEspecificos_c197d197_${index}" 
                          style="display: ${codigo.aplicarTodos ? 'none' : 'block'};">
-                        <label>Selecione os períodos:</label>
-                        <div class="periodos-checkboxes">
+                        <h5>Selecione os períodos e configure códigos específicos:</h5>
+                        <div class="periodos-container">
                             ${isMultiplePeriodsC197D197 && multiPeriodData ? 
                                 multiPeriodData.map((periodo, pIndex) => {
                                     // Encontrar o valor específico deste código neste período
                                     const valorPeriodo = encontrarValorC197D197NoPeriodo(codigo, pIndex);
-                                    console.log(`Debug C197/D197: Período ${pIndex} (${periodo.periodo}) - Código ${codigo.codigo} - Valor: ${valorPeriodo}`);
+                                    const isSelected = codigo.periodosEscolhidos?.includes(pIndex);
+                                    const codigoEspecifico = codigo.codigosPorPeriodo && codigo.codigosPorPeriodo[pIndex] ? 
+                                        codigo.codigosPorPeriodo[pIndex] : '';
+                                    
                                     return `
-                                        <div class="checkbox-periodo-item">
-                                            <label class="checkbox-label">
-                                                <input type="checkbox" 
-                                                       ${codigo.periodosEscolhidos?.includes(pIndex) ? 'checked' : ''}
-                                                       onchange="atualizarPeriodoEspecificoC197D197(${index}, ${pIndex}, this.checked)">
-                                                <div class="periodo-info">
-                                                    <span class="periodo-nome">Período ${pIndex + 1}</span>
-                                                    <span class="periodo-data">${periodo.periodo}</span>
-                                                    <span class="periodo-valor">R$ ${formatCurrency(valorPeriodo)}</span>
-                                                </div>
-                                            </label>
+                                        <div class="periodo-item-expandido">
+                                            <div class="periodo-header">
+                                                <label class="periodo-checkbox">
+                                                    <input type="checkbox" 
+                                                           ${isSelected ? 'checked' : ''}
+                                                           onchange="atualizarPeriodoEspecificoC197D197(${index}, ${pIndex}, this.checked)">
+                                                    <span class="periodo-info">
+                                                        <strong>Período ${pIndex + 1}</strong><br>
+                                                        <small>${periodo.periodo}</small><br>
+                                                        <small>R$ ${formatCurrency(valorPeriodo)}</small>
+                                                    </span>
+                                                </label>
+                                            </div>
+                                            <div class="periodo-codigo" style="display: ${isSelected ? 'block' : 'none'};" id="periodoCodigo_c197d197_${index}_${pIndex}">
+                                                <label for="codigoPeriodo_c197d197_${index}_${pIndex}">Código específico:</label>
+                                                <input type="text" 
+                                                       id="codigoPeriodo_c197d197_${index}_${pIndex}"
+                                                       placeholder="Ex: GO040001 (específico para este período)"
+                                                       value="${codigoEspecifico}"
+                                                       onchange="atualizarCodigoPorPeriodoC197D197(${index}, ${pIndex}, this.value)">
+                                                <small class="ajuda-codigo">Deixe vazio para usar o código global</small>
+                                            </div>
                                         </div>
                                     `;
                                 }).join('') : ''
@@ -3017,13 +3046,28 @@ document.addEventListener('DOMContentLoaded', () => {
         // Campo de correção
         const correcaoDiv = document.createElement('div');
         correcaoDiv.className = 'codigo-correcao';
-        correcaoDiv.innerHTML = `
-            <label for="novoCodigo_${index}">Novo Código (se incorreto):</label>
-            <input type="text" id="novoCodigo_${index}" 
-                   placeholder="Ex: GO020001" 
-                   value="${codigo.novocodigo}"
-                   onchange="atualizarCodigoCorrecao(${index}, this.value)">
-        `;
+        
+        if (isMultiplePeriods && codigo.periodos) {
+            // Para múltiplos períodos, mostrar opção de código global primeiro
+            correcaoDiv.innerHTML = `
+                <div class="correcao-global">
+                    <label for="novoCodigo_${index}">Código Corrigido (global):</label>
+                    <input type="text" id="novoCodigo_${index}" 
+                           placeholder="Ex: GO020001 (aplicado a todos os períodos selecionados)" 
+                           value="${codigo.novocodigo}"
+                           onchange="atualizarCodigoCorrecao(${index}, this.value)">
+                </div>
+            `;
+        } else {
+            // Para período único, manter comportamento original
+            correcaoDiv.innerHTML = `
+                <label for="novoCodigo_${index}">Novo Código (se incorreto):</label>
+                <input type="text" id="novoCodigo_${index}" 
+                       placeholder="Ex: GO020001" 
+                       value="${codigo.novocodigo}"
+                       onchange="atualizarCodigoCorrecao(${index}, this.value)">
+            `;
+        }
         
         // Opções para múltiplos períodos
         let periodosDiv = null;
@@ -3047,26 +3091,42 @@ document.addEventListener('DOMContentLoaded', () => {
                     </label>
                 </div>
                 <div id="periodosEspecificos_${index}" class="periodos-especificos" style="display: ${codigo.aplicarTodos ? 'none' : 'block'};">
-                    <h5>Selecione os períodos para aplicar a correção:</h5>
-                    <div class="periodos-grid">
+                    <h5>Selecione os períodos e configure códigos específicos:</h5>
+                    <div class="periodos-container">
             `;
             
-            // Adicionar checkbox para cada período
+            // Adicionar checkbox e campo de código para cada período
             codigo.periodos.forEach((periodo, periodoIndex) => {
                 const isSelected = codigo.periodosEscolhidos && codigo.periodosEscolhidos.includes(periodoIndex);
+                const codigoEspecifico = codigo.codigosPorPeriodo && codigo.codigosPorPeriodo[periodoIndex] ? 
+                    codigo.codigosPorPeriodo[periodoIndex] : '';
+                
                 periodosHTML += `
-                    <label class="periodo-checkbox">
-                        <input type="checkbox" 
-                               name="periodo_${index}_${periodoIndex}" 
-                               value="${periodoIndex}"
-                               ${isSelected ? 'checked' : ''}
-                               onchange="atualizarPeriodoEspecifico(${index}, ${periodoIndex}, this.checked)">
-                        <span class="periodo-info">
-                            <strong>Período ${periodoIndex + 1}</strong><br>
-                            <small>${periodo.nome || `${periodoIndex + 1}º período`}</small><br>
-                            <small>R$ ${formatCurrency(Math.abs(periodo.valor))}</small>
-                        </span>
-                    </label>
+                    <div class="periodo-item-expandido">
+                        <div class="periodo-header">
+                            <label class="periodo-checkbox">
+                                <input type="checkbox" 
+                                       name="periodo_${index}_${periodoIndex}" 
+                                       value="${periodoIndex}"
+                                       ${isSelected ? 'checked' : ''}
+                                       onchange="atualizarPeriodoEspecifico(${index}, ${periodoIndex}, this.checked)">
+                                <span class="periodo-info">
+                                    <strong>Período ${periodoIndex + 1}</strong><br>
+                                    <small>${periodo.nome || `${periodoIndex + 1}º período`}</small><br>
+                                    <small>R$ ${formatCurrency(Math.abs(periodo.valor))}</small>
+                                </span>
+                            </label>
+                        </div>
+                        <div class="periodo-codigo" style="display: ${isSelected ? 'block' : 'none'};" id="periodoCodigo_${index}_${periodoIndex}">
+                            <label for="codigoPeriodo_${index}_${periodoIndex}">Código específico:</label>
+                            <input type="text" 
+                                   id="codigoPeriodo_${index}_${periodoIndex}"
+                                   placeholder="Ex: GO020001 (específico para este período)"
+                                   value="${codigoEspecifico}"
+                                   onchange="atualizarCodigoPorPeriodo(${index}, ${periodoIndex}, this.value)">
+                            <small class="ajuda-codigo">Deixe vazio para usar o código global</small>
+                        </div>
+                    </div>
                 `;
             });
             
@@ -3137,9 +3197,36 @@ document.addEventListener('DOMContentLoaded', () => {
                     codigosEncontradosC197D197[index].periodosEscolhidos.filter(p => p !== periodoIndex);
             }
             
+            // Mostrar/ocultar campo de código específico
+            const periodoCodigoDiv = document.getElementById(`periodoCodigo_c197d197_${index}_${periodoIndex}`);
+            if (periodoCodigoDiv) {
+                periodoCodigoDiv.style.display = checked ? 'block' : 'none';
+            }
+            
             const totalSelecionados = codigosEncontradosC197D197[index].periodosEscolhidos.length;
             const acao = checked ? 'adicionado' : 'removido';
             addLog(`Período ${periodoIndex + 1} ${acao} para correção do código ${codigosEncontradosC197D197[index].origem}:${codigosEncontradosC197D197[index].codigo} (${totalSelecionados} período(s) selecionado(s))`, 'info');
+        }
+    };
+
+    // CLAUDE-FISCAL: Nova função para atualizar código específico por período C197/D197
+    window.atualizarCodigoPorPeriodoC197D197 = function(index, periodoIndex, novoCodigo) {
+        if (codigosEncontradosC197D197[index]) {
+            // Inicializar objeto de códigos por período se não existir
+            if (!codigosEncontradosC197D197[index].codigosPorPeriodo) {
+                codigosEncontradosC197D197[index].codigosPorPeriodo = {};
+            }
+            
+            const codigoLimpo = novoCodigo.trim();
+            
+            if (codigoLimpo) {
+                codigosEncontradosC197D197[index].codigosPorPeriodo[periodoIndex] = codigoLimpo;
+                addLog(`${codigosEncontradosC197D197[index].origem}: Código específico para período ${periodoIndex + 1}: ${codigoLimpo}`, 'info');
+            } else {
+                // Se vazio, remover da lista (usará código global)
+                delete codigosEncontradosC197D197[index].codigosPorPeriodo[periodoIndex];
+                addLog(`${codigosEncontradosC197D197[index].origem}: Período ${periodoIndex + 1} usará código global`, 'info');
+            }
         }
     };
 
@@ -3193,9 +3280,36 @@ document.addEventListener('DOMContentLoaded', () => {
                     codigosEncontrados[index].periodosEscolhidos.filter(p => p !== periodoIndex);
             }
             
+            // Mostrar/ocultar campo de código específico
+            const periodoCodigoDiv = document.getElementById(`periodoCodigo_${index}_${periodoIndex}`);
+            if (periodoCodigoDiv) {
+                periodoCodigoDiv.style.display = checked ? 'block' : 'none';
+            }
+            
             const totalSelecionados = codigosEncontrados[index].periodosEscolhidos.length;
             const acao = checked ? 'adicionado' : 'removido';
             addLog(`Período ${periodoIndex + 1} ${acao} para correção do código ${codigosEncontrados[index].codigo} (${totalSelecionados} período(s) selecionado(s))`, 'info');
+        }
+    };
+
+    // CLAUDE-FISCAL: Nova função para atualizar código específico por período
+    window.atualizarCodigoPorPeriodo = function(index, periodoIndex, novoCodigo) {
+        if (codigosEncontrados[index]) {
+            // Inicializar objeto de códigos por período se não existir
+            if (!codigosEncontrados[index].codigosPorPeriodo) {
+                codigosEncontrados[index].codigosPorPeriodo = {};
+            }
+            
+            const codigoLimpo = novoCodigo.trim();
+            
+            if (codigoLimpo) {
+                codigosEncontrados[index].codigosPorPeriodo[periodoIndex] = codigoLimpo;
+                addLog(`Código específico para período ${periodoIndex + 1}: ${codigoLimpo}`, 'info');
+            } else {
+                // Se vazio, remover da lista (usará código global)
+                delete codigosEncontrados[index].codigosPorPeriodo[periodoIndex];
+                addLog(`Período ${periodoIndex + 1} usará código global`, 'info');
+            }
         }
     };
 
@@ -3217,15 +3331,37 @@ document.addEventListener('DOMContentLoaded', () => {
         addLog('Iniciando aplicação de correções C197/D197...', 'info');
         
         codigosEncontradosC197D197.forEach(codigo => {
-            if (codigo.novocodigo && codigo.novocodigo.trim() !== '') {
+            const temCodigoGlobal = codigo.novocodigo && codigo.novocodigo.trim() !== '';
+            const temCodigosEspecificos = codigo.codigosPorPeriodo && Object.keys(codigo.codigosPorPeriodo).length > 0;
+            
+            if (temCodigoGlobal || temCodigosEspecificos) {
                 const chave = `${codigo.origem}_${codigo.codigo}`;
                 codigosCorrecaoC197D197[chave] = {
-                    novoCodigo: codigo.novocodigo.trim(),
+                    novoCodigo: codigo.novocodigo ? codigo.novocodigo.trim() : '',
                     aplicarTodos: codigo.aplicarTodos,
                     periodosEscolhidos: codigo.periodosEscolhidos || [],
-                    origem: codigo.origem
+                    origem: codigo.origem,
+                    codigosPorPeriodo: codigo.codigosPorPeriodo || {} // NOVO: códigos específicos por período
                 };
                 correcoesAplicadas++;
+                
+                // Log detalhado sobre onde será aplicada a correção
+                if (codigo.aplicarTodos && temCodigoGlobal) {
+                    addLog(`${codigo.origem}: ${codigo.codigo} → ${codigo.novocodigo.trim()} (todos os períodos)`, 'success');
+                } else if (codigo.periodosEscolhidos && codigo.periodosEscolhidos.length > 0) {
+                    if (temCodigosEspecificos) {
+                        // Mostrar códigos específicos por período
+                        codigo.periodosEscolhidos.forEach(periodoIndex => {
+                            const codigoEspecifico = codigo.codigosPorPeriodo[periodoIndex];
+                            const codigoFinal = codigoEspecifico || codigo.novocodigo?.trim() || codigo.codigo;
+                            const fonte = codigoEspecifico ? 'específico' : 'global';
+                            addLog(`${codigo.origem}: ${codigo.codigo} → ${codigoFinal} (período ${periodoIndex + 1}, código ${fonte})`, 'success');
+                        });
+                    } else {
+                        const periodosTexto = codigo.periodosEscolhidos.map(p => p + 1).join(', ');
+                        addLog(`${codigo.origem}: ${codigo.codigo} → ${codigo.novocodigo.trim()} (períodos: ${periodosTexto})`, 'success');
+                    }
+                }
             }
         });
         
@@ -3302,23 +3438,37 @@ document.addEventListener('DOMContentLoaded', () => {
         let correcoesAplicadas = 0;
         
         codigosEncontrados.forEach(codigo => {
-            if (codigo.novocodigo && codigo.novocodigo.trim() !== '') {
+            const temCodigoGlobal = codigo.novocodigo && codigo.novocodigo.trim() !== '';
+            const temCodigosEspecificos = codigo.codigosPorPeriodo && Object.keys(codigo.codigosPorPeriodo).length > 0;
+            
+            if (temCodigoGlobal || temCodigosEspecificos) {
                 codigosCorrecao[codigo.codigo] = {
-                    novoCodigo: codigo.novocodigo.trim(),
+                    novoCodigo: codigo.novocodigo ? codigo.novocodigo.trim() : '',
                     aplicarTodos: codigo.aplicarTodos,
                     periodos: codigo.periodos || [],
-                    periodosEscolhidos: codigo.periodosEscolhidos || []
+                    periodosEscolhidos: codigo.periodosEscolhidos || [],
+                    codigosPorPeriodo: codigo.codigosPorPeriodo || {} // NOVO: códigos específicos por período
                 };
                 correcoesAplicadas++;
                 
                 // Log detalhado sobre onde será aplicada a correção
-                if (codigo.aplicarTodos) {
+                if (codigo.aplicarTodos && temCodigoGlobal) {
                     addLog(`Correção configurada: ${codigo.codigo} → ${codigo.novocodigo.trim()} (todos os períodos)`, 'success');
                 } else if (codigo.periodosEscolhidos && codigo.periodosEscolhidos.length > 0) {
-                    const periodosTexto = codigo.periodosEscolhidos.map(p => p + 1).join(', ');
-                    addLog(`Correção configurada: ${codigo.codigo} → ${codigo.novocodigo.trim()} (períodos: ${periodosTexto})`, 'success');
+                    if (temCodigosEspecificos) {
+                        // Mostrar códigos específicos por período
+                        codigo.periodosEscolhidos.forEach(periodoIndex => {
+                            const codigoEspecifico = codigo.codigosPorPeriodo[periodoIndex];
+                            const codigoFinal = codigoEspecifico || codigo.novocodigo?.trim() || codigo.codigo;
+                            const fonte = codigoEspecifico ? 'específico' : 'global';
+                            addLog(`Correção configurada: ${codigo.codigo} → ${codigoFinal} (período ${periodoIndex + 1}, código ${fonte})`, 'success');
+                        });
+                    } else {
+                        const periodosTexto = codigo.periodosEscolhidos.map(p => p + 1).join(', ');
+                        addLog(`Correção configurada: ${codigo.codigo} → ${codigo.novocodigo.trim()} (períodos: ${periodosTexto})`, 'success');
+                    }
                 } else {
-                    addLog(`Correção configurada: ${codigo.codigo} → ${codigo.novocodigo.trim()} (nenhum período específico selecionado)`, 'warn');
+                    addLog(`Correção configurada: ${codigo.codigo} → ${codigo.novocodigo?.trim() || 'códigos específicos'} (nenhum período específico selecionado)`, 'warn');
                 }
             }
         });
@@ -3763,17 +3913,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (correcao) {
                     // Verificar se deve aplicar correção neste período
-                    const deveAplicar = correcao.aplicarTodos || 
-                                       correcao.periodosEscolhidos.includes(periodoIndex);
+                    let deveAplicar = false;
+                    let codigoFinal = correcao.novoCodigo; // Código padrão
                     
-                    if (deveAplicar) {
-                        campos[1] = correcao.novoCodigo; // Substituir COD_AJ
+                    if (correcao.aplicarTodos) {
+                        deveAplicar = true;
+                    } else {
+                        // Verificar se este período foi selecionado especificamente
+                        deveAplicar = correcao.periodosEscolhidos.includes(periodoIndex);
+                        
+                        // Verificar se existe código específico para este período
+                        if (deveAplicar && correcao.codigosPorPeriodo && correcao.codigosPorPeriodo[periodoIndex]) {
+                            codigoFinal = correcao.codigosPorPeriodo[periodoIndex];
+                        }
+                    }
+                    
+                    if (deveAplicar && codigoFinal) {
+                        campos[1] = codigoFinal; // Substituir COD_AJ
                         
                         // Recompor o registro
                         registro.splice(1, campos.length, ...campos);
                         
                         correcoesAplicadas++;
-                        addLog(`C197 corrigido: ${codAjusteOriginal} → ${correcao.novoCodigo} (Período ${periodoIndex + 1})`, 'info');
+                        const tipoCorrecao = (correcao.codigosPorPeriodo && correcao.codigosPorPeriodo[periodoIndex]) ? 
+                            'específico' : 'global';
+                        addLog(`C197 corrigido: ${codAjusteOriginal} → ${codigoFinal} (Período ${periodoIndex + 1}, código ${tipoCorrecao})`, 'info');
                     }
                 }
             });
@@ -3790,17 +3954,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (correcao) {
                     // Verificar se deve aplicar correção neste período
-                    const deveAplicar = correcao.aplicarTodos || 
-                                       correcao.periodosEscolhidos.includes(periodoIndex);
+                    let deveAplicar = false;
+                    let codigoFinal = correcao.novoCodigo; // Código padrão
                     
-                    if (deveAplicar) {
-                        campos[1] = correcao.novoCodigo; // Substituir COD_AJ
+                    if (correcao.aplicarTodos) {
+                        deveAplicar = true;
+                    } else {
+                        // Verificar se este período foi selecionado especificamente
+                        deveAplicar = correcao.periodosEscolhidos.includes(periodoIndex);
+                        
+                        // Verificar se existe código específico para este período
+                        if (deveAplicar && correcao.codigosPorPeriodo && correcao.codigosPorPeriodo[periodoIndex]) {
+                            codigoFinal = correcao.codigosPorPeriodo[periodoIndex];
+                        }
+                    }
+                    
+                    if (deveAplicar && codigoFinal) {
+                        campos[1] = codigoFinal; // Substituir COD_AJ
                         
                         // Recompor o registro
                         registro.splice(1, campos.length, ...campos);
                         
                         correcoesAplicadas++;
-                        addLog(`D197 corrigido: ${codAjusteOriginal} → ${correcao.novoCodigo} (Período ${periodoIndex + 1})`, 'info');
+                        const tipoCorrecao = (correcao.codigosPorPeriodo && correcao.codigosPorPeriodo[periodoIndex]) ? 
+                            'específico' : 'global';
+                        addLog(`D197 corrigido: ${codAjusteOriginal} → ${codigoFinal} (Período ${periodoIndex + 1}, código ${tipoCorrecao})`, 'info');
                     }
                 }
             });
@@ -3826,6 +4004,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (correcao) {
                         // Verificar se deve aplicar correção neste período
                         let aplicarCorrecao = false;
+                        let codigoFinal = correcao.novoCodigo; // Código padrão
                         
                         if (currentImportMode === 'multiple') {
                             if (correcao.aplicarTodos) {
@@ -3834,16 +4013,23 @@ document.addEventListener('DOMContentLoaded', () => {
                                 // Verificar se este período foi selecionado especificamente
                                 aplicarCorrecao = correcao.periodosEscolhidos && 
                                                correcao.periodosEscolhidos.includes(periodoIndex);
+                                
+                                // Verificar se existe código específico para este período
+                                if (aplicarCorrecao && correcao.codigosPorPeriodo && correcao.codigosPorPeriodo[periodoIndex]) {
+                                    codigoFinal = correcao.codigosPorPeriodo[periodoIndex];
+                                }
                             }
                         } else {
                             aplicarCorrecao = true;
                         }
                         
-                        if (aplicarCorrecao) {
-                            campos[codAjusteIndex] = correcao.novoCodigo;
-                            registro[codAjusteIndex + 1] = correcao.novoCodigo; // +1 porque o primeiro elemento é o tipo do registro
+                        if (aplicarCorrecao && codigoFinal) {
+                            campos[codAjusteIndex] = codigoFinal;
+                            registro[codAjusteIndex + 1] = codigoFinal; // +1 porque o primeiro elemento é o tipo do registro
                             
-                            addLog(`Código corrigido no período ${periodoIndex + 1}: ${codAjusteOriginal} → ${correcao.novoCodigo}`, 'success');
+                            const tipoCorrecao = (correcao.codigosPorPeriodo && correcao.codigosPorPeriodo[periodoIndex]) ? 
+                                'específico' : 'global';
+                            addLog(`Código corrigido no período ${periodoIndex + 1}: ${codAjusteOriginal} → ${codigoFinal} (${tipoCorrecao})`, 'success');
                         }
                     }
                 });
