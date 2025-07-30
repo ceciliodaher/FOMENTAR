@@ -74,6 +74,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('exportValidationPDF').addEventListener('click', exportValidationPDF);
     document.getElementById('printFomentar').addEventListener('click', printFomentarReport);
     
+    // E115 listeners
+    document.getElementById('exportE115').addEventListener('click', exportRegistroE115);
+    document.getElementById('exportConfrontoE115').addEventListener('click', exportConfrontoE115Excel);
+    
     // ProGoiás listeners
     document.getElementById('importSpedProgoias').addEventListener('click', importSpedForProgoias);
     document.getElementById('exportProgoias').addEventListener('click', exportProgoisReport);
@@ -4384,6 +4388,21 @@ document.addEventListener('DOMContentLoaded', () => {
         
         addLog('Valores calculados salvos para exportação', 'info');
         
+        // CLAUDE-FISCAL: Gerar registro E115 após cálculo completo
+        const programType = document.getElementById('programType').value;
+        fomentarData.registroE115 = generateRegistroE115(fomentarData, programType);
+        
+        // Extrair E115 do SPED se disponível para confronto
+        if (registrosCompletos) {
+            const registrosE115Sped = extractE115FromSped(registrosCompletos);
+            if (registrosE115Sped.length > 0) {
+                fomentarData.confrontoE115 = confrontarE115(fomentarData.registroE115, registrosE115Sped, programType);
+                addLog(`Confronto E115: ${fomentarData.confrontoE115.filter(c => c.status === 'OK').length} concordantes, ${fomentarData.confrontoE115.filter(c => c.status === 'DIVERGENTE').length} divergentes`, 'info');
+            } else {
+                addLog('SPED não contém registros E115 para confronto', 'warning');
+            }
+        }
+        
         // Debug: Mostrar TODOS os valores salvos
         addLog(`Debug - Quadro A: saidasIncentivadas=${saidasIncentivadas}, totalSaidas=${totalSaidas}, percentualSaidasIncentivadas=${percentualSaidasIncentivadas}`, 'info');
         addLog(`Debug - Quadro B: debitoIncentivadas=${debitoIncentivadas}, icmsBaseFomentar=${icmsBaseFomentar}, icmsFinanciado=${icmsFinanciado}`, 'info');
@@ -4487,6 +4506,524 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (fomentarData) {
             calculateFomentar();
+        }
+    }
+
+    // CLAUDE-FISCAL: Geração do Registro E115 para FOMENTAR/PRODUZIR/MICROPRODUZIR
+    // Conforme Tabela 5.2 EFD Goiás - Códigos GO200001 até GO200054 (vigentes desde 01/01/2023)
+    function generateRegistroE115(dadosCalculo, programType = 'FOMENTAR') {
+        if (!dadosCalculo || !dadosCalculo.calculatedValues) {
+            addLog('Erro: Dados de cálculo não disponíveis para geração E115', 'error');
+            return [];
+        }
+
+        const values = dadosCalculo.calculatedValues;
+        const registrosE115 = [];
+        
+        addLog(`Gerando registro E115 para ${programType} com códigos GO200001-GO200054...`, 'info');
+
+        // Quadro B - Operações Incentivadas (GO200001-GO200026)
+        registrosE115.push(
+            { codigo: 'GO200001', descricao: 'Débito do ICMS das Operações Incentivadas (Anexo II, exceto o débito do item 2)', valor: values.debitoIncentivadas || 0 },
+            { codigo: 'GO200002', descricao: 'Débito do ICMS das Saídas a Título de Bonificação ou Semelhante Incentivadas', valor: values.debitoBonificacaoIncentivadas || 0 },
+            { codigo: 'GO200003', descricao: 'Outros Débitos das Operações Incentivadas (Anexo III)', valor: values.outrosDebitosIncentivadas || 0 },
+            { codigo: 'GO200004', descricao: 'Estorno de Créditos das Operações Incentivadas (Anexo III)', valor: values.estornoCreditosIncentivadas || 0 },
+            { codigo: 'GO200005', descricao: 'Crédito do ICMS para Operações Incentivadas (Anexo I)', valor: values.creditoOperacoesIncentivadas || 0 },
+            { codigo: 'GO200006', descricao: 'Outros Créditos para Operações Incentivadas (Anexo III)', valor: 0 }, // Configurável
+            { codigo: 'GO200007', descricao: 'Estorno de Débitos para Operações Incentivadas (Anexo III)', valor: 0 }, // Configurável
+            { codigo: 'GO200008', descricao: 'Saldo Credor do Período Anterior das Operações Incentivadas', valor: values.saldoCredorAnterior || 0 },
+            { codigo: 'GO200009', descricao: 'Crédito Referente Saldo Credor do Período das Operações Não Incentivadas (41)', valor: values.creditoSaldoCredorNaoIncentivadas || 0 },
+            { codigo: 'GO200010', descricao: 'Saldo Devedor do ICMS das Operações Incentivadas [(1+2+3+4)-(5+6+7+8+9)]', valor: values.saldoDevedorIncentivadas || 0 },
+            { codigo: 'GO200011', descricao: 'ICMS por Média', valor: values.icmsPorMedia || 0 },
+            { codigo: 'GO200012', descricao: 'Deduções (115)', valor: values.deducoesCompensacoes || 0 },
+            { codigo: 'GO200013', descricao: 'Saldo do ICMS a Pagar por Média (11-12)', valor: values.saldoIcmsPagarPorMedia || 0 },
+            { codigo: 'GO200014', descricao: 'ICMS Base para Fomentar/Produzir (10-11)', valor: values.icmsBaseFomentar || 0 },
+            { codigo: 'GO200015', descricao: 'Percentagem do Financiamento', valor: (values.percentualFinanciamento || 0) * 100 },
+            { codigo: 'GO200016', descricao: 'ICMS Sujeito a Financiamento [(14x15)/100]', valor: values.icmsSujeitoFinanciamento || 0 },
+            { codigo: 'GO200017', descricao: 'ICMS Excedente Importação Não Sujeito ao Incentivo (51) - Fomentar', valor: 0 }, // Configurável
+            { codigo: 'GO200018', descricao: 'ICMS Excedente Industrialização Fora do Estado Não Sujeito ao Incentivo - Fomentar', valor: 0 }, // Configurável
+            { codigo: 'GO200019', descricao: 'ICMS Excedente Importação de Peças e Partes de Veículos Não Sujeito ao Incentivo - Fomentar', valor: 0 }, // Configurável
+            { codigo: 'GO200020', descricao: 'ICMS Financiado (16)-(17+18+19)', valor: values.icmsFinanciado || 0 },
+            { codigo: 'GO200021', descricao: 'Saldo do ICMS da Parcela Não Financiada (14-16)', valor: values.parcelaNaoFinanciada || 0 },
+            { codigo: 'GO200022', descricao: 'Deduções (116)', valor: 0 }, // Configurável
+            { codigo: 'GO200023', descricao: 'Saldo do ICMS a Pagar da Parcela Não Financiada (21-22)', valor: values.saldoPagarParcelaNaoFinanciada || 0 },
+            { codigo: 'GO200024', descricao: 'Saldo Credor do Período [(5+6+7+8+9)-(1+2+3+4)]', valor: values.saldoCredorPeriodoIncentivadas || 0 },
+            { codigo: 'GO200025', descricao: 'Saldo Credor do Período Utilizado nas Operações Não Incentivadas', valor: values.saldoCredorIncentUsadoNaoIncentivadas || 0 },
+            { codigo: 'GO200026', descricao: 'Saldo Credor a Transportar para o Período Seguinte (24-25)', valor: values.saldoCredorTransportarIncentivadas || 0 }
+        );
+
+        // Quadro C - Operações Não Incentivadas (GO200027-GO200042)
+        registrosE115.push(
+            { codigo: 'GO200027', descricao: 'Débito do ICMS das Operações Não Incentivadas (Não constam no Anexo II)', valor: values.debitoNaoIncentivadas || 0 },
+            { codigo: 'GO200028', descricao: 'Outros Débitos das Operações Não Incentivadas (Não constam no Anexo III)', valor: values.outrosDebitosNaoIncentivadas || 0 },
+            { codigo: 'GO200029', descricao: 'Estorno de Créditos das Operações Não Incentivadas (Não constam no Anexo III)', valor: values.estornoCreditosNaoIncentivadas || 0 },
+            { codigo: 'GO200030', descricao: 'ICMS Excedente Industrialização Fora do Estado Não Sujeito ao Incentivo - Fomentar', valor: 0 }, // Configurável
+            { codigo: 'GO200031', descricao: 'ICMS Excedente Imp. de Peças e Partes de Veículos Não Sujeito ao Incentivo - Fomentar', valor: 0 }, // Configurável
+            { codigo: 'GO200032', descricao: 'Crédito do ICMS para Operações Não Incentivadas (Não constam no Anexo I)', valor: values.creditoOperacoesNaoIncentivadas || 0 },
+            { codigo: 'GO200033', descricao: 'Outros Créditos para Operações Não Incentivadas (Não constam no Anexo III)', valor: 0 }, // Configurável
+            { codigo: 'GO200034', descricao: 'Estorno de Débitos para Operações Não Incentivadas (Não constam no Anexo III)', valor: 0 }, // Configurável
+            { codigo: 'GO200035', descricao: 'Saldo Credor do Período Anterior das Operações Não Incentivadas', valor: 0 }, // Configurável
+            { codigo: 'GO200036', descricao: 'Crédito Referente Saldo Credor do Período das Operações Incentivadas (25)', valor: values.saldoCredorIncentUsadoNaoIncentivadas || 0 },
+            { codigo: 'GO200037', descricao: 'Saldo Devedor do ICMS das Operações Não Incentivadas [(27+28+29+30+31)-(32+33+34+35+36)]', valor: values.saldoDevedorBrutoNaoIncentivadas || 0 },
+            { codigo: 'GO200038', descricao: 'Deduções (114)', valor: 0 }, // Configurável
+            { codigo: 'GO200039', descricao: 'Saldo do ICMS a Pagar das Operações Não Incentivadas (37-38)', valor: values.saldoPagarNaoIncentivadas || 0 },
+            { codigo: 'GO200040', descricao: 'Saldo Credor do Período [(32+33+34+35+36)-(27+28+29+30+31)]', valor: values.saldoCredorPeriodoNaoIncentivadasFinal || 0 },
+            { codigo: 'GO200041', descricao: 'Saldo Credor do Período Utilizado nas Operações Incentivadas', valor: values.saldoCredorNaoIncentUsadoIncentivadas || 0 },
+            { codigo: 'GO200042', descricao: 'Saldo Credor a Transp. para o Período Seguinte (40-41)', valor: values.saldoCredorTransportarNaoIncentivadas || 0 }
+        );
+
+        // Quadro D - Controle de Importação (GO200043-GO200054) - apenas para FOMENTAR
+        registrosE115.push(
+            { codigo: 'GO200043', descricao: 'Total das Mercadorias Importadas', valor: 0 }, // Configurável
+            { codigo: 'GO200044', descricao: 'Outros Acréscimos sobre Importação', valor: 0 }, // Configurável
+            { codigo: 'GO200045', descricao: 'Total das Operações de Importação (43+44)', valor: 0 }, // Calculado
+            { codigo: 'GO200046', descricao: 'Total das Entradas do Período', valor: 0 }, // Configurável
+            { codigo: 'GO200047', descricao: 'Percentual das Operações de Importação [(45/46)x100]', valor: 0 }, // Calculado
+            { codigo: 'GO200048', descricao: 'ICMS sobre Importação', valor: 0 }, // Configurável
+            { codigo: 'GO200049', descricao: 'Mercadorias Importadas Excedentes {[46x(47 – 30%)]/100}', valor: 0 }, // Calculado
+            { codigo: 'GO200050', descricao: 'ICMS sobre Importação Excedente [48x(49/45)]', valor: 0 }, // Calculado
+            { codigo: 'GO200051', descricao: 'ICMS sobre Importação Excedente Não Sujeito a Incentivo [(50x15)/100]', valor: 0 }, // Calculado
+            { codigo: 'GO200052', descricao: 'ICMS sobre Importação Sujeito ao Incentivo (48-50)', valor: 0 }, // Calculado
+            { codigo: 'GO200053', descricao: 'ICMS sobre Importação da Parcela Não Financiada {[48x( 100%- 15)]/100}', valor: 0 }, // Calculado
+            { codigo: 'GO200054', descricao: 'Saldo do ICMS sobre Importação a Pagar (51+53)', valor: 0 } // Calculado
+        );
+
+        addLog(`E115 gerado com sucesso: ${registrosE115.length} registros`, 'success');
+        return registrosE115;
+    }
+
+    // CLAUDE-FISCAL: Função para extrair registros E115 existentes do SPED
+    function extractE115FromSped(registrosCompletos) {
+        if (!registrosCompletos || !registrosCompletos.E115) {
+            addLog('SPED não contém registros E115', 'warning');
+            return [];
+        }
+
+        const registrosE115Sped = [];
+        
+        // Processar exatamente igual aos outros registros SPED
+        registrosCompletos.E115.forEach(registro => {
+            // registro é um array: ['', 'E115', 'COD_INF_ADIC', 'VL_INF_ADIC', 'DESCR_COMPL_AJ', '']
+            if (Array.isArray(registro) && registro.length >= 4) {
+                const codigo = registro[2] || '';  // COD_INF_ADIC
+                const valor = parseFloat(registro[3]) || 0;  // VL_INF_ADIC
+                const descricao = registro[4] || '';  // DESCR_COMPL_AJ
+                
+                if (codigo.trim() !== '') {
+                    registrosE115Sped.push({
+                        codigo: codigo,
+                        valor: valor,
+                        descricao: descricao
+                    });
+                }
+            }
+        });
+
+        addLog(`Extraídos ${registrosE115Sped.length} registros E115 do SPED`, 'info');
+        return registrosE115Sped;
+    }
+
+    // CLAUDE-FISCAL: Função para confrontar E115 calculado vs SPED
+    function confrontarE115(registrosCalculados, registrosSped, programType = 'FOMENTAR') {
+        const confronto = [];
+        const codigosRelevantes = registrosCalculados.map(r => r.codigo);
+        
+        addLog(`Confrontando E115: ${registrosCalculados.length} calculados vs ${registrosSped.length} do SPED`, 'info');
+
+        // Confrontar códigos calculados vs SPED
+        codigosRelevantes.forEach(codigo => {
+            const calculado = registrosCalculados.find(r => r.codigo === codigo);
+            const sped = registrosSped.find(r => r.codigo === codigo);
+            
+            const valorCalculado = calculado ? calculado.valor : 0;
+            const valorSped = sped ? sped.valor : 0;
+            const diferenca = Math.abs(valorCalculado - valorSped);
+            const percentualDiferenca = valorSped > 0 ? (diferenca / valorSped) * 100 : (valorCalculado > 0 ? 100 : 0);
+            
+            confronto.push({
+                codigo: codigo,
+                descricao: 'Calculado pelo sistema', // Descrição simplificada
+                valorCalculado: valorCalculado,
+                valorSped: valorSped,
+                diferenca: diferenca,
+                percentualDiferenca: percentualDiferenca,
+                status: diferenca < 0.01 ? 'OK' : 'DIVERGENTE'
+            });
+        });
+
+        // Identificar códigos no SPED que não foram calculados (TODOS os códigos, não apenas GO200xxx)
+        registrosSped.forEach(sped => {
+            if (!codigosRelevantes.includes(sped.codigo)) {
+                confronto.push({
+                    codigo: sped.codigo,
+                    descricao: 'Código adicional no SPED',
+                    valorCalculado: 0,
+                    valorSped: sped.valor,
+                    diferenca: Math.abs(sped.valor),
+                    percentualDiferenca: 100,
+                    status: 'ADICIONAL_SPED'
+                });
+            }
+        });
+
+        return confronto.sort((a, b) => a.codigo.localeCompare(b.codigo));
+    }
+
+    // CLAUDE-FISCAL: Gerar texto do registro E115 no formato SPED
+    function generateE115SpedText(registrosE115) {
+        let spedText = '';
+        
+        registrosE115.forEach(registro => {
+            // Formato: |E115|COD_INF_ADIC|VL_INF_ADIC|DESCR_COMPL_AJ|
+            spedText += `|E115|${registro.codigo}|${registro.valor.toFixed(2)}|${registro.descricao}|\n`;
+        });
+        
+        return spedText;
+    }
+
+    // CLAUDE-FISCAL: Função para exportar registro E115 como arquivo de texto
+    function exportRegistroE115() {
+        const isMultiplePeriods = multiPeriodData.length > 1;
+        const programType = document.getElementById('programType').value;
+        
+        if (isMultiplePeriods) {
+            // Exportar E115 para múltiplos períodos
+            let spedTextCombined = '';
+            let totalCodigos = 0;
+            
+            multiPeriodData.forEach((periodo, index) => {
+                if (periodo.registroE115) {
+                    spedTextCombined += `\n// Período: ${periodo.periodo} - ${periodo.nomeEmpresa}\n`;
+                    spedTextCombined += generateE115SpedText(periodo.registroE115);
+                    totalCodigos += periodo.registroE115.length;
+                }
+            });
+            
+            if (totalCodigos === 0) {
+                addLog('Erro: Nenhum registro E115 disponível nos períodos.', 'error');
+                return;
+            }
+            
+            const blob = new Blob([spedTextCombined], { type: 'text/plain;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `Registro_E115_${programType}_MultiplosPeriodos_${new Date().toISOString().slice(0,10)}.txt`;
+            link.click();
+            
+            addLog(`Registro E115 múltiplos períodos exportado: ${multiPeriodData.length} períodos, ${totalCodigos} registros`, 'success');
+            
+        } else {
+            // Período único
+            if (!fomentarData || !fomentarData.registroE115) {
+                addLog('Erro: Dados E115 não disponíveis. Execute primeiro o cálculo FOMENTAR.', 'error');
+                return;
+            }
+
+            try {
+                const spedText = generateE115SpedText(fomentarData.registroE115);
+                
+                // Criar blob e download
+                const blob = new Blob([spedText], { type: 'text/plain;charset=utf-8' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `Registro_E115_${programType}_${sharedNomeEmpresa.replace(/[^a-zA-Z0-9]/g, '_')}_${sharedPeriodo}.txt`;
+                link.click();
+                
+                addLog(`Registro E115 exportado: ${fomentarData.registroE115.length} códigos`, 'success');
+                
+            } catch (error) {
+                addLog(`Erro ao exportar E115: ${error.message}`, 'error');
+            }
+        }
+    }
+
+    // CLAUDE-FISCAL: Função para exportar confronto E115 vs SPED
+    async function exportConfrontoE115Excel() {
+        const isMultiplePeriods = multiPeriodData.length > 1;
+        
+        if (isMultiplePeriods) {
+            // Implementar confronto para múltiplos períodos
+            await exportConfrontoE115MultiplosPeriodos();
+            return;
+        }
+        
+        if (!fomentarData || !fomentarData.registroE115) {
+            addLog('Erro: Dados E115 não disponíveis. Execute primeiro o cálculo FOMENTAR.', 'error');
+            return;
+        }
+
+        // Extrair E115 do SPED e fazer confronto na hora
+        const registrosE115Sped = registrosCompletos ? extractE115FromSped(registrosCompletos) : [];
+        
+        let confrontoData;
+        if (registrosE115Sped.length > 0) {
+            confrontoData = confrontarE115(fomentarData.registroE115, registrosE115Sped);
+            addLog(`Confronto realizado: ${confrontoData.filter(c => c.status === 'OK').length} concordantes, ${confrontoData.filter(c => c.status === 'DIVERGENTE').length} divergentes`, 'info');
+        } else {
+            // Se não há registros no SPED, mostrar apenas os calculados
+            confrontoData = fomentarData.registroE115.map(reg => ({
+                codigo: reg.codigo,
+                descricao: 'Calculado pelo sistema',
+                valorCalculado: reg.valor,
+                valorSped: 0,
+                diferenca: reg.valor,
+                percentualDiferenca: reg.valor > 0 ? 100 : 0,
+                status: 'SEM_SPED'
+            }));
+            addLog('SPED não contém E115. Mostrando apenas valores calculados.', 'info');
+        }
+
+        try {
+            const workbook = await XlsxPopulate.fromBlankAsync();
+            
+            // Planilha principal
+            const sheet = workbook.sheet(0);
+            sheet.name('Confronto E115');
+            
+            // Cabeçalho
+            const headers = [
+                'Código', 'Descrição', 'Valor Calculado', 'Valor SPED', 
+                'Diferença', 'Diferença %', 'Status'
+            ];
+            
+            headers.forEach((header, index) => {
+                const cell = sheet.cell(1, index + 1);
+                cell.value(header);
+                cell.style('bold', true);
+                cell.style('fill', '366092');
+                cell.style('fontColor', 'ffffff');
+            });
+            
+            // Dados
+            confrontoData.forEach((item, rowIndex) => {
+                const row = rowIndex + 2;
+                sheet.cell(row, 1).value(item.codigo);
+                sheet.cell(row, 2).value(item.descricao);
+                sheet.cell(row, 3).value(item.valorCalculado);
+                sheet.cell(row, 4).value(item.valorSped);
+                sheet.cell(row, 5).value(item.diferenca);
+                sheet.cell(row, 6).value(item.percentualDiferenca.toFixed(2) + '%');
+                sheet.cell(row, 7).value(item.status);
+                
+                // Colorir linha conforme status
+                if (item.status === 'DIVERGENTE') {
+                    for (let col = 1; col <= 7; col++) {
+                        sheet.cell(row, col).style('fill', 'ffcccc');
+                    }
+                } else if (item.status === 'ADICIONAL_SPED') {
+                    for (let col = 1; col <= 7; col++) {
+                        sheet.cell(row, col).style('fill', 'ffffcc');
+                    }
+                } else if (item.status === 'OK') {
+                    for (let col = 1; col <= 7; col++) {
+                        sheet.cell(row, col).style('fill', 'ccffcc');
+                    }
+                } else if (item.status === 'SEM_SPED') {
+                    for (let col = 1; col <= 7; col++) {
+                        sheet.cell(row, col).style('fill', 'e6f3ff');
+                    }
+                }
+            });
+            
+            // Autofit colunas
+            for (let col = 1; col <= headers.length; col++) {
+                sheet.column(col).width(col === 2 ? 40 : 15);
+            }
+            
+            // Resumo
+            const divergentes = confrontoData.filter(item => item.status === 'DIVERGENTE').length;
+            const adicionais = confrontoData.filter(item => item.status === 'ADICIONAL_SPED').length;
+            const concordantes = confrontoData.filter(item => item.status === 'OK').length;
+            const semSped = confrontoData.filter(item => item.status === 'SEM_SPED').length;
+            
+            const resumoRow = confrontoData.length + 4;
+            sheet.cell(resumoRow, 1).value('RESUMO:');
+            sheet.cell(resumoRow, 1).style('bold', true);
+            sheet.cell(resumoRow + 1, 1).value(`Concordantes: ${concordantes}`);
+            sheet.cell(resumoRow + 2, 1).value(`Divergentes: ${divergentes}`);
+            sheet.cell(resumoRow + 3, 1).value(`Adicionais no SPED: ${adicionais}`);
+            if (semSped > 0) {
+                sheet.cell(resumoRow + 4, 1).value(`Sem dados SPED: ${semSped}`);
+            }
+            
+            // Adicionar planilha com registro E115 gerado
+            const sheetE115 = workbook.addSheet('Registro E115 Gerado');
+            
+            const headersE115 = ['Código', 'Descrição', 'Valor'];
+            headersE115.forEach((header, index) => {
+                const cell = sheetE115.cell(1, index + 1);
+                cell.value(header);
+                cell.style('bold', true);
+                cell.style('fill', '366092');
+                cell.style('fontColor', 'ffffff');
+            });
+            
+            fomentarData.registroE115.forEach((registro, rowIndex) => {
+                const row = rowIndex + 2;
+                sheetE115.cell(row, 1).value(registro.codigo);
+                sheetE115.cell(row, 2).value(registro.descricao);
+                sheetE115.cell(row, 3).value(registro.valor);
+            });
+            
+            sheetE115.column(1).width(12);
+            sheetE115.column(2).width(50);
+            sheetE115.column(3).width(15);
+            
+            const fileName = `Confronto_E115_${sharedNomeEmpresa.replace(/[^a-zA-Z0-9]/g, '_')}_${sharedPeriodo}.xlsx`;
+            const blob = await workbook.outputAsync();
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = fileName;
+            link.click();
+            
+            addLog(`Confronto E115 exportado: ${fileName}`, 'success');
+            
+        } catch (error) {
+            addLog(`Erro ao exportar confronto E115: ${error.message}`, 'error');
+        }
+    }
+
+    // CLAUDE-FISCAL: Função para confronto E115 em múltiplos períodos (formato tabela)
+    async function exportConfrontoE115MultiplosPeriodos() {
+        try {
+            const workbook = await XlsxPopulate.fromBlankAsync();
+            const sheet = workbook.sheet(0);
+            sheet.name('Confronto E115 Múltiplos Períodos');
+            
+            // Filtrar períodos que têm E115 calculado
+            const periodosValidos = multiPeriodData.filter(periodo => periodo.registroE115);
+            
+            if (periodosValidos.length === 0) {
+                addLog('Nenhum período possui dados E115 calculados', 'error');
+                return;
+            }
+            
+            // Coletar todos os códigos únicos de todos os períodos
+            const codigosUnicos = new Set();
+            periodosValidos.forEach(periodo => {
+                periodo.registroE115.forEach(reg => codigosUnicos.add(reg.codigo));
+            });
+            const codigosArray = Array.from(codigosUnicos).sort();
+            
+            // Cabeçalho: Código | Período1 Calc | Período1 SPED | Período2 Calc | Período2 SPED | ...
+            const headers = ['Código'];
+            periodosValidos.forEach(periodo => {
+                const periodoNome = periodo.periodo.replace(/[\\\/\?\*\[\]:]/g, '_').substring(0, 10);
+                headers.push(`${periodoNome}_Calc`);
+                headers.push(`${periodoNome}_SPED`);
+            });
+            
+            headers.forEach((header, col) => {
+                const cell = sheet.cell(1, col + 1);
+                cell.value(header);
+                cell.style('bold', true);
+                cell.style('fill', '366092');
+                cell.style('fontColor', 'ffffff');
+            });
+            
+            // Dados: uma linha por código E115
+            codigosArray.forEach((codigo, rowIndex) => {
+                const row = rowIndex + 2;
+                sheet.cell(row, 1).value(codigo);
+                
+                let colIndex = 2;
+                periodosValidos.forEach(periodo => {
+                    // Extrair E115 do SPED deste período
+                    const registrosE115Sped = periodo.registrosCompletos ? 
+                        extractE115FromSped(periodo.registrosCompletos) : [];
+                    
+                    // Valor calculado
+                    const regCalculado = periodo.registroE115.find(r => r.codigo === codigo);
+                    const valorCalculado = regCalculado ? regCalculado.valor : 0;
+                    sheet.cell(row, colIndex).value(valorCalculado);
+                    
+                    // Valor SPED
+                    const regSped = registrosE115Sped.find(r => r.codigo === codigo);
+                    const valorSped = regSped ? regSped.valor : 0;
+                    sheet.cell(row, colIndex + 1).value(valorSped);
+                    
+                    // Colorir célula se divergente
+                    const diferenca = Math.abs(valorCalculado - valorSped);
+                    if (diferenca >= 0.01) {
+                        if (valorSped === 0) {
+                            // Sem dados SPED - azul claro
+                            sheet.cell(row, colIndex).style('fill', 'e6f3ff');
+                            sheet.cell(row, colIndex + 1).style('fill', 'e6f3ff');
+                        } else {
+                            // Divergente - vermelho
+                            sheet.cell(row, colIndex).style('fill', 'ffcccc');
+                            sheet.cell(row, colIndex + 1).style('fill', 'ffcccc');
+                        }
+                    } else if (valorCalculado > 0 || valorSped > 0) {
+                        // Concordante - verde
+                        sheet.cell(row, colIndex).style('fill', 'ccffcc');
+                        sheet.cell(row, colIndex + 1).style('fill', 'ccffcc');
+                    }
+                    
+                    colIndex += 2;
+                });
+            });
+            
+            // Autofit colunas
+            for (let col = 1; col <= headers.length; col++) {
+                sheet.column(col).width(col === 1 ? 15 : 12);
+            }
+            
+            // Adicionar resumo na parte inferior
+            const resumoRow = codigosArray.length + 4;
+            sheet.cell(resumoRow, 1).value('RESUMO:');
+            sheet.cell(resumoRow, 1).style('bold', true);
+            sheet.cell(resumoRow + 1, 1).value(`Total de códigos E115: ${codigosArray.length}`);
+            sheet.cell(resumoRow + 2, 1).value(`Períodos processados: ${periodosValidos.length}`);
+            
+            // Calcular estatísticas gerais
+            let totalComparacoes = 0;
+            let totalConcordantes = 0;
+            let totalDivergentes = 0;
+            let totalSemSped = 0;
+            
+            periodosValidos.forEach(periodo => {
+                const registrosE115Sped = periodo.registrosCompletos ? 
+                    extractE115FromSped(periodo.registrosCompletos) : [];
+                
+                codigosArray.forEach(codigo => {
+                    const regCalculado = periodo.registroE115.find(r => r.codigo === codigo);
+                    const regSped = registrosE115Sped.find(r => r.codigo === codigo);
+                    
+                    if (regCalculado && regCalculado.valor > 0) {
+                        totalComparacoes++;
+                        const valorCalculado = regCalculado.valor;
+                        const valorSped = regSped ? regSped.valor : 0;
+                        const diferenca = Math.abs(valorCalculado - valorSped);
+                        
+                        if (valorSped === 0) {
+                            totalSemSped++;
+                        } else if (diferenca < 0.01) {
+                            totalConcordantes++;
+                        } else {
+                            totalDivergentes++;
+                        }
+                    }
+                });
+            });
+            
+            sheet.cell(resumoRow + 3, 1).value(`Concordantes: ${totalConcordantes}`);
+            sheet.cell(resumoRow + 4, 1).value(`Divergentes: ${totalDivergentes}`);
+            sheet.cell(resumoRow + 5, 1).value(`Sem dados SPED: ${totalSemSped}`);
+            
+            const fileName = `Confronto_E115_MultiplosPeriodos_${new Date().toISOString().slice(0,10)}.xlsx`;
+            const blob = await workbook.outputAsync();
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = fileName;
+            link.click();
+            
+            addLog(`Confronto E115 múltiplos períodos exportado: ${periodosValidos.length} períodos, ${codigosArray.length} códigos`, 'success');
+            
+        } catch (error) {
+            addLog(`Erro ao gerar confronto E115 múltiplos períodos: ${error.message}`, 'error');
         }
     }
 
@@ -4933,6 +5470,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 saldoCredorCarryOver, 
                 configPeriodo
             );
+            
+            // CLAUDE-FISCAL: Gerar E115 para cada período
+            const programType = document.getElementById('programType').value;
+            periodo.registroE115 = generateRegistroE115({ calculatedValues: periodo.calculatedValues }, programType);
             
             // Criar relatório de validação para o período
             if (periodo.calculatedValues.spedValidationData) {

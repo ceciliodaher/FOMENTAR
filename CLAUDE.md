@@ -44,6 +44,11 @@ Este é um sistema web completo para conversão de arquivos SPED e apuração de
   - CDN: `https://cdn.jsdelivr.net/npm/xlsx-populate/browser/xlsx-populate.min.js`
   - Já incluída no HTML principal
 
+#### Novos Botões FOMENTAR (2025-07-30)
+
+- **📋 Gerar Registro E115**: Exporta arquivo .txt no formato SPED com 54 códigos
+- **🔍 Confronto E115 vs SPED**: Planilha Excel comparativa calculado vs declarado
+
 ### Arquitetura do Sistema
 
 #### Funcionalidades Principais
@@ -65,6 +70,9 @@ Este é um sistema web completo para conversão de arquivos SPED e apuração de
    - Correção automática de códigos E111 inconsistentes
    - Correção de códigos C197/D197 (débitos adicionais)
    - Sistema de memória de cálculo com auditoria completa
+   - **NOVO**: Geração automática do registro E115 com 54 códigos oficiais
+   - **NOVO**: Confronto E115 calculado vs SPED declarado
+   - **NOVO**: Exportação arquivo .txt SPED + planilha Excel comparativa
 
 3. **Apuração ProGoiás** (Aba 3)
    
@@ -79,9 +87,11 @@ Este é um sistema web completo para conversão de arquivos SPED e apuração de
 1. **Importação SPED**: `processSpedFile()` → `lerArquivoSpedCompleto()`
 2. **Classificação**: `classifyOperations()` usando CFOPs da IN 885 e registros consolidados
 3. **Cálculo FOMENTAR**: `calculateFomentar()` com base nos quadros normativos
-4. **Cálculo ProGoiás**: `calculateProgoias()` conforme Decreto 9.724/2020
-5. **Correção E111**: Interface de correção manual para códigos inconsistentes
-6. **Exportação**: Geração de Excel, memória de cálculo ou impressão
+4. **Geração E115**: `generateRegistroE115()` automática após cálculo FOMENTAR
+5. **Extração E115**: `extractE115FromSped()` para confronto com SPED existente
+6. **Cálculo ProGoiás**: `calculateProgoias()` conforme Decreto 9.724/2020
+7. **Correção E111**: Interface de correção manual para códigos inconsistentes
+8. **Exportação**: Geração de Excel, memória de cálculo, E115 SPED ou confronto
 
 #### Constantes Importantes
 
@@ -102,7 +112,7 @@ Este é um sistema web completo para conversão de arquivos SPED e apuração de
 
 - **E100/E110**: Apuração do ICMS
 - **E111**: Outros créditos e débitos (processamento detalhado)
-- **E115**: Demonstrativo ProGoiás (geração automática)
+- **E115**: Demonstrativo FOMENTAR/ProGoiás (geração automática)
 
 #### Registros de Controle
 
@@ -505,6 +515,37 @@ O código utiliza marcadores específicos para orientar o Claude:
 
 ### Funções JavaScript Principais (2025-07-30)
 
+#### Sistema de Geração E115 (NOVO)
+```javascript
+// CLAUDE-FISCAL: Geração automática após cálculo FOMENTAR
+function generateRegistroE115(dadosCalculo, programType = 'FOMENTAR') {
+    // Gera 54 códigos GO200001-GO200054 conforme Tabela 5.2 EFD Goiás
+    // Mapeia valores calculados para códigos oficiais
+    // Retorna array pronto para exportação SPED
+}
+
+// Extração E115 do SPED para confronto
+function extractE115FromSped(registrosCompletos) {
+    // Processa registros E115 existentes no SPED
+    // Formato: ['', 'E115', 'COD_INF_ADIC', 'VL_INF_ADIC', 'DESCR_COMPL_AJ', '']
+    // Retorna array estruturado para comparação
+}
+
+// Confronto inteligente calculado vs SPED
+function confrontarE115(registrosCalculados, registrosSped) {
+    // Compara código por código (ignora diferenças de descrição)
+    // Status: OK, DIVERGENTE, ADICIONAL_SPED, SEM_SPED
+    // Retorna array com análise completa
+}
+
+// Exportação E115 múltiplos períodos (estrutura tabular)
+async function exportConfrontoE115MultiplosPeriodos() {
+    // Estrutura: Código | Período1_Calc | Período1_SPED | Período2_Calc | ...
+    // Cores visuais por status de confronto
+    // Resumo estatístico automatizado
+}
+```
+
 #### Sistema de Correção Avançado - E111
 ```javascript
 // Gerenciamento de códigos específicos por período
@@ -628,7 +669,19 @@ periodoCodigoDiv.style.display = checked ? 'block' : 'none';
 - [x] **Compatibilidade total** com sistemas existentes
 - [x] **Máxima flexibilidade** para cenários fiscais complexos
 
-**Status Atual**: Sistema completo com correção avançada de códigos fiscais (100% funcional)
+#### Fase 9: Geração e Confronto Registro E115 (Concluída - 2025-07-30)
+- [x] **Geração automática** do registro E115 conforme Tabela 5.2 EFD Goiás
+- [x] **54 códigos oficiais** GO200001-GO200054 (vigentes desde 01/01/2023)
+- [x] **Mapeamento completo** dos valores FOMENTAR para códigos E115
+- [x] **Extração E115 do SPED** existente para confronto
+- [x] **Confronto inteligente** calculado vs declarado (foco em código e valor)
+- [x] **Exportação dupla**: arquivo .txt SPED + planilha Excel comparativa
+- [x] **Suporte período único** e múltiplos períodos
+- [x] **Interface tabular** para múltiplos períodos (códigos em linhas, períodos em colunas)
+- [x] **Cores visuais**: concordante/divergente/sem SPED/adicional
+- [x] **Conformidade SECON** (FAQ 20801) implementada
+
+**Status Atual**: Sistema completo com geração e confronto E115 (100% funcional)
 
 ### Contexto Importante
 
@@ -683,6 +736,12 @@ Ao modificar o sistema:
 - [ ] Melhorias na UX de navegação entre períodos
 
 ### Funcionalidades Recentes (2025-07-30)
+- ✅ **Sistema de Geração E115**: 54 códigos oficiais GO200001-GO200054 implementados
+- ✅ **Confronto E115 vs SPED**: Comparação inteligente código/valor (ignora descrições)
+- ✅ **Exportação Dupla**: Arquivo .txt SPED + planilha Excel comparativa
+- ✅ **Múltiplos Períodos E115**: Estrutura tabular (códigos×períodos) funcional
+- ✅ **Interface E115**: 2 novos botões na aba FOMENTAR
+- ✅ **Conformidade SECON**: FAQ 20801 totalmente implementada
 - ✅ **Sistema de Correção Avançado**: Códigos específicos por período implementado
 - ✅ **Interface Expansível**: Barra de rolagem e campos dinâmicos funcionando
 - ✅ **Compatibilidade Total**: E111, C197 e D197 com mesma funcionalidade
@@ -693,7 +752,30 @@ Ao modificar o sistema:
 - **Registros Consolidados**: Não reverter para C100/C170 sem justificativa técnica
 - **Percentuais**: FOMENTAR = 70%, não 73%
 - **ProGoiás**: Fórmula exata conforme Decreto 9.724/2020
-- **NOVO - Correções Específicas**: Verificar se códigos específicos por período estão sendo aplicados corretamente
+- **NOVO - Registro E115**: Geração automática após cada cálculo FOMENTAR
+- **NOVO - Confronto E115**: Foco em código/valor, ignora diferenças de descrição
+- **NOVO - Múltiplos Períodos E115**: Estrutura tabular evita problemas de nome de aba
+- **Correções Específicas**: Verificar se códigos específicos por período estão sendo aplicados corretamente
+
+### Como Usar o Sistema E115 (NOVO)
+
+#### Período Único:
+1. **Importe o SPED** na aba FOMENTAR
+2. **Execute o cálculo** (E115 gerado automaticamente)
+3. **Clique "Gerar Registro E115"** → Arquivo .txt para importar no ERP
+4. **Clique "Confronto E115 vs SPED"** → Planilha Excel comparativa
+
+#### Múltiplos Períodos:
+1. **Selecione "Múltiplos Períodos"** e importe vários SPEDs
+2. **Execute o processamento** (E115 gerado para cada período)
+3. **Clique "Gerar Registro E115"** → Arquivo .txt consolidado
+4. **Clique "Confronto E115 vs SPED"** → Planilha tabular (códigos×períodos)
+
+#### Status de Cores na Planilha:
+- 🟢 **Verde**: Valores concordantes (diferença < R$ 0,01)
+- 🔴 **Vermelho**: Valores divergentes
+- 🔵 **Azul claro**: Sem dados no SPED (apenas calculado)
+- 🟡 **Amarelo**: Códigos adicionais no SPED
 
 ### Como Usar o Sistema de Correção Avançado
 
