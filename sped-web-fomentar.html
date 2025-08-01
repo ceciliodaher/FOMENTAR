@@ -39,6 +39,7 @@
             <button id="tabConverter" class="tab-button active">Conversor SPED</button>
             <button id="tabFomentar" class="tab-button">Apuração FOMENTAR</button>
             <button id="tabProgoias" class="tab-button">Apuração ProGoiás</button>
+            <button id="tabLogproduzir" class="tab-button">Apuração LogPRODUZIR</button>
         </div>
 
         <main class="main-content">
@@ -770,6 +771,384 @@
                         </button>
                         <button id="printProgoias" class="btn-style btn-secondary">
                             <span class="btn-icon">🖨️</span> Imprimir
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Painel LogPRODUZIR -->
+            <div id="logproduzirPanel" class="converter-panel tab-content">
+                <div class="fomentar-header">
+                    <h2>🚛 Apuração LogPRODUZIR</h2>
+                    <p class="fomentar-subtitle">Conforme Lei nº 14.244/2002 e Decreto nº 5.835/2003</p>
+                </div>
+
+                <div class="instrucoes-uso">
+                    <h3>📋 Instruções de Uso</h3>
+                    <div class="instrucoes-content">
+                        <p><strong>1. Importação do SPED:</strong> Clique em "Importar SPED" para carregar os dados de transporte (D190/D590).</p>
+                        <p><strong>2. Configurações:</strong> Defina a categoria da empresa e tipo de média (período anterior ou histórica).</p>
+                        <p><strong>3. Verificação:</strong> <em>Revise os cálculos de proporcionalidade e crédito outorgado</em> conforme legislação.</p>
+                        <p><strong>4. Exportação:</strong> Gere o demonstrativo em Excel com memória de cálculo detalhada.</p>
+                    </div>
+                </div>
+
+                <!-- Importação SPED -->
+                <div class="fomentar-import-section">
+                    <div class="import-mode-selector">
+                        <label>
+                            <input type="radio" name="importModeLogproduzir" value="single" checked>
+                            <span>Período Único</span>
+                        </label>
+                        <label>
+                            <input type="radio" name="importModeLogproduzir" value="multiple">
+                            <span>Múltiplos Períodos</span>
+                        </label>
+                    </div>
+                    
+                    <div id="singleImportSectionLogproduzir" class="import-section">
+                        <div id="logproduzirDropZone" class="drop-zone">
+                            <span class="drop-zone-icon">📁</span>
+                            <p class="drop-zone-text">Arraste e solte o arquivo SPED aqui</p>
+                            <p class="drop-zone-or">- ou -</p>
+                            <button id="importSpedLogproduzir" class="btn-style btn-import">
+                                <span class="btn-icon">📂</span> Importar SPED para LogPRODUZIR
+                            </button>
+                        </div>
+                        <p id="logproduzirSpedStatus">Nenhum arquivo SPED importado</p>
+                    </div>
+                    
+                    <div id="multipleImportSectionLogproduzir" class="import-section" style="display: none;">
+                        <div id="multipleDropZoneLogproduzir" class="multiple-import-zone">
+                            <span class="drop-zone-icon">📁</span>
+                            <p>Arraste e solte múltiplos arquivos SPED aqui</p>
+                            <p class="drop-zone-or">- ou -</p>
+                            <input type="file" id="multipleSpedFilesLogproduzir" multiple accept=".txt" style="display: none;">
+                            <button id="selectMultipleSpedsLogproduzir" class="btn-style btn-import">
+                                <span class="btn-icon">📂</span> Selecionar Múltiplos SPEDs
+                            </button>
+                            <div id="multipleSpedListLogproduzir" class="selected-files-list"></div>
+                        </div>
+
+                        <div class="multiple-controls">
+                            <button id="processMultipleLogproduzir" class="btn-style btn-process" style="display: none;">
+                                <span class="btn-icon">⚡</span> Processar Múltiplos Períodos
+                            </button>
+                            <button id="clearMultipleLogproduzir" class="btn-style btn-secondary" style="display: none;">
+                                <span class="btn-icon">🗑️</span> Limpar Lista
+                            </button>
+                        </div>
+
+                        <div id="multipleProgressLogproduzir" class="multiple-progress" style="display: none;">
+                            <div class="progress-info">
+                                <span id="multipleStatusLogproduzir">Processando...</span>
+                                <span id="multipleCounterLogproduzir">0/0</span>
+                            </div>
+                            <div class="progress-bar-container-style">
+                                <div id="multipleProgressBarLogproduzir" class="progress-bar-style" style="width: 0%;">0%</div>
+                            </div>
+                        </div>
+
+                        <div id="multiplePeriodNavLogproduzir" class="period-navigation" style="display: none;">
+                            <div class="period-selector">
+                                <label>Período Selecionado:</label>
+                                <select id="periodSelectorLogproduzir" class="select-style"></select>
+                            </div>
+                            <div class="period-summary">
+                                <span id="periodSummaryLogproduzir">0 períodos processados</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Configuração Simplificada -->
+                <div class="config-section logproduzir-config">
+                    <h3>⚙️ Configurações LogPRODUZIR</h3>
+                    
+                    <!-- Dados da Empresa (extraídos do SPED) -->
+                    <div class="empresa-info-display">
+                        <h4>🏢 Dados da Empresa (extraídos do SPED)</h4>
+                        <div class="empresa-data">
+                            <div class="data-item">
+                                <label>Razão Social:</label>
+                                <span id="logproduzirRazaoSocialDisplay">Aguardando importação do SPED...</span>
+                            </div>
+                            <div class="data-item">
+                                <label>CNPJ:</label>
+                                <span id="logproduzirCnpjDisplay">Aguardando importação do SPED...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Categoria da Empresa -->
+                    <div class="categoria-empresa">
+                        <h4>📊 Categoria da Empresa (Lei 14.244/2002)</h4>
+                        <div class="categoria-options">
+                            <label class="categoria-item">
+                                <input type="radio" name="logproduzirCategoria" value="I">
+                                <div class="categoria-info">
+                                    <strong>Categoria I - até 50%</strong>
+                                    <p>Logística + Agenciamento + Armazenamento</p>
+                                </div>
+                            </label>
+                            
+                            <label class="categoria-item">
+                                <input type="radio" name="logproduzirCategoria" value="II" checked>
+                                <div class="categoria-info">
+                                    <strong>Categoria II - até 73%</strong>
+                                    <p>Categoria I + Transporte Rodoviário/Aéreo</p>
+                                </div>
+                            </label>
+                            
+                            <label class="categoria-item">
+                                <input type="radio" name="logproduzirCategoria" value="III">
+                                <div class="categoria-info">
+                                    <strong>Categoria III - até 80%</strong>
+                                    <p>Categoria II + ICMS > R$ 900.000,00/mês</p>
+                                </div>
+                            </label>
+                        </div>
+                        
+                        <div class="input-group" id="icmsValidationGroup" style="display: none;">
+                            <label for="logproduzirIcmsMensal">ICMS Mensal (R$):</label>
+                            <input type="text" id="logproduzirIcmsMensal" class="input-style" placeholder="0,00" readonly>
+                            <small>Valor extraído do registro E100 do SPED</small>
+                        </div>
+                    </div>
+
+                    <!-- Tipo de Média -->
+                    <div class="media-config">
+                        <h4>📈 Configuração da Média</h4>
+                        <p class="media-description">
+                            O LogPRODUZIR oferece crédito sobre o ICMS que exceder a média histórica. 
+                            Escolha o tipo de média para comparação:
+                        </p>
+                        
+                        <div class="media-options">
+                            <label class="media-option">
+                                <input type="radio" name="logproduzirTipoMedia" value="sem_media">
+                                <div class="media-info">
+                                    <strong>Sem Média</strong>
+                                    <p>Usar todo o ICMS mensal como base (sem comparação com períodos anteriores)</p>
+                                </div>
+                            </label>
+                            
+                            <label class="media-option">
+                                <input type="radio" name="logproduzirTipoMedia" value="anterior" checked>
+                                <div class="media-info">
+                                    <strong>Média do Período Anterior</strong>
+                                    <p>Comparar com ICMS do período anterior (corrigido pelo IGP-DI se necessário)</p>
+                                </div>
+                            </label>
+                            
+                            <label class="media-option">
+                                <input type="radio" name="logproduzirTipoMedia" value="historica">
+                                <div class="media-info">
+                                    <strong>Média Histórica</strong>
+                                    <p>Comparar com média dos 12 meses anteriores (requer configuração IGP-DI)</p>
+                                </div>
+                            </label>
+                        </div>
+                        
+                        <!-- Campo para digitar média do período anterior -->
+                        <div id="mediaPeriodoAnteriorSection" class="input-section" style="display: block;">
+                            <h5>💰 Valor da Média do Período Anterior</h5>
+                            <div class="input-group">
+                                <label for="logproduzirMediaPeriodoAnterior">ICMS do Período Anterior (R$):</label>
+                                <input type="number" id="logproduzirMediaPeriodoAnterior" class="input-style" 
+                                       step="0.01" min="0" placeholder="0,00">
+                                <small>Digite o valor do ICMS devido no período anterior ao da apuração</small>
+                            </div>
+                        </div>
+                        
+                        <!-- Data de entrada do projeto -->
+                        <div class="input-group">
+                            <label for="logproduzirDataProjeto">Data de Entrada do Projeto:</label>
+                            <input type="month" id="logproduzirDataProjeto" class="input-style">
+                            <small>Mês/ano do início da fruição do incentivo LogPRODUZIR</small>
+                        </div>
+                    </div>
+
+                    <!-- Configuração IGP-DI (apenas quando necessário) -->
+                    <div id="igpdiConfigSection" class="igpdi-config" style="display: none;">
+                        <h4>📊 Correção Monetária - IGP-DI</h4>
+                        <div class="igpdi-alert">
+                            <p><strong>⚠️ Configuração Obrigatória:</strong></p>
+                            <p>Para média histórica, é necessário corrigir monetariamente os valores pelos índices IGP-DI.</p>
+                            <p><strong>Período de referência:</strong> Use o IGP-DI do segundo mês anterior à apuração.</p>
+                        </div>
+                        
+                        <div class="igpdi-input-group">
+                            <div class="input-group">
+                                <label for="igpdiValorPeriodo">IGP-DI de Correção:</label>
+                                <input type="number" id="igpdiValorPeriodo" class="input-style" 
+                                       step="0.00001" min="0" placeholder="1,00000">
+                                <small>
+                                    <strong>Exemplo:</strong> Para apuração de Março/2024, usar IGP-DI de Janeiro/2024<br>
+                                    <strong>Formato:</strong> Use ponto decimal (ex: 1.05432 para variação de 5,432%)
+                                </small>
+                            </div>
+                            
+                            <div class="igpdi-help">
+                                <p><strong>Como calcular:</strong></p>
+                                <ol>
+                                    <li>Consulte o IGP-DI no site da FGV ou Banco Central</li>
+                                    <li>Use o índice do segundo mês anterior à competência</li>
+                                    <li>Se não houver correção, deixe 1,00000</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Botão de Processamento -->
+                    <div class="logproduzir-process-section">
+                        <button id="processLogproduzirBtn" class="btn-style btn-process" style="display: none;">
+                            <span class="btn-icon">⚡</span> Processar Apuração LogPRODUZIR
+                        </button>
+                        <div id="logproduzirProcessStatus" class="process-status"></div>
+                    </div>
+                </div>
+
+
+                <!-- Resultados da Apuração -->
+                <div id="logproduzirResults" class="fomentar-results" style="display: none;">
+                    <h3>📊 Resultados da Apuração LogPRODUZIR</h3>
+                    
+                    <!-- Resumo da Empresa -->
+                    <div class="result-section empresa-summary">
+                        <h4>🏢 Dados da Empresa</h4>
+                        <div class="summary-grid">
+                            <div class="summary-item">
+                                <label>Categoria:</label>
+                                <span id="resultCategoria">-</span>
+                            </div>
+                            <div class="summary-item">
+                                <label>Percentual Máximo:</label>
+                                <span id="resultPercentualMax">-</span>
+                            </div>
+                            <div class="summary-item">
+                                <label>ICMS Mensal:</label>
+                                <span id="resultIcmsMensal">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Proporcionalidade -->
+                    <div class="result-section proporcionalidade">
+                        <h4>⚖️ Proporcionalidade de Fretes</h4>
+                        <div class="summary-grid">
+                            <div class="summary-item">
+                                <label>Fretes Interestaduais:</label>
+                                <span id="resultFretesInterestaduais">R$ 0,00</span>
+                            </div>
+                            <div class="summary-item">
+                                <label>Fretes Estaduais:</label>
+                                <span id="resultFretesEstaduais">R$ 0,00</span>
+                            </div>
+                            <div class="summary-item">
+                                <label>Fretes Totais:</label>
+                                <span id="resultFretesTotais">R$ 0,00</span>
+                            </div>
+                            <div class="summary-item">
+                                <label>Proporção:</label>
+                                <span id="resultProporcao">0,0%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cálculo do Crédito -->
+                    <div class="result-section credito-calculo">
+                        <h4>💰 Cálculo do Crédito Outorgado</h4>
+                        <div class="summary-grid">
+                            <div class="summary-item">
+                                <label>ICMS Base (12%):</label>
+                                <span id="resultIcmsBase">R$ 0,00</span>
+                            </div>
+                            <div class="summary-item">
+                                <label>Saldo Corrigido (IGP-DI):</label>
+                                <span id="resultSaldoCorrigido">R$ 0,00</span>
+                            </div>
+                            <div class="summary-item">
+                                <label>Média Histórica:</label>
+                                <span id="resultMediaHistorica">R$ 0,00</span>
+                            </div>
+                            <div class="summary-item">
+                                <label>Excesso sobre Média:</label>
+                                <span id="resultExcesso">R$ 0,00</span>
+                            </div>
+                            <div class="summary-item highlight">
+                                <label>Crédito Outorgado:</label>
+                                <span id="resultCreditoOutorgado">R$ 0,00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contribuições Obrigatórias -->
+                    <div class="result-section contribuicoes">
+                        <h4>📋 Contribuições Obrigatórias</h4>
+                        <div class="summary-grid">
+                            <div class="summary-item">
+                                <label>Bolsa Universitária (2%):</label>
+                                <span id="resultBolsaUniversitaria">R$ 0,00</span>
+                            </div>
+                            <div class="summary-item">
+                                <label>FUNPRODUZIR (3%):</label>
+                                <span id="resultFunproduzir">R$ 0,00</span>
+                            </div>
+                            <div class="summary-item">
+                                <label>PROTEGE GOIÁS (15%):</label>
+                                <span id="resultProtegeGoias">R$ 0,00</span>
+                            </div>
+                            <div class="summary-item highlight">
+                                <label>Total Contribuições:</label>
+                                <span id="resultTotalContribuicoes">R$ 0,00</span>
+                            </div>
+                            <div class="summary-item highlight">
+                                <label>Crédito Líquido:</label>
+                                <span id="resultCreditoLiquido">R$ 0,00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Resumo Final -->
+                    <div class="result-section resumo-final">
+                        <h4>🎯 Resumo Final</h4>
+                        <div class="final-summary">
+                            <div class="final-item">
+                                <label>ICMS Original:</label>
+                                <span id="resultIcmsOriginal">R$ 0,00</span>
+                            </div>
+                            <div class="final-item">
+                                <label>Crédito LogPRODUZIR:</label>
+                                <span id="resultCreditoFinal">R$ 0,00</span>
+                            </div>
+                            <div class="final-item highlight">
+                                <label>ICMS a Pagar:</label>
+                                <span id="resultIcmsAPagar">R$ 0,00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botões de Ação -->
+                <div id="logproduzirActions" class="fomentar-actions" style="display: none;">
+                    <div class="action-group">
+                        <button id="exportLogproduzir" class="btn-style btn-export">
+                            <span class="btn-icon">📊</span> Exportar Excel
+                        </button>
+                        <button id="exportLogproduzirMemoria" class="btn-style btn-export">
+                            <span class="btn-icon">📄</span> Memória de Cálculo
+                        </button>
+                        <button id="exportLogproduzirE115" class="btn-style btn-export">
+                            <span class="btn-icon">📋</span> Gerar E115
+                        </button>
+                    </div>
+                    <div class="action-group">
+                        <button id="printLogproduzir" class="btn-style btn-secondary">
+                            <span class="btn-icon">🖨️</span> Imprimir
+                        </button>
+                        <button id="exportLogproduzirCSV" class="btn-style btn-secondary">
+                            <span class="btn-icon">💾</span> Exportar IGP-DI
                         </button>
                     </div>
                 </div>

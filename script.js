@@ -1,4 +1,6 @@
-// script.js
+// script.js - Sistema FOMENTAR/ProGoiás/LogPRODUZIR Consolidado
+// ÚLTIMA ATUALIZAÇÃO: 2025-08-01 - LogPRODUZIR integrado ao script principal
+// IMPORTANTE: Este é o arquivo principal único. O script-modular.js foi descontinuado.
 document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements ---
     const spedFileButtonLabel = document.querySelector('label[for="spedFile"]');
@@ -63,6 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('tabConverter').addEventListener('click', () => switchTab('converter'));
     document.getElementById('tabFomentar').addEventListener('click', () => switchTab('fomentar'));
     document.getElementById('tabProgoias').addEventListener('click', () => switchTab('progoias'));
+    document.getElementById('tabLogproduzir').addEventListener('click', () => switchTab('logproduzir'));
 
     // FOMENTAR listeners
     document.getElementById('importSpedFomentar').addEventListener('click', importSpedForFomentar);
@@ -1508,6 +1511,8 @@ document.addEventListener('DOMContentLoaded', () => {
         addLog("Log inicializado. Aguardando ação...", "info");
     }
 
+    // LogPRODUZIR será inicializado no final do script
+
 
     // --- FOMENTAR Constants ---
     // CFOPs para classificação de operações incentivadas (baseado na IN 885/07-GSF)
@@ -1665,6 +1670,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (tab === 'progoias') {
             document.getElementById('tabProgoias').classList.add('active');
             document.getElementById('progoiasPanel').classList.add('active');
+        } else if (tab === 'logproduzir') {
+            document.getElementById('tabLogproduzir').classList.add('active');
+            document.getElementById('logproduzirPanel').classList.add('active');
         }
     }
 
@@ -10754,6 +10762,631 @@ document.addEventListener('DOMContentLoaded', () => {
     // updateStatus("Aguardando arquivo SPED..."); // Initial status is now set by clearLogs
     excelFileNameInput.placeholder = "NomeDoArquivoModerno.xlsx"; // From new HTML
     clearLogs(); // Initialize log area and set initial status message via addLog
+
+    // ========================================
+    // LOGPRODUZIR SYSTEM - Funcionalidades Essenciais
+    // ========================================
+    
+    // Sistema LogPRODUZIR integrado
+    const LogproduzirSystem = {
+        // Classificar operações de transporte (D190/D590)
+        classifyOperations(registros) {
+            try {
+                addLog('Iniciando classificação LogPRODUZIR...', 'info');
+                
+                const operations = {
+                    interestaduais: [], // CFOPs 6351, 6352, 6353 (geram incentivo)
+                    estaduais: [],      // CFOPs 5351, 5352, 5353 (para proporcionalidade)
+                    totals: {
+                        freteInterestadual: 0,
+                        freteEstadual: 0,
+                        freteTotal: 0,
+                        proporcionalidade: 0
+                    }
+                };
+                
+                // Processar registros D190 e D590 (transporte)
+                const registrosTransporte = registros.filter(reg => 
+                    reg.length > 2 && (reg[1] === 'D190' || reg[1] === 'D590')
+                );
+                
+                registrosTransporte.forEach(registro => {
+                    const cfop = registro[4]; // CFOP na posição 4
+                    const valorContabil = parseFloat(registro[7]) || 0; // VL_DOC na posição 7
+                    
+                    if (this.isInterstateTransport(cfop)) {
+                        operations.interestaduais.push({
+                            cfop,
+                            valor: valorContabil,
+                            registro: registro[1]
+                        });
+                        operations.totals.freteInterestadual += valorContabil;
+                    } else if (this.isStateTransport(cfop)) {
+                        operations.estaduais.push({
+                            cfop,
+                            valor: valorContabil,
+                            registro: registro[1]
+                        });
+                        operations.totals.freteEstadual += valorContabil;
+                    }
+                });
+                
+                // Calcular totais e proporcionalidade
+                operations.totals.freteTotal = operations.totals.freteInterestadual + operations.totals.freteEstadual;
+                operations.totals.proporcionalidade = operations.totals.freteTotal > 0 ? 
+                    (operations.totals.freteInterestadual / operations.totals.freteTotal) : 0;
+                
+                addLog(`LogPRODUZIR: Inter=${formatCurrency(operations.totals.freteInterestadual)}, ` +
+                       `Estadual=${formatCurrency(operations.totals.freteEstadual)}, ` +
+                       `Proporção=${(operations.totals.proporcionalidade * 100).toFixed(2)}%`, 'success');
+                
+                return operations;
+                
+            } catch (error) {
+                addLog(`Erro na classificação LogPRODUZIR: ${error.message}`, 'error');
+                throw error;
+            }
+        },
+        
+        // Verificar se é transporte interestadual (gera incentivo)
+        isInterstateTransport(cfop) {
+            return ['6351', '6352', '6353'].includes(cfop);
+        },
+        
+        // Verificar se é transporte estadual (para proporcionalidade)
+        isStateTransport(cfop) {
+            return ['5351', '5352', '5353'].includes(cfop);
+        },
+        
+        // Extrair dados da empresa do SPED (registro 0000)
+        extractCompanyData(registros) {
+            const registro0000 = registros.find(reg => reg.length > 2 && reg[1] === '0000');
+            
+            if (!registro0000) {
+                throw new Error('Registro 0000 não encontrado no SPED');
+            }
+            
+            return {
+                razaoSocial: registro0000[4] || 'Nome não encontrado', // NOME na posição 4
+                cnpj: registro0000[3] || 'CNPJ não encontrado',        // CNPJ na posição 3
+                ie: registro0000[5] || '',                             // IE na posição 5
+                uf: registro0000[6] || ''                              // UF na posição 6
+            };
+        },
+        
+        // Extrair ICMS mensal do SPED (registro E100)
+        extractMonthlyICMS(registros) {
+            const registroE100 = registros.find(reg => reg.length > 2 && reg[1] === 'E100');
+            
+            if (!registroE100) {
+                addLog('Registro E100 não encontrado - Tentando registros consolidados...', 'warning');
+                
+                // Fallback: somar ICMS dos registros consolidados
+                let icmsTotal = 0;
+                const registrosConsolidados = registros.filter(reg => 
+                    reg.length > 2 && (reg[1] === 'C190' || reg[1] === 'D190')
+                );
+                
+                registrosConsolidados.forEach(reg => {
+                    if (reg[1] === 'C190') {
+                        // VL_ICMS = posição 8
+                        const vlIcms = parseFloat(reg[8]) || 0;
+                        icmsTotal += vlIcms;
+                    } else if (reg[1] === 'D190') {
+                        // VL_ICMS = posição 8  
+                        const vlIcms = parseFloat(reg[8]) || 0;
+                        icmsTotal += vlIcms;
+                    }
+                });
+                
+                if (icmsTotal > 0) {
+                    addLog(`ICMS extraído dos registros consolidados: R$ ${formatCurrency(icmsTotal)}`, 'info');
+                    return icmsTotal;
+                } else {
+                    addLog('Nenhum valor de ICMS encontrado no SPED', 'error');
+                    return 0;
+                }
+            }
+            
+            // Estrutura E100: |E100|DT_INI|DT_FIN|VL_TOT_DEBITOS|VL_TOT_CREDITOS|VL_AJ_DEBITOS|VL_AJ_CREDITOS|VL_TOT_ICMS_APURADO|VL_TOT_ICMS_DEVID|
+            const vlTotIcmsApurado = parseFloat(registroE100[8]) || 0;
+            const vlTotIcmsDevido = parseFloat(registroE100[9]) || 0;
+            const vlTotDebitos = parseFloat(registroE100[3]) || 0;
+            const vlTotCreditos = parseFloat(registroE100[4]) || 0;
+            
+            // Usar o ICMS apurado/devido se disponível, senão calcular diferença
+            let icmsMensal = vlTotIcmsApurado || vlTotIcmsDevido || Math.max(0, vlTotDebitos - vlTotCreditos);
+            
+            addLog(`ICMS mensal extraído do E100: R$ ${formatCurrency(icmsMensal)}`, 'info');
+            return icmsMensal;
+        },
+        
+        // Calcular média conforme tipo selecionado
+        calculateMedia(registros, config) {
+            const tipoMedia = config.tipoMedia || 'anterior';
+            const icmsMensal = this.extractMonthlyICMS(registros);
+            
+            if (tipoMedia === 'sem_media') {
+                // Sem média: retorna 0 para que todo ICMS seja considerado excesso
+                return 0;
+                
+            } else if (tipoMedia === 'anterior') {
+                // Média do período anterior: usar valor digitado pelo usuário
+                const mediaPeriodoAnterior = parseFloat(config.mediaPeriodoAnterior || '0') || 0;
+                addLog(`Média período anterior: R$ ${formatCurrency(mediaPeriodoAnterior)}`, 'info');
+                return mediaPeriodoAnterior;
+                
+            } else if (tipoMedia === 'historica') {
+                // Média histórica: usar média corrigida pelo IGP-DI
+                const igpdiPeriodo = parseFloat(config.igpdiValorPeriodo || '1') || 1;
+                const mediaHistorica = icmsMensal * igpdiPeriodo;
+                addLog(`Média histórica (IGP-DI ${igpdiPeriodo}): R$ ${formatCurrency(mediaHistorica)}`, 'info');
+                return mediaHistorica;
+            }
+            
+            return 0;
+        },
+        
+        // Calcular crédito outorgado
+        calculateCredito(registros, operations, config) {
+            const icmsBase = this.extractMonthlyICMS(registros);
+            const mediaCorrigida = this.calculateMedia(registros, config);
+            const categoria = config.categoria;
+            
+            // Base do cálculo: apenas excesso sobre a média
+            const excesso = Math.max(0, icmsBase - mediaCorrigida);
+            
+            // Aplicar proporcionalidade de fretes interestaduais
+            const baseIncentivo = excesso * operations.totals.proporcionalidade;
+            
+            // Aplicar percentual da categoria
+            const percentuais = { 'I': 0.50, 'II': 0.73, 'III': 0.80 };
+            const percentualCategoria = percentuais[categoria] || 0.50;
+            
+            const creditoOutorgado = baseIncentivo * percentualCategoria;
+            
+            // Calcular contribuições obrigatórias
+            const contribuicoes = {
+                bolsaUniversitaria: creditoOutorgado * 0.02, // 2%
+                funproduzir: creditoOutorgado * 0.03,        // 3%
+                protegeGoias: creditoOutorgado * 0.15,       // até 15%
+                protefeGoias: creditoOutorgado * 0.15,       // até 15%
+                total: creditoOutorgado * 0.35               // ~35% total
+            };
+            
+            return {
+                icmsBase,
+                mediaCorrigida,
+                excesso,
+                baseIncentivo,
+                percentualCategoria,
+                creditoOutorgado,
+                contribuicoes,
+                icmsFinal: icmsBase - creditoOutorgado + contribuicoes.total
+            };
+        },
+        
+        // Função principal de cálculo
+        calculate(registros, config) {
+            try {
+                addLog('Iniciando cálculo LogPRODUZIR...', 'info');
+                
+                // Classificar operações
+                const operations = this.classifyOperations(registros);
+                
+                // Extrair dados da empresa
+                const companyData = this.extractCompanyData(registros);
+                
+                // Calcular crédito
+                const creditoData = this.calculateCredito(registros, operations, config);
+                
+                const resultado = {
+                    empresa: companyData,
+                    categoria: config.categoria,
+                    percentualMax: { 'I': 50, 'II': 73, 'III': 80 }[config.categoria],
+                    operations,
+                    calculo: creditoData,
+                    config,
+                    processedAt: new Date()
+                };
+                
+                addLog(`LogPRODUZIR calculado: Crédito = ${formatCurrency(creditoData.creditoOutorgado)}`, 'success');
+                
+                return resultado;
+                
+            } catch (error) {
+                addLog(`Erro no cálculo LogPRODUZIR: ${error.message}`, 'error');
+                throw error;
+            }
+        }
+    };
+
+    // Variáveis LogPRODUZIR
+    let logproduzirData = null;
+    let logproduzirResults = null;
+
+    // Função para importar SPED LogPRODUZIR
+    async function importSpedForLogproduzir() {
+        try {
+            addLog('Iniciando importação SPED para LogPRODUZIR...', 'info');
+            
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.txt';
+            
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    await processLogproduzirSpedFile(file);
+                }
+            };
+            
+            input.click();
+        } catch (error) {
+            addLog(`Erro na importação LogPRODUZIR: ${error.message}`, 'error');
+        }
+    }
+
+    // Processar arquivo SPED para LogPRODUZIR
+    async function processLogproduzirSpedFile(file) {
+        try {
+            addLog(`Processando SPED para LogPRODUZIR: ${file.name}`, 'info');
+            
+            // Ler arquivo usando mesma lógica das outras funções
+            const arrayBuffer = await file.arrayBuffer();
+            const { encoding, content } = await detectAndRead(arrayBuffer);
+            addLog(`Encoding detectado: ${encoding}`, 'info');
+            
+            if (!content) {
+                throw new Error('Falha ao ler o conteúdo do arquivo');
+            }
+            
+            // Processar conteúdo SPED
+            const registrosCompletos = lerArquivoSpedCompleto(content);
+            
+            // Converter registros em array para compatibilidade
+            const registrosArray = [];
+            Object.keys(registrosCompletos).forEach(tipo => {
+                registrosCompletos[tipo].forEach(registro => {
+                    registrosArray.push(registro);
+                });
+            });
+            
+            // Extrair dados da empresa automaticamente
+            const companyData = LogproduzirSystem.extractCompanyData(registrosArray);
+            const icmsMensal = LogproduzirSystem.extractMonthlyICMS(registrosArray);
+            
+            // Atualizar interface com dados extraídos
+            const razaoSocialEl = document.getElementById('logproduzirRazaoSocialDisplay');
+            const cnpjEl = document.getElementById('logproduzirCnpjDisplay');
+            const icmsEl = document.getElementById('logproduzirIcmsMensal');
+            
+            if (razaoSocialEl) razaoSocialEl.textContent = companyData.razaoSocial;
+            if (cnpjEl) cnpjEl.textContent = companyData.cnpj;
+            if (icmsEl) icmsEl.value = formatCurrency(icmsMensal);
+            
+            // Mostrar/ocultar validação ICMS para categoria III
+            const icmsValidationGroup = document.getElementById('icmsValidationGroup');
+            if (icmsValidationGroup) {
+                if (icmsMensal > 900000) {
+                    icmsValidationGroup.style.display = 'block';
+                    addLog(`ICMS mensal (${formatCurrency(icmsMensal)}) > R$ 900.000 - Categoria III disponível`, 'info');
+                } else {
+                    icmsValidationGroup.style.display = 'none';
+                }
+            }
+            
+            // Extrair informações do cabeçalho
+            const headerInfo = extrairInformacoesHeader(registrosCompletos);
+            
+            // Atualizar status na interface
+            const statusEl = document.getElementById('logproduzirSpedStatus');
+            if (statusEl) {
+                statusEl.textContent = `Arquivo processado: ${file.name} (${headerInfo.periodo})`;
+            }
+            
+            // Salvar dados
+            logproduzirData = {
+                file: file.name,
+                registros: registrosArray,
+                registrosCompletos: registrosCompletos,
+                headerInfo: headerInfo,
+                companyData: companyData,
+                icmsMensal: icmsMensal,
+                processedAt: new Date()
+            };
+            
+            addLog('SPED LogPRODUZIR importado com sucesso', 'success');
+            
+            // Atualizar status do botão de processamento
+            updateLogproduzirProcessButton();
+            
+        } catch (error) {
+            addLog(`Erro no processamento LogPRODUZIR: ${error.message}`, 'error');
+            throw error;
+        }
+    }
+
+    // Event listeners LogPRODUZIR
+    function setupLogproduzirEventListeners() {
+        // Importação SPED
+        const importBtn = document.getElementById('importSpedLogproduzir');
+        if (importBtn) {
+            importBtn.addEventListener('click', importSpedForLogproduzir);
+        }
+        
+        // Drag and drop
+        const dropZone = document.getElementById('logproduzirDropZone');
+        if (dropZone) {
+            dropZone.addEventListener('dragenter', (e) => {
+                e.preventDefault();
+                e.target.classList.add('dragover');
+            });
+            
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+            });
+            
+            dropZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                if (!e.target.contains(e.relatedTarget)) {
+                    e.target.classList.remove('dragover');
+                }
+            });
+            
+            dropZone.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                e.target.classList.remove('dragover');
+                
+                const files = Array.from(e.dataTransfer.files);
+                const txtFiles = files.filter(file => file.name.toLowerCase().endsWith('.txt'));
+                
+                if (txtFiles.length === 0) {
+                    addLog('Nenhum arquivo SPED (.txt) encontrado', 'error');
+                    return;
+                }
+                
+                if (txtFiles.length > 1) {
+                    addLog('Múltiplos arquivos detectados. Usando apenas o primeiro.', 'warning');
+                }
+                
+                await processLogproduzirSpedFile(txtFiles[0]);
+            });
+        }
+        
+        // Configuração de categoria
+        const categoriaRadios = document.querySelectorAll('input[name="logproduzirCategoria"]');
+        categoriaRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const categoria = e.target.value;
+                addLog(`Categoria selecionada: ${categoria}`, 'info');
+                
+                // Executar cálculo se dados disponíveis
+                if (logproduzirData && isLogproduzirConfigComplete()) {
+                    calculateLogproduzir();
+                }
+                
+                // Atualizar status do botão
+                updateLogproduzirProcessButton();
+            });
+        });
+        
+        // Configuração do tipo de média
+        const tipoMediaRadios = document.querySelectorAll('input[name="logproduzirTipoMedia"]');
+        tipoMediaRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const tipoMedia = e.target.value;
+                const igpdiSection = document.getElementById('igpdiConfigSection');
+                const mediaPeriodoAnteriorSection = document.getElementById('mediaPeriodoAnteriorSection');
+                
+                // Controlar exibição das seções conforme tipo de média
+                if (tipoMedia === 'sem_media') {
+                    // Sem média: ocultar ambas as seções
+                    if (igpdiSection) igpdiSection.style.display = 'none';
+                    if (mediaPeriodoAnteriorSection) mediaPeriodoAnteriorSection.style.display = 'none';
+                    addLog('Sem média selecionada - Usar todo o ICMS mensal como base', 'info');
+                    
+                } else if (tipoMedia === 'anterior') {
+                    // Média período anterior: mostrar seção de input, ocultar IGP-DI
+                    if (igpdiSection) igpdiSection.style.display = 'none';
+                    if (mediaPeriodoAnteriorSection) mediaPeriodoAnteriorSection.style.display = 'block';
+                    addLog('Média do período anterior selecionada - Digite o valor do ICMS anterior', 'info');
+                    
+                } else if (tipoMedia === 'historica') {
+                    // Média histórica: mostrar IGP-DI, ocultar campo de input
+                    if (igpdiSection) igpdiSection.style.display = 'block';
+                    if (mediaPeriodoAnteriorSection) mediaPeriodoAnteriorSection.style.display = 'none';
+                    addLog('Média histórica selecionada - Configure o IGP-DI para correção monetária', 'info');
+                }
+                
+                // Executar cálculo se dados disponíveis
+                if (logproduzirData && isLogproduzirConfigComplete()) {
+                    calculateLogproduzir();
+                }
+                
+                // Atualizar status do botão
+                updateLogproduzirProcessButton();
+            });
+        });
+        
+        // Event listener para campo de média do período anterior
+        const mediaPeriodoAnteriorInput = document.getElementById('logproduzirMediaPeriodoAnterior');
+        if (mediaPeriodoAnteriorInput) {
+            mediaPeriodoAnteriorInput.addEventListener('input', (e) => {
+                const valor = parseFloat(e.target.value) || 0;
+                if (valor >= 0) {
+                    addLog(`Média período anterior atualizada: R$ ${formatCurrency(valor)}`, 'info');
+                    
+                    // Executar cálculo se dados disponíveis
+                    if (logproduzirData && isLogproduzirConfigComplete()) {
+                        calculateLogproduzir();
+                    }
+                }
+            });
+        }
+        
+        // Event listener para IGP-DI
+        const igpdiInput = document.getElementById('igpdiValorPeriodo');
+        if (igpdiInput) {
+            igpdiInput.addEventListener('input', (e) => {
+                const valor = parseFloat(e.target.value) || 1;
+                if (valor > 0) {
+                    addLog(`IGP-DI atualizado: ${valor}`, 'info');
+                    
+                    // Executar cálculo se dados disponíveis
+                    if (logproduzirData && isLogproduzirConfigComplete()) {
+                        calculateLogproduzir();
+                    }
+                }
+            });
+        }
+        
+        // Event listener para botão de processamento manual
+        const processBtn = document.getElementById('processLogproduzirBtn');
+        if (processBtn) {
+            processBtn.addEventListener('click', () => {
+                if (logproduzirData && isLogproduzirConfigComplete()) {
+                    calculateLogproduzir();
+                } else {
+                    addLog('Configure todas as opções antes de processar', 'warning');
+                }
+            });
+        }
+    }
+    
+    // Função para mostrar/ocultar botão de processamento
+    function updateLogproduzirProcessButton() {
+        const processBtn = document.getElementById('processLogproduzirBtn');
+        const statusDiv = document.getElementById('logproduzirProcessStatus');
+        
+        if (processBtn && statusDiv) {
+            if (logproduzirData) {
+                if (isLogproduzirConfigComplete()) {
+                    processBtn.style.display = 'block';
+                    statusDiv.innerHTML = '<p style="color: #28A745;">✅ Configuração completa - Pronto para processar</p>';
+                } else {
+                    processBtn.style.display = 'none';
+                    statusDiv.innerHTML = '<p style="color: #FFC107;">⚠️ Complete a configuração para processar</p>';
+                }
+            } else {
+                processBtn.style.display = 'none';
+                statusDiv.innerHTML = '<p style="color: #DC3545;">❌ Importe um arquivo SPED primeiro</p>';
+            }
+        }
+    }
+
+    // Verificar se configuração está completa
+    function isLogproduzirConfigComplete() {
+        const categoria = document.querySelector('input[name="logproduzirCategoria"]:checked')?.value;
+        if (!categoria) return false;
+        
+        const tipoMedia = document.querySelector('input[name="logproduzirTipoMedia"]:checked')?.value;
+        if (!tipoMedia) return false;
+        
+        // Se média do período anterior, campo de valor é obrigatório
+        if (tipoMedia === 'anterior') {
+            const mediaPeriodoAnterior = document.getElementById('logproduzirMediaPeriodoAnterior')?.value;
+            if (!mediaPeriodoAnterior || mediaPeriodoAnterior.trim() === '' || parseFloat(mediaPeriodoAnterior) < 0) {
+                return false;
+            }
+        }
+        
+        // Se média histórica, IGP-DI é obrigatório
+        if (tipoMedia === 'historica') {
+            const igpdiValor = document.getElementById('igpdiValorPeriodo')?.value;
+            if (!igpdiValor || igpdiValor.trim() === '' || parseFloat(igpdiValor) <= 0) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
+    // Calcular LogPRODUZIR
+    async function calculateLogproduzir() {
+        try {
+            if (!logproduzirData) {
+                throw new Error('Nenhum SPED importado');
+            }
+            
+            // Obter configurações da interface
+            const categoria = document.querySelector('input[name="logproduzirCategoria"]:checked')?.value;
+            const tipoMedia = document.querySelector('input[name="logproduzirTipoMedia"]:checked')?.value;
+            const igpdiValor = document.getElementById('igpdiValorPeriodo')?.value;
+            const mediaPeriodoAnterior = document.getElementById('logproduzirMediaPeriodoAnterior')?.value;
+            
+            // Preparar configuração para cálculo
+            const config = {
+                categoria: categoria,
+                tipoMedia: tipoMedia,
+                igpdiValorPeriodo: igpdiValor ? parseFloat(igpdiValor) : 1,
+                mediaPeriodoAnterior: mediaPeriodoAnterior ? parseFloat(mediaPeriodoAnterior) : 0,
+                competencia: logproduzirData.headerInfo.periodo,
+                icmsOperacoesProprias: logproduzirData.icmsMensal || 0
+            };
+            
+            // Executar cálculo
+            const resultado = LogproduzirSystem.calculate(logproduzirData.registros, config);
+            
+            // Atualizar interface com resultados
+            updateLogproduzirResults(resultado);
+            
+            // Salvar resultado
+            logproduzirResults = resultado;
+            
+            addLog('Cálculo LogPRODUZIR concluído com sucesso', 'success');
+            
+            // Atualizar status do botão
+            updateLogproduzirProcessButton();
+            
+        } catch (error) {
+            addLog(`Erro no cálculo LogPRODUZIR: ${error.message}`, 'error');
+        }
+    }
+
+    // Atualizar interface com resultados
+    function updateLogproduzirResults(resultado) {
+        // Mostrar seção de resultados
+        const resultsSection = document.getElementById('logproduzirResults');
+        if (resultsSection) {
+            resultsSection.style.display = 'block';
+            
+            // Atualizar dados da empresa
+            const categoriaEl = document.getElementById('resultCategoria');
+            const percentualEl = document.getElementById('resultPercentualMax');
+            const icmsEl = document.getElementById('resultIcmsMensal');
+            
+            if (categoriaEl) categoriaEl.textContent = `${resultado.categoria} (${resultado.percentualMax}%)`;
+            if (percentualEl) percentualEl.textContent = `${resultado.percentualMax}%`;
+            if (icmsEl) icmsEl.textContent = formatCurrency(resultado.calculo.icmsBase);
+            
+            // Atualizar proporcionalidade
+            const fretesInterestaduaisEl = document.getElementById('resultFretesInterestaduais');
+            const fretesEstaduaisEl = document.getElementById('resultFretesEstaduais');
+            const proporcionalidadeEl = document.getElementById('resultProporcionalidade');
+            
+            if (fretesInterestaduaisEl) fretesInterestaduaisEl.textContent = formatCurrency(resultado.operations.totals.freteInterestadual);
+            if (fretesEstaduaisEl) fretesEstaduaisEl.textContent = formatCurrency(resultado.operations.totals.freteEstadual);
+            if (proporcionalidadeEl) proporcionalidadeEl.textContent = `${(resultado.operations.totals.proporcionalidade * 100).toFixed(2)}%`;
+            
+            // Atualizar cálculos
+            const baseIncentivo = document.getElementById('resultBaseIncentivo');
+            const creditoOutorgado = document.getElementById('resultCreditoOutorgado'); 
+            const icmsFinal = document.getElementById('resultIcmsFinal');
+            
+            if (baseIncentivo) baseIncentivo.textContent = formatCurrency(resultado.calculo.baseIncentivo);
+            if (creditoOutorgado) creditoOutorgado.textContent = formatCurrency(resultado.calculo.creditoOutorgado);
+            if (icmsFinal) icmsFinal.textContent = formatCurrency(resultado.calculo.icmsFinal);
+        }
+    }
+
+    // Inicializar LogPRODUZIR
+    setupLogproduzirEventListeners();
+    
+    // Inicializar status do botão LogPRODUZIR
+    updateLogproduzirProcessButton();
+    
+    addLog('Sistema LogPRODUZIR integrado com sucesso', 'info');
 
     // CLAUDE-CONTEXT: Inicializar sistema de controle de usuário
     initializeUserControlSystem();
