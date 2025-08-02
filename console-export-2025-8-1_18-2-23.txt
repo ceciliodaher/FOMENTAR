@@ -1,0 +1,23 @@
+[6:01:37 PM] Log inicializado. Aguardando ação... script.js:1491:21
+[6:01:37 PM] Sistema LogPRODUZIR integrado com sucesso script.js:1491:21
+[6:01:48 PM] Processando SPED para LogPRODUZIR: SPED VERDELOG MATRIZ MES 09 2024 .txt script.js:1491:21
+Arquivo lido com sucesso usando ISO-8859-1 script.js:479:25
+[6:01:48 PM] Encoding detectado: ISO-8859-1 script.js:1491:21
+SPED Completo Lido e Estruturado. Contagem de Tipos: 51 script.js:729:17
+[6:01:48 PM] ICMS mensal extraído do E100: R$ 30.092.024,00 script.js:1491:21
+[6:01:48 PM] ICMS mensal (30.092.024,00) > R$ 900.000 - Categoria III disponível script.js:1491:21
+✅ [6:01:48 PM] SPED LogPRODUZIR importado com sucesso script.js:1489:21
+[6:01:48 PM] Configuração incompleta: Digite o valor da média do período anterior script.js:1491:21
+[6:01:56 PM] Sem média selecionada - Usar todo o ICMS mensal como base script.js:1491:21
+[6:01:56 PM] Config sem média: Todo ICMS será considerado como excesso script.js:1491:21
+[6:01:56 PM] Iniciando cálculo LogPRODUZIR... script.js:1491:21
+[6:01:56 PM] Iniciando classificação LogPRODUZIR... script.js:1491:21
+✅ [6:01:56 PM] LogPRODUZIR: Inter=0,00, Estadual=0,00, Proporção=0.00% script.js:1489:21
+[6:01:56 PM] ICMS mensal extraído do E100: R$ 30.092.024,00 script.js:1491:21
+[6:01:56 PM] Cálculo sem média: Todo ICMS será base para incentivo script.js:1491:21
+✅ [6:01:56 PM] LogPRODUZIR calculado: Crédito = 0,00 script.js:1489:21
+[6:01:56 PM] Atualizando interface com resultados do cálculo... script.js:1491:21
+✅ [6:01:56 PM] Interface atualizada: Crédito R$ 0,00, ICMS Final R$ 30.092.024,00 script.js:1489:21
+✅ [6:01:56 PM] Cálculo LogPRODUZIR concluído com sucesso script.js:1489:21
+[6:02:01 PM] Média do período anterior selecionada - Digite o valor do ICMS anterior script.js:1491:21
+[6:02:01 PM] Configuração incompleta: Digite o valor da média do período anterior 2 script.js:1491:21

@@ -954,10 +954,46 @@
                         <div id="mediaPeriodoAnteriorSection" class="input-section" style="display: block;">
                             <h5>💰 Valor da Média do Período Anterior</h5>
                             <div class="input-group">
-                                <label for="logproduzirMediaPeriodoAnterior">ICMS do Período Anterior (R$):</label>
-                                <input type="number" id="logproduzirMediaPeriodoAnterior" class="input-style" 
-                                       step="0.01" min="0" placeholder="0,00">
-                                <small>Digite o valor do ICMS devido no período anterior ao da apuração</small>
+                                <label for="logproduzirMediaPeriodoAnterior">Média do Período Anterior (R$):</label>
+                                <input type="text" id="logproduzirMediaPeriodoAnterior" class="input-style currency-input" 
+                                       placeholder="R$ 0,00" data-currency="true">
+                                <small>Digite o valor da média do ICMS devido dos períodos anteriores</small>
+                            </div>
+                            
+                            <div class="input-group">
+                                <label for="logproduzirIgpdiPeriodoAnterior">Índice IGP-DI de Correção:</label>
+                                <input type="number" id="logproduzirIgpdiPeriodoAnterior" class="input-style" 
+                                       step="0.00001" min="0" placeholder="1,00000">
+                                <small>IGP-DI para corrigir monetariamente o valor do período anterior (deixe 1,00000 se não houver correção)</small>
+                            </div>
+                        </div>
+                        
+                        <!-- Campo para média histórica -->
+                        <div id="mediaHistoricaSection" class="input-section" style="display: none;">
+                            <h5>📈 Valor da Média Histórica</h5>
+                            <div class="input-group">
+                                <label for="logproduzirMediaHistorica">Média Histórica (12 meses):</label>
+                                <input type="text" id="logproduzirMediaHistorica" class="input-style currency-input" 
+                                       placeholder="R$ 0,00" data-currency="true">
+                                <small>Digite a média dos últimos 12 meses (valores originais, sem correção)</small>
+                            </div>
+                            
+                            <div class="input-group">
+                                <label for="logproduzirIgpdiAcumulado">IGP-DI Acumulado:</label>
+                                <input type="number" id="logproduzirIgpdiAcumulado" class="input-style" 
+                                       step="0.00001" min="0" placeholder="1,00000">
+                                <small>IGP-DI acumulado desde o início do projeto até a competência atual</small>
+                            </div>
+                            
+                            <div class="igpdi-help-expanded">
+                                <h6>📊 Como obter os índices IGP-DI:</h6>
+                                <p>🔗 <strong>Calculadora do Cidadão - Banco Central:</strong></p>
+                                <p><a href="https://www3.bcb.gov.br/CALCIDADAO/publico/exibirFormCorrecaoValores.do" target="_blank" class="link-bcb">https://www3.bcb.gov.br/CALCIDADAO/publico/exibirFormCorrecaoValores.do</a></p>
+                                <ul>
+                                    <li><strong>Período Anterior:</strong> Use o IGP-DI do segundo mês anterior à apuração</li>
+                                    <li><strong>Média Histórica:</strong> Use o IGP-DI acumulado desde a data de entrada do projeto</li>
+                                    <li><strong>Formato:</strong> Use ponto decimal (ex: 1.05432 para variação de 5,432%)</li>
+                                </ul>
                             </div>
                         </div>
                         
@@ -969,33 +1005,82 @@
                         </div>
                     </div>
 
-                    <!-- Configuração IGP-DI (apenas quando necessário) -->
-                    <div id="igpdiConfigSection" class="igpdi-config" style="display: none;">
-                        <h4>📊 Correção Monetária - IGP-DI</h4>
-                        <div class="igpdi-alert">
-                            <p><strong>⚠️ Configuração Obrigatória:</strong></p>
-                            <p>Para média histórica, é necessário corrigir monetariamente os valores pelos índices IGP-DI.</p>
-                            <p><strong>Período de referência:</strong> Use o IGP-DI do segundo mês anterior à apuração.</p>
+                    <!-- Configuração de múltiplos períodos IGP-DI -->
+                    <div id="multipleIgpdiSection" class="multiple-igpdi-config" style="display: none;">
+                        <h4>📊 Múltiplos Períodos - Configuração IGP-DI por Período</h4>
+                        <div class="igpdi-multiple-alert">
+                            <p><strong>⚠️ Importante:</strong> Cada período precisa de seu próprio índice IGP-DI!</p>
+                            <p>A média é corrigida período a período, não com um único índice para todos.</p>
                         </div>
                         
-                        <div class="igpdi-input-group">
-                            <div class="input-group">
-                                <label for="igpdiValorPeriodo">IGP-DI de Correção:</label>
-                                <input type="number" id="igpdiValorPeriodo" class="input-style" 
-                                       step="0.00001" min="0" placeholder="1,00000">
-                                <small>
-                                    <strong>Exemplo:</strong> Para apuração de Março/2024, usar IGP-DI de Janeiro/2024<br>
-                                    <strong>Formato:</strong> Use ponto decimal (ex: 1.05432 para variação de 5,432%)
-                                </small>
+                        <!-- Tabela de IGP-DI por período -->
+                        <div id="igpdiPerPeriodTable" class="igpdi-table-container">
+                            <h5>🔢 IGP-DI por Período Processado:</h5>
+                            <table id="igpdiTable" class="igpdi-period-table">
+                                <thead>
+                                    <tr>
+                                        <th>Período</th>
+                                        <th>Arquivo SPED</th>
+                                        <th>IGP-DI (use vírgula ou ponto)</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="igpdiTableBody">
+                                    <!-- Linhas serão adicionadas dinamicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="igpdi-input-methods">
+                            <h5>Método de Entrada dos Índices:</h5>
+                            <div class="method-options">
+                                <label class="method-option">
+                                    <input type="radio" name="igpdiInputMethod" value="manual" checked>
+                                    <div class="method-info">
+                                        <strong>Digitação Manual</strong>
+                                        <p>Inserir índices na tabela acima</p>
+                                    </div>
+                                </label>
+                                
+                                <label class="method-option">
+                                    <input type="radio" name="igpdiInputMethod" value="excel">
+                                    <div class="method-info">
+                                        <strong>Upload de Planilha Excel</strong>
+                                        <p>Carregar planilha .xlsx com os índices</p>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Entrada manual -->
+                        <div id="manualIgpdiInput" class="manual-input-section">
+                            <div id="igpdiPeriodsTable" class="igpdi-periods-table">
+                                <!-- Será preenchido dinamicamente via JavaScript -->
+                            </div>
+                        </div>
+                        
+                        <!-- Upload Excel -->
+                        <div id="excelIgpdiInput" class="excel-input-section" style="display: none;">
+                            <div class="excel-upload-zone">
+                                <input type="file" id="igpdiExcelFile" accept=".xlsx,.xls" style="display: none;">
+                                <button id="selectIgpdiExcel" class="btn-style btn-secondary">
+                                    <span class="btn-icon">📁</span> Selecionar Planilha Excel
+                                </button>
+                                <div id="igpdiExcelStatus" class="excel-status"></div>
                             </div>
                             
-                            <div class="igpdi-help">
-                                <p><strong>Como calcular:</strong></p>
-                                <ol>
-                                    <li>Consulte o IGP-DI no site da FGV ou Banco Central</li>
-                                    <li>Use o índice do segundo mês anterior à competência</li>
-                                    <li>Se não houver correção, deixe 1,00000</li>
-                                </ol>
+                            <div class="excel-format-help">
+                                <h6>📋 Formato da Planilha Excel:</h6>
+                                <table class="format-example">
+                                    <thead>
+                                        <tr><th>Competência</th><th>IGP-DI</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td>01/2024</td><td>1.00532</td></tr>
+                                        <tr><td>02/2024</td><td>1.01234</td></tr>
+                                        <tr><td>03/2024</td><td>1.00876</td></tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>

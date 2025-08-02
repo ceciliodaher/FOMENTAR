@@ -10791,8 +10791,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 );
                 
                 registrosTransporte.forEach(registro => {
-                    const cfop = registro[4]; // CFOP na posição 4
-                    const valorContabil = parseFloat(registro[7]) || 0; // VL_DOC na posição 7
+                    const cfop = registro[2]; // CFOP na posição 2 (conforme layout SPED)
+                    const valorContabil = parseFloat(registro[4]) || 0; // VL_OPR na posição 4
                     
                     if (this.isInterstateTransport(cfop)) {
                         operations.interestaduais.push({
@@ -10897,31 +10897,36 @@ document.addEventListener('DOMContentLoaded', () => {
             // Usar o ICMS apurado/devido se disponível, senão calcular diferença
             let icmsMensal = vlTotIcmsApurado || vlTotIcmsDevido || Math.max(0, vlTotDebitos - vlTotCreditos);
             
-            addLog(`ICMS mensal extraído do E100: R$ ${formatCurrency(icmsMensal)}`, 'info');
+            addLog(`ICMS apurado no período: R$ ${formatCurrency(icmsMensal)}`, 'info');
             return icmsMensal;
         },
         
-        // Calcular média conforme tipo selecionado
+        // CLAUDE-FISCAL: Calcular média conforme tipo selecionado (atualizado)
         calculateMedia(registros, config) {
             const tipoMedia = config.tipoMedia || 'anterior';
-            const icmsMensal = this.extractMonthlyICMS(registros);
             
             if (tipoMedia === 'sem_media') {
                 // Sem média: retorna 0 para que todo ICMS seja considerado excesso
+                addLog('Cálculo sem média: Todo ICMS será base para incentivo', 'info');
                 return 0;
                 
             } else if (tipoMedia === 'anterior') {
-                // Média do período anterior: usar valor digitado pelo usuário
-                const mediaPeriodoAnterior = parseFloat(config.mediaPeriodoAnterior || '0') || 0;
-                addLog(`Média período anterior: R$ ${formatCurrency(mediaPeriodoAnterior)}`, 'info');
-                return mediaPeriodoAnterior;
+                // Média do período anterior com correção IGP-DI opcional
+                const mediaPeriodoAnterior = config.mediaPeriodoAnterior || 0;
+                const igpdiPeriodoAnterior = config.igpdiPeriodoAnterior || 1;
+                
+                const mediaCorrigida = mediaPeriodoAnterior * igpdiPeriodoAnterior;
+                addLog(`Média período anterior: R$ ${formatCurrency(mediaPeriodoAnterior)} x IGP-DI ${igpdiPeriodoAnterior} = R$ ${formatCurrency(mediaCorrigida)}`, 'info');
+                return mediaCorrigida;
                 
             } else if (tipoMedia === 'historica') {
-                // Média histórica: usar média corrigida pelo IGP-DI
-                const igpdiPeriodo = parseFloat(config.igpdiValorPeriodo || '1') || 1;
-                const mediaHistorica = icmsMensal * igpdiPeriodo;
-                addLog(`Média histórica (IGP-DI ${igpdiPeriodo}): R$ ${formatCurrency(mediaHistorica)}`, 'info');
-                return mediaHistorica;
+                // Média histórica com IGP-DI acumulado
+                const mediaHistorica = config.mediaHistorica || 0;
+                const igpdiAcumulado = config.igpdiAcumulado || 1;
+                
+                const mediaCorrigida = mediaHistorica * igpdiAcumulado;
+                addLog(`Média histórica: R$ ${formatCurrency(mediaHistorica)} x IGP-DI ${igpdiAcumulado} = R$ ${formatCurrency(mediaCorrigida)}`, 'info');
+                return mediaCorrigida;
             }
             
             return 0;
@@ -11004,6 +11009,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Variáveis LogPRODUZIR
     let logproduzirData = null;
     let logproduzirResults = null;
+    let logproduzirMultipleFiles = [];
+    let logproduzirMultipleData = [];
+    let logproduzirSelectedPeriodIndex = 0;
 
     // Função para importar SPED LogPRODUZIR
     async function importSpedForLogproduzir() {
@@ -11187,16 +11195,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     addLog('Sem média selecionada - Usar todo o ICMS mensal como base', 'info');
                     
                 } else if (tipoMedia === 'anterior') {
-                    // Média período anterior: mostrar seção de input, ocultar IGP-DI
+                    // Média período anterior: mostrar seção de input, ocultar seções de histórica
                     if (igpdiSection) igpdiSection.style.display = 'none';
                     if (mediaPeriodoAnteriorSection) mediaPeriodoAnteriorSection.style.display = 'block';
-                    addLog('Média do período anterior selecionada - Digite o valor do ICMS anterior', 'info');
+                    const mediaHistoricaSection = document.getElementById('mediaHistoricaSection');
+                    if (mediaHistoricaSection) mediaHistoricaSection.style.display = 'none';
+                    addLog('Média do período anterior selecionada - Digite a média histórica dos períodos anteriores', 'info');
                     
                 } else if (tipoMedia === 'historica') {
-                    // Média histórica: mostrar IGP-DI, ocultar campo de input
-                    if (igpdiSection) igpdiSection.style.display = 'block';
+                    // Média histórica: mostrar seção histórica, ocultar anteriores
+                    if (igpdiSection) igpdiSection.style.display = 'none';
                     if (mediaPeriodoAnteriorSection) mediaPeriodoAnteriorSection.style.display = 'none';
-                    addLog('Média histórica selecionada - Configure o IGP-DI para correção monetária', 'info');
+                    const mediaHistoricaSection = document.getElementById('mediaHistoricaSection');
+                    if (mediaHistoricaSection) mediaHistoricaSection.style.display = 'block';
+                    addLog('Média histórica selecionada - Configure a média e IGP-DI acumulado', 'info');
                 }
                 
                 // Executar cálculo se dados disponíveis
@@ -11209,11 +11221,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         
+        // CLAUDE-FISCAL: Event listeners para campos monetários com máscara
+        setupCurrencyInputs();
+        
         // Event listener para campo de média do período anterior
         const mediaPeriodoAnteriorInput = document.getElementById('logproduzirMediaPeriodoAnterior');
         if (mediaPeriodoAnteriorInput) {
             mediaPeriodoAnteriorInput.addEventListener('input', (e) => {
-                const valor = parseFloat(e.target.value) || 0;
+                const valor = parseCurrencyValue(e.target.value) || 0;
                 if (valor >= 0) {
                     addLog(`Média período anterior atualizada: R$ ${formatCurrency(valor)}`, 'info');
                     
@@ -11222,6 +11237,57 @@ document.addEventListener('DOMContentLoaded', () => {
                         calculateLogproduzir();
                     }
                 }
+                updateLogproduzirProcessButton();
+            });
+        }
+        
+        // Event listener para campo de média histórica
+        const mediaHistoricaInput = document.getElementById('logproduzirMediaHistorica');
+        if (mediaHistoricaInput) {
+            mediaHistoricaInput.addEventListener('input', (e) => {
+                const valor = parseCurrencyValue(e.target.value) || 0;
+                if (valor >= 0) {
+                    addLog(`Média histórica atualizada: R$ ${formatCurrency(valor)}`, 'info');
+                    
+                    // Executar cálculo se dados disponíveis
+                    if (logproduzirData && isLogproduzirConfigComplete()) {
+                        calculateLogproduzir();
+                    }
+                }
+                updateLogproduzirProcessButton();
+            });
+        }
+        
+        // Event listeners para campos IGP-DI
+        const igpdiPeriodoAnteriorInput = document.getElementById('logproduzirIgpdiPeriodoAnterior');
+        if (igpdiPeriodoAnteriorInput) {
+            igpdiPeriodoAnteriorInput.addEventListener('input', (e) => {
+                const valor = parseFloat(e.target.value) || 1;
+                if (valor > 0) {
+                    addLog(`IGP-DI período anterior atualizado: ${valor}`, 'info');
+                    
+                    // Executar cálculo se dados disponíveis
+                    if (logproduzirData && isLogproduzirConfigComplete()) {
+                        calculateLogproduzir();
+                    }
+                }
+                updateLogproduzirProcessButton();
+            });
+        }
+        
+        const igpdiAcumuladoInput = document.getElementById('logproduzirIgpdiAcumulado');
+        if (igpdiAcumuladoInput) {
+            igpdiAcumuladoInput.addEventListener('input', (e) => {
+                const valor = parseFloat(e.target.value) || 1;
+                if (valor > 0) {
+                    addLog(`IGP-DI acumulado atualizado: ${valor}`, 'info');
+                    
+                    // Executar cálculo se dados disponíveis
+                    if (logproduzirData && isLogproduzirConfigComplete()) {
+                        calculateLogproduzir();
+                    }
+                }
+                updateLogproduzirProcessButton();
             });
         }
         
@@ -11241,6 +11307,104 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
+        // Event listeners para seleção de modo de importação (single/multiple)
+        const importModeRadios = document.querySelectorAll('input[name="importModeLogproduzir"]');
+        importModeRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const mode = e.target.value;
+                const singleSection = document.getElementById('singleImportSectionLogproduzir');
+                const multipleSection = document.getElementById('multipleImportSectionLogproduzir');
+                const multipleIgpdiSection = document.getElementById('multipleIgpdiSection');
+                
+                if (mode === 'single') {
+                    // Modo período único
+                    if (singleSection) singleSection.style.display = 'block';
+                    if (multipleSection) multipleSection.style.display = 'none';
+                    if (multipleIgpdiSection) multipleIgpdiSection.style.display = 'none';
+                    addLog('Modo período único selecionado', 'info');
+                    
+                } else if (mode === 'multiple') {
+                    // Modo múltiplos períodos
+                    if (singleSection) singleSection.style.display = 'none';
+                    if (multipleSection) multipleSection.style.display = 'block';
+                    if (multipleIgpdiSection) multipleIgpdiSection.style.display = 'block';
+                    addLog('Modo múltiplos períodos selecionado - Configure IGP-DI por período', 'info');
+                }
+                
+                updateLogproduzirProcessButton();
+            });
+        });
+        
+        // Event listeners para botões de múltiplos períodos
+        const selectMultipleBtn = document.getElementById('selectMultipleSpedsLogproduzir');
+        const multipleFilesInput = document.getElementById('multipleSpedFilesLogproduzir');
+        const processMultipleBtn = document.getElementById('processMultipleLogproduzir');
+        const clearMultipleBtn = document.getElementById('clearMultipleLogproduzir');
+        
+        if (selectMultipleBtn && multipleFilesInput) {
+            selectMultipleBtn.addEventListener('click', () => {
+                multipleFilesInput.click();
+            });
+            
+            multipleFilesInput.addEventListener('change', handleMultipleLogproduzirFiles);
+        }
+        
+        if (processMultipleBtn) {
+            processMultipleBtn.addEventListener('click', processMultipleLogproduzirPeriods);
+        }
+        
+        if (clearMultipleBtn) {
+            clearMultipleBtn.addEventListener('click', clearMultipleLogproduzirFiles);
+        }
+        
+        // Event listeners para drag'n'drop múltiplos períodos
+        const multipleDropZone = document.getElementById('multipleDropZoneLogproduzir');
+        if (multipleDropZone) {
+            multipleDropZone.addEventListener('dragenter', (e) => {
+                e.preventDefault();
+                e.target.classList.add('dragover');
+            });
+            
+            multipleDropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+            });
+            
+            multipleDropZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                if (!e.target.contains(e.relatedTarget)) {
+                    e.target.classList.remove('dragover');
+                }
+            });
+            
+            multipleDropZone.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                e.target.classList.remove('dragover');
+                
+                const files = Array.from(e.dataTransfer.files);
+                const txtFiles = files.filter(file => file.name.toLowerCase().endsWith('.txt'));
+                
+                if (txtFiles.length === 0) {
+                    addLog('Nenhum arquivo SPED (.txt) encontrado no drag\'n\'drop', 'error');
+                    return;
+                }
+                
+                // Simular seleção de arquivos
+                logproduzirMultipleFiles = txtFiles;
+                addLog(`${txtFiles.length} arquivo(s) SPED arrastado(s) para LogPRODUZIR`, 'info');
+                
+                // Mostrar botões de controle
+                const processBtn = document.getElementById('processMultipleLogproduzir');
+                const clearBtn = document.getElementById('clearMultipleLogproduzir');
+                
+                if (processBtn) processBtn.style.display = 'inline-block';
+                if (clearBtn) clearBtn.style.display = 'inline-block';
+                
+                // Listar arquivos
+                const fileList = txtFiles.map(f => f.name).join(', ');
+                addLog(`Arquivos: ${fileList}`, 'info');
+            });
+        }
+        
         // Event listener para botão de processamento manual
         const processBtn = document.getElementById('processLogproduzirBtn');
         if (processBtn) {
@@ -11251,6 +11415,152 @@ document.addEventListener('DOMContentLoaded', () => {
                     addLog('Configure todas as opções antes de processar', 'warning');
                 }
             });
+        }
+    }
+    
+    // Funções para múltiplos períodos LogPRODUZIR
+    async function handleMultipleLogproduzirFiles(event) {
+        const files = Array.from(event.target.files);
+        const txtFiles = files.filter(file => file.name.toLowerCase().endsWith('.txt'));
+        
+        if (txtFiles.length === 0) {
+            addLog('Nenhum arquivo SPED (.txt) selecionado', 'error');
+            return;
+        }
+        
+        logproduzirMultipleFiles = txtFiles;
+        addLog(`${txtFiles.length} arquivo(s) SPED selecionado(s) para LogPRODUZIR`, 'info');
+        
+        // Mostrar botões de controle
+        const processBtn = document.getElementById('processMultipleLogproduzir');
+        const clearBtn = document.getElementById('clearMultipleLogproduzir');
+        
+        if (processBtn) processBtn.style.display = 'inline-block';
+        if (clearBtn) clearBtn.style.display = 'inline-block';
+        
+        // Listar arquivos selecionados
+        const fileList = txtFiles.map(f => f.name).join(', ');
+        addLog(`Arquivos: ${fileList}`, 'info');
+    }
+    
+    async function processMultipleLogproduzirPeriods() {
+        if (logproduzirMultipleFiles.length === 0) {
+            addLog('Nenhum arquivo selecionado para processamento', 'error');
+            return;
+        }
+        
+        try {
+            addLog(`Iniciando processamento de ${logproduzirMultipleFiles.length} períodos LogPRODUZIR`, 'info');
+            logproduzirMultipleData = [];
+            
+            for (let i = 0; i < logproduzirMultipleFiles.length; i++) {
+                const file = logproduzirMultipleFiles[i];
+                addLog(`Processando período ${i + 1}/${logproduzirMultipleFiles.length}: ${file.name}`, 'info');
+                
+                try {
+                    // Processar arquivo usando a função existente
+                    await processLogproduzirSpedFile(file);
+                    
+                    // Salvar dados do período
+                    if (logproduzirData) {
+                        logproduzirMultipleData.push({
+                            periodIndex: i,
+                            fileName: file.name,
+                            data: { ...logproduzirData }
+                        });
+                    }
+                    
+                } catch (error) {
+                    addLog(`Erro no período ${i + 1} (${file.name}): ${error.message}`, 'error');
+                }
+            }
+            
+            if (logproduzirMultipleData.length > 0) {
+                addLog(`Processamento concluído: ${logproduzirMultipleData.length} períodos processados`, 'success');
+                
+                // Mostrar seção de múltiplos períodos IGP-DI
+                const multipleIgpdiSection = document.getElementById('multipleIgpdiSection');
+                if (multipleIgpdiSection) {
+                    multipleIgpdiSection.style.display = 'block';
+                    updateIgpdiTable();
+                }
+            } else {
+                addLog('Nenhum período foi processado com sucesso', 'error');
+            }
+            
+        } catch (error) {
+            addLog(`Erro no processamento múltiplos períodos: ${error.message}`, 'error');
+        }
+    }
+    
+    function clearMultipleLogproduzirFiles() {
+        logproduzirMultipleFiles = [];
+        logproduzirMultipleData = [];
+        
+        // Ocultar botões
+        const processBtn = document.getElementById('processMultipleLogproduzir');
+        const clearBtn = document.getElementById('clearMultipleLogproduzir');
+        const multipleIgpdiSection = document.getElementById('multipleIgpdiSection');
+        
+        if (processBtn) processBtn.style.display = 'none';
+        if (clearBtn) clearBtn.style.display = 'none';
+        if (multipleIgpdiSection) multipleIgpdiSection.style.display = 'none';
+        
+        // Limpar input de arquivos
+        const fileInput = document.getElementById('multipleSpedFilesLogproduzir');
+        if (fileInput) fileInput.value = '';
+        
+        addLog('Arquivos múltiplos períodos limpos', 'info');
+    }
+    
+    function updateIgpdiTable() {
+        const tableBody = document.getElementById('igpdiTableBody');
+        if (!tableBody || logproduzirMultipleData.length === 0) return;
+        
+        tableBody.innerHTML = '';
+        
+        logproduzirMultipleData.forEach((periodData, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${periodData.data.headerInfo?.periodo || 'N/A'}</td>
+                <td>${periodData.fileName}</td>
+                <td>
+                    <input type="text" class="igpdi-period-input" 
+                           placeholder="1,0000" 
+                           data-period-index="${index}"
+                           id="igpdiPeriod_${index}">
+                </td>
+                <td>
+                    <span class="igpdi-status pending" id="igpdiStatus_${index}">Pendente</span>
+                </td>
+            `;
+            tableBody.appendChild(row);
+            
+            // Event listener para validação
+            const input = row.querySelector('.igpdi-period-input');
+            input.addEventListener('input', (e) => {
+                validateIgpdiInput(index, e.target.value);
+            });
+        });
+    }
+    
+    function validateIgpdiInput(periodIndex, value) {
+        const statusEl = document.getElementById(`igpdiStatus_${periodIndex}`);
+        if (!statusEl) return;
+        
+        if (!value || value.trim() === '') {
+            statusEl.textContent = 'Pendente';
+            statusEl.className = 'igpdi-status pending';
+            return;
+        }
+        
+        const numValue = parseFloat(value.replace(',', '.'));
+        if (isNaN(numValue) || numValue <= 0) {
+            statusEl.textContent = 'Inválido';
+            statusEl.className = 'igpdi-status invalid';
+        } else {
+            statusEl.textContent = 'Válido';
+            statusEl.className = 'igpdi-status valid';
         }
     }
     
@@ -11276,27 +11586,56 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Verificar se configuração está completa
+    // CLAUDE-FISCAL: Validação completa de configuração LogPRODUZIR
     function isLogproduzirConfigComplete() {
         const categoria = document.querySelector('input[name="logproduzirCategoria"]:checked')?.value;
-        if (!categoria) return false;
+        if (!categoria) {
+            addLog('Configuração incompleta: Categoria da empresa não selecionada', 'warning');
+            return false;
+        }
         
         const tipoMedia = document.querySelector('input[name="logproduzirTipoMedia"]:checked')?.value;
-        if (!tipoMedia) return false;
+        if (!tipoMedia) {
+            addLog('Configuração incompleta: Tipo de média não selecionado', 'warning');
+            return false;
+        }
         
-        // Se média do período anterior, campo de valor é obrigatório
+        // Validação específica por tipo de média
         if (tipoMedia === 'anterior') {
-            const mediaPeriodoAnterior = document.getElementById('logproduzirMediaPeriodoAnterior')?.value;
-            if (!mediaPeriodoAnterior || mediaPeriodoAnterior.trim() === '' || parseFloat(mediaPeriodoAnterior) < 0) {
+            const mediaPeriodoAnterior = parseCurrencyValue(document.getElementById('logproduzirMediaPeriodoAnterior')?.value);
+            if (!mediaPeriodoAnterior || mediaPeriodoAnterior < 0) {
+                addLog('Configuração incompleta: Digite o valor da média do período anterior', 'warning');
+                return false;
+            }
+            
+            // IGP-DI período anterior é opcional, mas se preenchido deve ser > 0
+            const igpdiPeriodoAnteriorValue = document.getElementById('logproduzirIgpdiPeriodoAnterior')?.value;
+            const igpdiPeriodoAnterior = igpdiPeriodoAnteriorValue ? parseFloat(igpdiPeriodoAnteriorValue.replace(',', '.')) : null;
+            if (igpdiPeriodoAnterior && igpdiPeriodoAnterior <= 0) {
+                addLog('Configuração incorreta: IGP-DI período anterior deve ser maior que zero', 'error');
+                return false;
+            }
+            
+        } else if (tipoMedia === 'historica') {
+            const mediaHistorica = parseCurrencyValue(document.getElementById('logproduzirMediaHistorica')?.value);
+            if (!mediaHistorica || mediaHistorica <= 0) {
+                addLog('Configuração incompleta: Digite o valor da média histórica', 'warning');
+                return false;
+            }
+            
+            const igpdiAcumuladoValue = document.getElementById('logproduzirIgpdiAcumulado')?.value;
+            const igpdiAcumulado = igpdiAcumuladoValue ? parseFloat(igpdiAcumuladoValue.replace(',', '.')) : null;
+            if (!igpdiAcumulado || igpdiAcumulado <= 0) {
+                addLog('Configuração incompleta: Digite o IGP-DI acumulado para média histórica', 'warning');
                 return false;
             }
         }
         
-        // Se média histórica, IGP-DI é obrigatório
-        if (tipoMedia === 'historica') {
-            const igpdiValor = document.getElementById('igpdiValorPeriodo')?.value;
-            if (!igpdiValor || igpdiValor.trim() === '' || parseFloat(igpdiValor) <= 0) {
-                return false;
-            }
+        // Data do projeto é obrigatória apenas para média histórica
+        const dataProjeto = document.getElementById('logproduzirDataProjeto')?.value;
+        if (tipoMedia === 'historica' && !dataProjeto) {
+            addLog('Configuração incompleta: Data de entrada do projeto é obrigatória para média histórica', 'warning');
+            return false;
         }
         
         return true;
@@ -11309,21 +11648,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error('Nenhum SPED importado');
             }
             
-            // Obter configurações da interface
+            // CLAUDE-FISCAL: Obter configurações da interface com validação
             const categoria = document.querySelector('input[name="logproduzirCategoria"]:checked')?.value;
             const tipoMedia = document.querySelector('input[name="logproduzirTipoMedia"]:checked')?.value;
-            const igpdiValor = document.getElementById('igpdiValorPeriodo')?.value;
-            const mediaPeriodoAnterior = document.getElementById('logproduzirMediaPeriodoAnterior')?.value;
+            const dataProjeto = document.getElementById('logproduzirDataProjeto')?.value;
             
-            // Preparar configuração para cálculo
-            const config = {
+            let config = {
                 categoria: categoria,
                 tipoMedia: tipoMedia,
-                igpdiValorPeriodo: igpdiValor ? parseFloat(igpdiValor) : 1,
-                mediaPeriodoAnterior: mediaPeriodoAnterior ? parseFloat(mediaPeriodoAnterior) : 0,
                 competencia: logproduzirData.headerInfo.periodo,
-                icmsOperacoesProprias: logproduzirData.icmsMensal || 0
+                icmsOperacoesProprias: logproduzirData.icmsMensal || 0,
+                dataProjeto: dataProjeto
             };
+            
+            // Configurar valores específicos por tipo de média
+            if (tipoMedia === 'anterior') {
+                config.mediaPeriodoAnterior = parseCurrencyValue(document.getElementById('logproduzirMediaPeriodoAnterior')?.value) || 0;
+                config.igpdiPeriodoAnterior = parseFloat(document.getElementById('logproduzirIgpdiPeriodoAnterior')?.value) || 1;
+                addLog(`Config anterior: Média=R$${formatCurrency(config.mediaPeriodoAnterior)}, IGP-DI=${config.igpdiPeriodoAnterior}`, 'info');
+                
+            } else if (tipoMedia === 'historica') {
+                config.mediaHistorica = parseCurrencyValue(document.getElementById('logproduzirMediaHistorica')?.value) || 0;
+                config.igpdiAcumulado = parseFloat(document.getElementById('logproduzirIgpdiAcumulado')?.value) || 1;
+                addLog(`Config histórica: Média=R$${formatCurrency(config.mediaHistorica)}, IGP-DI=${config.igpdiAcumulado}`, 'info');
+                
+            } else {
+                // Sem média
+                config.mediaPeriodoAnterior = 0;
+                config.igpdiPeriodoAnterior = 1;
+                addLog('Config sem média: Todo ICMS será considerado como excesso', 'info');
+            }
             
             // Executar cálculo
             const resultado = LogproduzirSystem.calculate(logproduzirData.registros, config);
@@ -11345,41 +11699,126 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Atualizar interface com resultados
+    // CLAUDE-FISCAL: Atualizar interface com resultados LogPRODUZIR
     function updateLogproduzirResults(resultado) {
-        // Mostrar seção de resultados
-        const resultsSection = document.getElementById('logproduzirResults');
-        if (resultsSection) {
-            resultsSection.style.display = 'block';
+        try {
+            addLog('Atualizando interface com resultados do cálculo...', 'info');
+            
+            // Mostrar seções de resultados e ações
+            const resultsSection = document.getElementById('logproduzirResults');
+            const actionsSection = document.getElementById('logproduzirActions');
+            
+            if (resultsSection) resultsSection.style.display = 'block';
+            if (actionsSection) actionsSection.style.display = 'block';
             
             // Atualizar dados da empresa
             const categoriaEl = document.getElementById('resultCategoria');
             const percentualEl = document.getElementById('resultPercentualMax');
             const icmsEl = document.getElementById('resultIcmsMensal');
             
-            if (categoriaEl) categoriaEl.textContent = `${resultado.categoria} (${resultado.percentualMax}%)`;
+            if (categoriaEl) categoriaEl.textContent = `Categoria ${resultado.categoria}`;
             if (percentualEl) percentualEl.textContent = `${resultado.percentualMax}%`;
             if (icmsEl) icmsEl.textContent = formatCurrency(resultado.calculo.icmsBase);
             
-            // Atualizar proporcionalidade
+            // Atualizar proporcionalidade (IDs corretos do HTML)
             const fretesInterestaduaisEl = document.getElementById('resultFretesInterestaduais');
             const fretesEstaduaisEl = document.getElementById('resultFretesEstaduais');
-            const proporcionalidadeEl = document.getElementById('resultProporcionalidade');
+            const fretesTotaisEl = document.getElementById('resultFretesTotais');
+            const proporcaoEl = document.getElementById('resultProporcao');
             
             if (fretesInterestaduaisEl) fretesInterestaduaisEl.textContent = formatCurrency(resultado.operations.totals.freteInterestadual);
             if (fretesEstaduaisEl) fretesEstaduaisEl.textContent = formatCurrency(resultado.operations.totals.freteEstadual);
-            if (proporcionalidadeEl) proporcionalidadeEl.textContent = `${(resultado.operations.totals.proporcionalidade * 100).toFixed(2)}%`;
+            if (fretesTotaisEl) fretesTotaisEl.textContent = formatCurrency(resultado.operations.totals.freteTotal);
+            if (proporcaoEl) proporcaoEl.textContent = `${(resultado.operations.totals.proporcionalidade * 100).toFixed(2)}%`;
             
-            // Atualizar cálculos
-            const baseIncentivo = document.getElementById('resultBaseIncentivo');
-            const creditoOutorgado = document.getElementById('resultCreditoOutorgado'); 
-            const icmsFinal = document.getElementById('resultIcmsFinal');
+            // Atualizar cálculos (IDs corretos do HTML)
+            const icmsBaseEl = document.getElementById('resultIcmsBase');
+            const saldoCorrigidoEl = document.getElementById('resultSaldoCorrigido');
+            const mediaHistoricaEl = document.getElementById('resultMediaHistorica');
+            const excessoEl = document.getElementById('resultExcesso');
+            const creditoOutorgadoEl = document.getElementById('resultCreditoOutorgado');
             
-            if (baseIncentivo) baseIncentivo.textContent = formatCurrency(resultado.calculo.baseIncentivo);
-            if (creditoOutorgado) creditoOutorgado.textContent = formatCurrency(resultado.calculo.creditoOutorgado);
-            if (icmsFinal) icmsFinal.textContent = formatCurrency(resultado.calculo.icmsFinal);
+            if (icmsBaseEl) icmsBaseEl.textContent = formatCurrency(resultado.calculo.icmsBase);
+            if (saldoCorrigidoEl) saldoCorrigidoEl.textContent = formatCurrency(resultado.calculo.icmsBase);
+            if (mediaHistoricaEl) mediaHistoricaEl.textContent = formatCurrency(resultado.calculo.mediaCorrigida);
+            if (excessoEl) excessoEl.textContent = formatCurrency(resultado.calculo.excesso);
+            if (creditoOutorgadoEl) creditoOutorgadoEl.textContent = formatCurrency(resultado.calculo.creditoOutorgado);
+            
+            // Atualizar contribuições obrigatórias
+            const bolsaUniversitariaEl = document.getElementById('resultBolsaUniversitaria');
+            const funproduzirEl = document.getElementById('resultFunproduzir');
+            const protegeGoiasEl = document.getElementById('resultProtegeGoias');
+            const totalContribuicoesEl = document.getElementById('resultTotalContribuicoes');
+            const creditoLiquidoEl = document.getElementById('resultCreditoLiquido');
+            
+            if (bolsaUniversitariaEl) bolsaUniversitariaEl.textContent = formatCurrency(resultado.calculo.contribuicoes.bolsaUniversitaria);
+            if (funproduzirEl) funproduzirEl.textContent = formatCurrency(resultado.calculo.contribuicoes.funproduzir);
+            if (protegeGoiasEl) protegeGoiasEl.textContent = formatCurrency(resultado.calculo.contribuicoes.protegeGoias);
+            if (totalContribuicoesEl) totalContribuicoesEl.textContent = formatCurrency(resultado.calculo.contribuicoes.total);
+            if (creditoLiquidoEl) creditoLiquidoEl.textContent = formatCurrency(resultado.calculo.creditoOutorgado - resultado.calculo.contribuicoes.total);
+            
+            // Atualizar resumo final
+            const icmsOriginalEl = document.getElementById('resultIcmsOriginal');
+            const creditoFinalEl = document.getElementById('resultCreditoFinal');
+            const icmsAPagarEl = document.getElementById('resultIcmsAPagar');
+            
+            if (icmsOriginalEl) icmsOriginalEl.textContent = formatCurrency(resultado.calculo.icmsBase);
+            if (creditoFinalEl) creditoFinalEl.textContent = formatCurrency(resultado.calculo.creditoOutorgado);
+            if (icmsAPagarEl) icmsAPagarEl.textContent = formatCurrency(resultado.calculo.icmsFinal);
+            
+            addLog(`Interface atualizada: Crédito R$ ${formatCurrency(resultado.calculo.creditoOutorgado)}, ICMS Final R$ ${formatCurrency(resultado.calculo.icmsFinal)}`, 'success');
+            
+        } catch (error) {
+            addLog(`Erro ao atualizar interface: ${error.message}`, 'error');
         }
     }
 
+    // CLAUDE-FISCAL: Funções auxiliares para máscaras de moeda
+    function setupCurrencyInputs() {
+        const currencyInputs = document.querySelectorAll('.currency-input');
+        currencyInputs.forEach(input => {
+            // Aplicar máscara ao perder o foco
+            input.addEventListener('blur', (e) => {
+                const value = parseCurrencyValue(e.target.value);
+                if (value !== null && value >= 0) {
+                    e.target.value = formatCurrencyInput(value);
+                }
+            });
+            
+            // Permitir apenas números, vírgulas e pontos durante a digitação
+            input.addEventListener('input', (e) => {
+                let value = e.target.value;
+                // Remove caracteres inválidos exceto números, pontos, vírgulas e espaços
+                value = value.replace(/[^0-9.,\s]/g, '');
+                e.target.value = value;
+            });
+        });
+    }
+    
+    function formatCurrencyInput(value) {
+        if (value === null || value === undefined || isNaN(value)) return 'R$ 0,00';
+        return 'R$ ' + value.toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+    
+    function parseCurrencyValue(value) {
+        if (!value || value.trim() === '') return null;
+        
+        // Remove tudo exceto números, pontos e vírgulas
+        let cleanValue = value.toString().replace(/[^0-9.,]/g, '');
+        
+        // Se contém vírgula, assume formato brasileiro (1.234,56)
+        if (cleanValue.includes(',')) {
+            // Remove pontos (milhares) e substitui vírgula por ponto (decimal)
+            cleanValue = cleanValue.replace(/\./g, '').replace(',', '.');
+        }
+        
+        const numValue = parseFloat(cleanValue);
+        return isNaN(numValue) ? null : numValue;
+    }
+    
     // Inicializar LogPRODUZIR
     setupLogproduzirEventListeners();
     

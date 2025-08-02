@@ -7,7 +7,8 @@ const USER_PERMISSIONS = {
         tabs: {
             converter: true,
             fomentar: true,
-            progoias: true
+            progoias: true,
+            logproduzir: true
         },
         fomentar: {
             periodoUnico: true,
@@ -28,6 +29,16 @@ const USER_PERMISSIONS = {
             importar: true,
             converter: true,
             exportar: true
+        },
+        logproduzir: {
+            periodoUnico: true,
+            multiplosPeriodos: true,
+            configurarEmpresa: true,
+            gerenciarIgpdi: true,
+            calcular: true,
+            exportar: true,
+            memoriaCalculo: true,
+            registroE115: true
         }
     },
     
@@ -36,7 +47,8 @@ const USER_PERMISSIONS = {
         tabs: {
             converter: false,
             fomentar: true,
-            progoias: false
+            progoias: false,
+            logproduzir: false
         },
         fomentar: {
             periodoUnico: true,
@@ -54,7 +66,8 @@ const USER_PERMISSIONS = {
         tabs: {
             converter: false,
             fomentar: true,
-            progoias: false
+            progoias: false,
+            logproduzir: false
         },
         fomentar: {
             periodoUnico: true,
@@ -72,7 +85,8 @@ const USER_PERMISSIONS = {
         tabs: {
             converter: true,
             fomentar: false,
-            progoias: false
+            progoias: false,
+            logproduzir: false
         },
         converter: {
             importar: true,
@@ -86,7 +100,8 @@ const USER_PERMISSIONS = {
         tabs: {
             converter: false,
             fomentar: false,
-            progoias: true
+            progoias: true,
+            logproduzir: false
         },
         progoias: {
             periodoUnico: true,
@@ -101,7 +116,8 @@ const USER_PERMISSIONS = {
         tabs: {
             converter: false,
             fomentar: false,
-            progoias: true
+            progoias: true,
+            logproduzir: false
         },
         progoias: {
             periodoUnico: true,
@@ -161,6 +177,7 @@ class PermissionManager {
         this.applyFomentarPermissions(permissions);
         this.applyProgoiasPermissions(permissions);
         this.applyConverterPermissions(permissions);
+        this.applyLogproduzirPermissions(permissions);
         
         // Se a aba ativa não tem permissão, trocar para primeira aba disponível
         this.switchToFirstAvailableTab(permissions);
@@ -171,6 +188,7 @@ class PermissionManager {
         const tabConverter = document.getElementById('tabConverter');
         const tabFomentar = document.getElementById('tabFomentar');
         const tabProgoias = document.getElementById('tabProgoias');
+        const tabLogproduzir = document.getElementById('tabLogproduzir');
         
         if (tabConverter) {
             tabConverter.style.display = permissions.tabs.converter ? 'inline-block' : 'none';
@@ -180,6 +198,9 @@ class PermissionManager {
         }
         if (tabProgoias) {
             tabProgoias.style.display = permissions.tabs.progoias ? 'inline-block' : 'none';
+        }
+        if (tabLogproduzir) {
+            tabLogproduzir.style.display = permissions.tabs.logproduzir ? 'inline-block' : 'none';
         }
     }
     
@@ -264,6 +285,30 @@ class PermissionManager {
         }
     }
     
+    // Aplicar permissões específicas da aba LogPRODUZIR
+    applyLogproduzirPermissions(permissions) {
+        if (!permissions.tabs.logproduzir) return;
+        
+        const logproduzirPermissions = permissions.logproduzir || {};
+        
+        // Controlar elementos específicos do LogPRODUZIR
+        this.controlButtonVisibility('calcularLogproduzir', logproduzirPermissions.calcular);
+        this.controlButtonVisibility('exportarLogproduzir', logproduzirPermissions.exportar);
+        this.controlButtonVisibility('memoriaCalculoLogproduzir', logproduzirPermissions.memoriaCalculo);
+        this.controlButtonVisibility('registroE115Logproduzir', logproduzirPermissions.registroE115);
+        
+        // Controlar seções de configuração
+        if (!logproduzirPermissions.configurarEmpresa) {
+            this.hideElement('empresaConfigSection');
+        }
+        if (!logproduzirPermissions.gerenciarIgpdi) {
+            this.hideElement('igpdiConfigSection');
+        }
+        if (!logproduzirPermissions.multiplosPeriodos) {
+            this.hideElement('logproduzirMultiPeriodRadio');
+        }
+    }
+    
     // Trocar para primeira aba disponível
     switchToFirstAvailableTab(permissions) {
         const activeTab = document.querySelector('.tab-button.active');
@@ -274,6 +319,7 @@ class PermissionManager {
             if (tabId === 'tabConverter' && !permissions.tabs.converter) needsSwitch = true;
             if (tabId === 'tabFomentar' && !permissions.tabs.fomentar) needsSwitch = true;
             if (tabId === 'tabProgoias' && !permissions.tabs.progoias) needsSwitch = true;
+            if (tabId === 'tabLogproduzir' && !permissions.tabs.logproduzir) needsSwitch = true;
         }
         
         if (needsSwitch || !activeTab) {
@@ -284,6 +330,8 @@ class PermissionManager {
                 document.getElementById('tabFomentar')?.click();
             } else if (permissions.tabs.progoias) {
                 document.getElementById('tabProgoias')?.click();
+            } else if (permissions.tabs.logproduzir) {
+                document.getElementById('tabLogproduzir')?.click();
             }
         }
     }
